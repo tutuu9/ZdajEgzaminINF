@@ -236,4 +236,48 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-01-24-01-sg': {
+    title: 'Firma IT — INF.03-01-24.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Grafika i pliki',
+        focus: [
+          'Sprawdź rozmiary logo i dwóch banerów, przezroczystość, kadrowanie oraz treść napisów.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Animacja i układ',
+        focus: ['Odszukaj czas 3000 ms, zrzut ustawień animacji oraz wspólne bloki trzech stron.'],
+      },
+      {
+        page: 4,
+        title: 'Treść, formularz i CSS',
+        focus: [
+          'Przyporządkuj zawartość do index.html, uslugi.html i kontakt.html. Zwróć uwagę na tabelę formularza i selektor button.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Obsługa zgłoszenia',
+        focus: [
+          'Rozdziel brak zgody od poprawnego zgłoszenia. Sprawdź kolor, wielkie litery i nowy wiersz.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Oddawane pliki',
+        focus: ['Porównaj listę rezultatów, formaty grafik i zapis nazwy przeglądarki.'],
+      },
+    ],
+  },
 };

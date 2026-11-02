@@ -2,6 +2,12 @@ import { spawn } from 'node:child_process';
 import { readFile, mkdir, chown, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import {
+  checkFirmaContact,
+  checkSalonCalculator,
+  checkChatMessages,
+  installChatRandomControl,
+} from './study-adapters.mjs';
 
 const task = JSON.parse(await readFile('/config/task.json', 'utf8'));
 const processes = [];
@@ -451,6 +457,7 @@ async function rendered(check, criterion) {
   });
   const page = await context.newPage();
   page.setDefaultTimeout(2500);
+  if (check.action === 'chat-messages') await context.addInitScript(installChatRandomControl);
   try {
     const response = await page.goto(`http://127.0.0.1:8080/${check.path}`, {
       waitUntil: 'load',
@@ -471,6 +478,9 @@ async function rendered(check, criterion) {
     if (check.type === 'javascript') {
       if (check.action === 'kursy-calculator') return await checkCourseCalculator(page);
       if (check.action === 'smoki-tabs') return await checkDragonTabs(page);
+      if (check.action === 'firma-contact') return await checkFirmaContact(page);
+      if (check.action === 'salon-calculator') return await checkSalonCalculator(page);
+      if (check.action === 'chat-messages') return await checkChatMessages(page);
       if (check.action === 'workshop-calculator') {
         for (const [course, count, discount, expected] of [
           ['html', '1', false, 120],
@@ -591,7 +601,7 @@ try {
       else outcome = await rendered(check, criterion);
       results.push({
         ...base,
-        status: outcome[0] ? 'passed' : 'failed',
+        status: outcome[0] === null ? 'manual' : outcome[0] ? 'passed' : 'failed',
         evidence: outcome[1],
         recommendation: outcome[0] ? '' : criterion.description,
       });

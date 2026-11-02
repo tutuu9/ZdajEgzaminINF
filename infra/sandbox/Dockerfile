@@ -18,6 +18,6 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 WORKDIR /opt/checker
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-COPY check.mjs chromium-wrapper ./
+COPY check.mjs study-adapters.mjs chromium-wrapper ./
 RUN chmod 755 /opt/checker/chromium-wrapper
 ENTRYPOINT ["timeout", "--signal=KILL", "115s", "node", "/opt/checker/check.mjs"]

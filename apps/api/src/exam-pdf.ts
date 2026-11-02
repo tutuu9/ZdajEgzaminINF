@@ -48,6 +48,12 @@ export const REVIEWED_EXAM_PDFS: Readonly<Record<string, ReviewedExamSource>> = 
     provenance: 'archive-copy',
     sha256: '66d22d97430a9d33d5af2a34684a92aa5f41890fcd5a26bb08cc838e9a89375f',
   },
+  'inf03-01-24-01-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-01-24.01-SG',
+    provenance: 'archive-copy',
+    sha256: '875fd2ae7d10aafcaaa9679d86be3e9c684c875189eb4cf9d2d96156cb7de939',
+  },
 });
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 25_000;

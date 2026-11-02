@@ -1,3 +1,4 @@
+import { firmaGuide } from './study-project-firma.js';
 import { rzekiGuide } from './study-project-rzeki.js';
 import { motocykleGuide } from './study-project-motocykle.js';
 import type { ExamStudyGuide } from '@zdaj/shared';
@@ -610,6 +611,8 @@ export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guid
 examStudyGuides.push(motocykleGuide);
 
 examStudyGuides.push(rzekiGuide);
+
+examStudyGuides.push(firmaGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,
