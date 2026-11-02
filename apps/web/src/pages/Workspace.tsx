@@ -42,6 +42,7 @@ import { createPreview } from '../preview';
 import { Editor } from '../components/Editor';
 import { ProjectStore, projectStore, recoverySnapshot, type ProjectPatch } from '../project-store';
 import '../cumulative.css';
+import { ThemePicker } from '../components/ThemePicker';
 import { Report } from '../components/Report';
 import { PdfReadingGuide } from '../components/PdfReadingGuide';
 import {
@@ -599,10 +600,13 @@ export function Workspace() {
   if (!attempt)
     return (
       <>
-        <Link className="back-link" to="/praktyka">
-          <ArrowLeft size={16} />
-          Zadania praktyczne
-        </Link>
+        <div className="workspace-entry-navigation">
+          <Link className="back-link" to="/praktyka">
+            <ArrowLeft size={16} />
+            Zadania praktyczne
+          </Link>
+          <ThemePicker />
+        </div>
         <PageHeading kicker="Arkusz CKE · INF.03" title={task.title}>
           {task.summary}
         </PageHeading>
@@ -973,6 +977,7 @@ export function Workspace() {
           </div>
         </div>
         <div className="workspace-heading-actions">
+          <ThemePicker />
           {!closed && <Timer deadlineAt={attempt.deadlineAt} onExpire={expire} />}
           <button
             className="button secondary small"
