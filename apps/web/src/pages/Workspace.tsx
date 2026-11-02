@@ -315,7 +315,7 @@ export function Workspace() {
       if (mode === 'nauka' && !copyFiles && task.sourceCatalogId) {
         const response = await api<ExamStudyResponse>(`/attempts/${ticket.id}/study`, {
           method: 'POST',
-          body: { token: ticket.token, guideVersion: 3 },
+          body: { token: ticket.token },
         });
         next.files = structuredClone(response.guide.project?.starterFiles ?? task.starterFiles);
         next.study = {
