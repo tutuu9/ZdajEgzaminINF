@@ -1,11 +1,4 @@
-import {
-  BookOpen,
-  FolderOpen,
-  GraduationCap,
-  Layers3,
-  LockKeyhole,
-  ShieldCheck,
-} from 'lucide-react';
+import { BookOpen, FolderOpen, GraduationCap, Layers3, Send, ShieldCheck } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Suspense } from 'react';
 import { useApp } from '../context';
@@ -72,10 +65,10 @@ export function Shell() {
             </span>
             <div>
               <span>Niezależny projekt edukacyjny</span>
-              <NavLink to="/admin">
-                <LockKeyhole size={13} />
-                Administracja
-              </NavLink>
+              <a href="https://t.me/tutuu9" target="_blank" rel="noopener noreferrer">
+                <Send size={13} aria-hidden="true" />
+                Właściciel
+              </a>
             </div>
           </footer>
         )}
