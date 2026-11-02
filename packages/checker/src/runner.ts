@@ -66,7 +66,9 @@ export function command(
   });
 }
 export async function checkRuntime(options: RunnerOptions): Promise<void> {
-  const result = await command(['info', '--format', '{{json .}}']);
+  // Docker Desktop can need more than ten seconds to answer trusted control
+  // probes. This does not extend the separate deadline for executing user code.
+  const result = await command(['info', '--format', '{{json .}}'], 30000);
   if (result.code !== 0) throw new Error('Docker nie jest dostępny.');
   const info = JSON.parse(result.stdout) as {
     OSType?: string;
@@ -89,13 +91,10 @@ export async function checkRuntime(options: RunnerOptions): Promise<void> {
         'Brak wymaganego runsc/gVisor lub cgroup v2. Uruchomienie zostało zablokowane.',
       );
   }
-  const image = await command([
-    'image',
-    'inspect',
-    options.image ?? 'zdaj-inf-sandbox:0.1.0',
-    '--format',
-    '{{.Id}}',
-  ]);
+  const image = await command(
+    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.1.0', '--format', '{{.Id}}'],
+    30000,
+  );
   if (image.code !== 0) throw new Error('Brak obrazu środowiska. Uruchom npm run sandbox:build.');
 }
 export function makeReport(

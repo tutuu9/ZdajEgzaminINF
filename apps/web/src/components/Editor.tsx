@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect, Transaction } from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -31,6 +31,16 @@ const readableHighlightStyle = HighlightStyle.define(
   })),
 );
 
+type ViewPosition = { anchor: number; head: number; scrollTop: number };
+type SavedEditor = {
+  state: EditorState;
+  position: ViewPosition;
+  readonly: Compartment;
+  label: Compartment;
+  size: Compartment;
+};
+const sessions = new Map<string, SavedEditor>();
+
 export function Editor({
   value,
   path,
@@ -38,6 +48,9 @@ export function Editor({
   readOnly = false,
   label = 'Edytor kodu',
   minHeight = 260,
+  sessionKey,
+  initialView,
+  onViewChange,
 }: {
   value: string;
   path: string;
@@ -45,11 +58,17 @@ export function Editor({
   readOnly?: boolean;
   label?: string;
   minHeight?: number;
+  sessionKey?: string;
+  initialView?: ViewPosition;
+  onViewChange?: (view: ViewPosition) => void;
 }) {
   const container = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | null>(null),
     callback = useRef(onChange);
   callback.current = onChange;
+  const positionCallback = useRef(onViewChange),
+    compartments = useRef<SavedEditor | null>(null);
+  positionCallback.current = onViewChange;
   useEffect(() => {
     if (!container.current) return;
     const language = /\.php$/i.test(path)
@@ -63,75 +82,179 @@ export function Editor({
             : /\.(sql|txt)$/i.test(path) && /sql|kwerend/i.test(path)
               ? sql()
               : [];
+    const cached = sessionKey ? sessions.get(sessionKey) : undefined;
+    const saveSessionPosition = positionCallback.current;
+    const readonly = cached?.readonly ?? new Compartment(),
+      labelConfig = cached?.label ?? new Compartment(),
+      size = cached?.size ?? new Compartment();
+    let positionTimer: ReturnType<typeof setTimeout> | undefined;
+    const notifyPosition = () => {
+      if (positionTimer) clearTimeout(positionTimer);
+      positionTimer = setTimeout(() => {
+        positionCallback.current?.({
+          anchor: instance.state.selection.main.anchor,
+          head: instance.state.selection.main.head,
+          scrollTop: instance.scrollDOM.scrollTop,
+        });
+      }, 250);
+    };
     const instance = new EditorView({
       parent: container.current,
-      state: EditorState.create({
-        doc: value,
-        extensions: [
-          lineNumbers(),
-          history(),
-          drawSelection(),
-          highlightActiveLine(),
-          highlightActiveLineGutter(),
-          bracketMatching(),
-          foldGutter(),
-          syntaxHighlighting(readableHighlightStyle),
-          keymap.of([
-            { key: 'Tab', run: expandHtmlAbbreviation(path) },
-            indentWithTab,
-            ...defaultKeymap,
-            ...historyKeymap,
-          ]),
-          oneDarkTheme,
-          language,
-          EditorView.lineWrapping,
-          EditorState.readOnly.of(readOnly),
-          EditorView.editable.of(!readOnly),
-          EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` }),
-          !readOnly && supportsHtmlAbbreviation(path)
-            ? showPanel.of(() => {
-                const dom = document.createElement('div');
-                dom.className = 'cm-html-abbreviation-hint';
-                dom.textContent = `Szkielet HTML: wpisz ! w osobnym wierszu i naciśnij Tab.${/\.php$/i.test(path) ? ' Działa poza kodem PHP.' : ''}`;
-                return { dom, bottom: true };
-              })
-            : [],
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) callback.current(update.state.doc.toString());
-          }),
-          EditorView.theme({
-            '&': { fontSize: '13px', height: '100%' },
-            '.cm-scroller': {
-              fontFamily: '"IBM Plex Mono", monospace',
-              overflow: 'auto',
-              minHeight: `${minHeight}px`,
-            },
-            '.cm-content': { padding: '16px 0' },
-            '.cm-gutters': { backgroundColor: '#192434', color: '#a4aec1', border: 'none' },
-            '&.cm-editor.cm-focused': { outline: '2px solid #75aaff', outlineOffset: '-2px' },
-            '.cm-html-abbreviation-hint': {
-              padding: '7px 12px',
-              color: '#c2cede',
-              backgroundColor: '#192434',
-              fontFamily: '"Source Sans 3", sans-serif',
-              fontSize: '12px',
-              lineHeight: '1.4',
-            },
-          }),
-        ],
-      }),
+      state:
+        cached?.state ??
+        EditorState.create({
+          doc: value,
+          extensions: [
+            lineNumbers(),
+            history(),
+            drawSelection(),
+            highlightActiveLine(),
+            highlightActiveLineGutter(),
+            bracketMatching(),
+            foldGutter(),
+            syntaxHighlighting(readableHighlightStyle),
+            keymap.of([
+              { key: 'Tab', run: expandHtmlAbbreviation(path) },
+              indentWithTab,
+              ...defaultKeymap,
+              ...historyKeymap,
+            ]),
+            oneDarkTheme,
+            language,
+            EditorView.lineWrapping,
+            readonly.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+            labelConfig.of(EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` })),
+            size.of(EditorView.theme({ '.cm-scroller': { minHeight: `${minHeight}px` } })),
+            !readOnly && supportsHtmlAbbreviation(path)
+              ? showPanel.of(() => {
+                  const dom = document.createElement('div');
+                  dom.className = 'cm-html-abbreviation-hint';
+                  dom.textContent = `Szkielet HTML: wpisz ! w osobnym wierszu i naciśnij Tab.${/\.php$/i.test(path) ? ' Działa poza kodem PHP.' : ''}`;
+                  return { dom, bottom: true };
+                })
+              : [],
+
+            EditorView.theme({
+              '&': { fontSize: '13px', height: '100%' },
+              '.cm-scroller': {
+                fontFamily: '"IBM Plex Mono", monospace',
+                overflow: 'auto',
+                minHeight: `${minHeight}px`,
+              },
+              '.cm-content': { padding: '16px 0' },
+              '.cm-gutters': { backgroundColor: '#192434', color: '#a4aec1', border: 'none' },
+              '&.cm-editor.cm-focused': { outline: '2px solid #75aaff', outlineOffset: '-2px' },
+              '.cm-html-abbreviation-hint': {
+                padding: '7px 12px',
+                color: '#c2cede',
+                backgroundColor: '#192434',
+                fontFamily: '"Source Sans 3", sans-serif',
+                fontSize: '12px',
+                lineHeight: '1.4',
+              },
+            }),
+          ],
+        }),
     });
     view.current = instance;
+    // A fresh listener is appended after restoring state; remove listeners before caching below.
+    const listener = new Compartment();
+    instance.dispatch({
+      effects: StateEffect.appendConfig.of(
+        listener.of(
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) callback.current(update.state.doc.toString());
+            if (update.selectionSet || update.docChanged) notifyPosition();
+          }),
+        ),
+      ),
+    });
+    instance.dispatch({
+      effects: [
+        readonly.reconfigure([
+          EditorState.readOnly.of(readOnly),
+          EditorView.editable.of(!readOnly),
+        ]),
+        labelConfig.reconfigure(
+          EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` }),
+        ),
+      ],
+    });
+    if (instance.state.doc.toString() !== value)
+      instance.dispatch({
+        changes: { from: 0, to: instance.state.doc.length, insert: value },
+        annotations: Transaction.addToHistory.of(false),
+      });
+    const position = cached?.position ?? initialView;
+    if (position) {
+      instance.dispatch({
+        selection: {
+          anchor: Math.min(position.anchor, instance.state.doc.length),
+          head: Math.min(position.head, instance.state.doc.length),
+        },
+      });
+      instance.scrollDOM.scrollTop = position.scrollTop;
+    }
+    compartments.current = {
+      state: instance.state,
+      position: { anchor: 0, head: 0, scrollTop: 0 },
+      readonly,
+      label: labelConfig,
+      size,
+    };
+    instance.scrollDOM.addEventListener('scroll', notifyPosition);
+
     return () => {
+      if (positionTimer) clearTimeout(positionTimer);
+      instance.scrollDOM.removeEventListener('scroll', notifyPosition);
+      if (sessionKey) {
+        const position = {
+          anchor: instance.state.selection.main.anchor,
+          head: instance.state.selection.main.head,
+          scrollTop: instance.scrollDOM.scrollTop,
+        };
+        saveSessionPosition?.(position);
+        instance.dispatch({ effects: listener.reconfigure([]) });
+        sessions.set(sessionKey, {
+          state: instance.state,
+          position,
+          readonly,
+          label: labelConfig,
+          size,
+        });
+        if (sessions.size > 50) sessions.delete(sessions.keys().next().value!);
+      }
       instance.destroy();
       view.current = null;
     };
     // A file switch starts an independent editing session. Value updates are applied below.
-  }, [path, readOnly, label, minHeight]);
+  }, [path, sessionKey]);
+  useEffect(() => {
+    const instance = view.current,
+      config = compartments.current;
+    if (instance && config)
+      instance.dispatch({
+        effects: [
+          config.readonly.reconfigure([
+            EditorState.readOnly.of(readOnly),
+            EditorView.editable.of(!readOnly),
+          ]),
+          config.label.reconfigure(
+            EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` }),
+          ),
+          config.size.reconfigure(
+            EditorView.theme({ '.cm-scroller': { minHeight: `${minHeight}px` } }),
+          ),
+        ],
+      });
+  }, [readOnly, label, path, minHeight]);
   useEffect(() => {
     const instance = view.current;
     if (instance && instance.state.doc.toString() !== value)
-      instance.dispatch({ changes: { from: 0, to: instance.state.doc.length, insert: value } });
+      instance.dispatch({
+        changes: { from: 0, to: instance.state.doc.length, insert: value },
+        annotations: Transaction.addToHistory.of(false),
+      });
   }, [value]);
   return <div className="code-editor" ref={container} style={{ minHeight }} />;
 }

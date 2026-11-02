@@ -1,6 +1,9 @@
 import type { ExamStudyGuide } from '@zdaj/shared';
 import { wedkowanieStudy } from './study-wedkowanie.js';
 import { studyActivities } from './study-activities.js';
+import { kursyProject, kursyProjectSteps } from './study-project-kursy.js';
+import { smokiProject, smokiProjectSteps } from './study-project-smoki.js';
+import { wedkowanieProject, wedkowanieProjectSteps } from './study-project-wedkowanie.js';
 
 const checkedAt = '2026-11-02';
 const kursySource =
@@ -567,7 +570,7 @@ if (isset($_POST['kraj']) && is_string($_POST['kraj'])) {
 
 /** Preserve published revision 1, including its original examples and notebook identifiers. */
 export const legacyExamStudyGuides: ExamStudyGuide[] = [wedkowanieStudy, kursyStudy, smokiStudy];
-export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guide) => ({
+const revisionTwoExamStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guide) => ({
   ...guide,
   version: 2,
   introduction:
@@ -577,3 +580,33 @@ export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guid
     activities: studyActivities[`${guide.taskId}:${step.id}`] ?? [],
   })),
 }));
+
+const cumulativeProjects = {
+  'cke-wedkowanie': { project: wedkowanieProject, steps: wedkowanieProjectSteps },
+  'inf03-01-25-01-sg': { project: kursyProject, steps: kursyProjectSteps },
+  'inf03-08-25-06-sg': { project: smokiProject, steps: smokiProjectSteps },
+};
+
+/** Revision 3 edits one persistent project. Old notebooks retain revisions 1 and 2. */
+export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guide) => {
+  const cumulative = cumulativeProjects[guide.taskId as keyof typeof cumulativeProjects];
+  return {
+    ...guide,
+    version: 3,
+    introduction:
+      'Zbudujesz jeden projekt krok po kroku. Każda czynność zmienia te same zapisane pliki; krótki przykład pokazuje tylko wskazany fragment. Poprawny element, który już istnieje, możesz zachować. To nasze objaśnienia do oryginalnego PDF CKE, nie oficjalne rozwiązanie ani ocena egzaminu. SQL, PHP, grafika, zrzuty i zgodność wizualna wymagają opisanej kontroli ręcznej.',
+    prerequisites: [
+      'Otwórz oryginalny arkusz oraz zweryfikowany odnośnik do jego danych wejściowych. Materiały zewnętrzne zachowują własne oznaczenie źródła.',
+      'Minimalny szkielet otrzymujesz tylko przy rozpoczęciu nowego projektu. Nie nadpisuj wcześniejszej pracy; każdy przykład dopisz we wskazanym miejscu istniejącego pliku.',
+      'Do importu bazy i uruchamiania PHP użyj lokalnego XAMPP z phpMyAdmin. Podgląd HTML i kontrola JavaScript nie wykonują PHP ani SQL.',
+      'Grafikę i zrzuty przygotuj samodzielnie w odpowiednich programach, a następnie dodaj do projektu. W treningu używaj fikcyjnego numeru zdającego.',
+    ],
+    ...cumulative,
+  };
+});
+
+export const allExamStudyGuides: ExamStudyGuide[] = [
+  ...legacyExamStudyGuides,
+  ...revisionTwoExamStudyGuides,
+  ...examStudyGuides,
+];

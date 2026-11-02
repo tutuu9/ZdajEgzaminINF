@@ -75,6 +75,34 @@ model CheckJob {
   @@index([expiresAt])
 }
 
+model StudyCheckJob {
+  id               String   @id @default(uuid())
+  secretHash       String
+  attemptId        String
+  taskId           String
+  taskVersion      Int
+  guideId          String
+  guideVersion     Int
+  activityId       String
+  projectRevision  Int
+  inputHash        String
+  adapterId        String
+  executionProfile String   @default("local-development")
+  status           String   @default("queued")
+  inputPath        String
+  report           Json?
+  error            String?
+  leaseUntil       DateTime?
+  createdAt        DateTime @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  expiresAt        DateTime
+  @@unique([attemptId, guideVersion, activityId, projectRevision, inputHash], map: "StudyCheckJob_request_key")
+  @@index([executionProfile, status, createdAt])
+  @@index([attemptId, status])
+  @@index([expiresAt])
+}
+
 model Setting {
   id        String   @id
   value     Json

@@ -10,6 +10,7 @@ import type {
   Bootstrap,
   CheckResponse,
   ExamStudyResponse,
+  StudyCheckResponse,
   TheoryResult,
   TheoryTicket,
 } from '@zdaj/shared';
@@ -61,6 +62,7 @@ class Client {
 let learner: Client;
 let owner: Client;
 let seed: typeof import('@zdaj/content');
+const joinStudyPath = (id: string) => resolve(dataDir, 'jobs', id, 'project.json');
 async function legacyPractice(mode: 'nauka' | 'trening' | 'egzamin' = 'trening') {
   // Existing authored attempts remain valid; public creation is tested separately below.
   const token = randomBytes(32).toString('base64url');
@@ -77,6 +79,32 @@ async function legacyPractice(mode: 'nauka' | 'trening' | 'egzamin' = 'trening')
     },
   });
   return { id: row.id, token, deadlineAt: deadlineAt?.toISOString() ?? null };
+}
+
+async function studyPractice(mode: 'nauka' | 'trening' | 'egzamin' = 'nauka') {
+  const token = randomBytes(32).toString('base64url');
+  const row = await db.attemptTicket.create({
+    data: {
+      taskId: 'inf03-01-25-01-sg',
+      taskVersion: 1,
+      mode,
+      level: 'beginner',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      deadlineAt: mode === 'egzamin' ? new Date(Date.now() + 150 * 60_000) : null,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    },
+  });
+  return { id: row.id, token };
+}
+
+async function enableStudyWorker() {
+  await owner.request('/admin/settings', 'PATCH', { checkingEnabled: true, queueLimit: 20 });
+  const day = new Date(new Date().toISOString().slice(0, 10));
+  await db.metric.upsert({
+    where: { key_day: { key: 'worker.local-development.lastSeen', day } },
+    create: { key: 'worker.local-development.lastSeen', day, value: Math.floor(Date.now() / 1000) },
+    update: { value: Math.floor(Date.now() / 1000) },
+  });
 }
 
 async function legacyTheory(
@@ -196,6 +224,303 @@ afterAll(async () => {
 }, 180_000);
 
 describe('real Nest API and PostgreSQL boundaries', () => {
+  it('retrieves an immutable requested guide revision and rejects missing versions', async () => {
+    const ticket = await studyPractice();
+    for (const version of [1, 2, 3]) {
+      const response = await learner.request<ExamStudyResponse>(
+        `/attempts/${ticket.id}/study`,
+        'POST',
+        { token: ticket.token, guideVersion: version },
+      );
+      expect(response.status).toBe(201);
+      expect(response.data.guide.version).toBe(version);
+      expect(response.data.guide).toEqual(
+        seed.allExamStudyGuides.find(
+          (guide) => guide.taskId === 'inf03-01-25-01-sg' && guide.version === version,
+        ),
+      );
+    }
+    expect(
+      (
+        await learner.request(`/attempts/${ticket.id}/study`, 'POST', {
+          token: ticket.token,
+          guideVersion: 99999,
+        })
+      ).status,
+    ).toBe(404);
+  });
+
+  it('checks successive learning revisions without closing an attempt and recovers a lost response', async () => {
+    await enableStudyWorker();
+    const ticket = await studyPractice();
+    const path = `/attempts/${ticket.id}/study/checks`;
+    const request = {
+      token: ticket.token,
+      guideVersion: 3,
+      activityId: 'calculator/calculator-check',
+      projectRevision: 7,
+      files: [{ path: 'raty.html', content: '<p>Moja wersja</p>', encoding: 'utf8' }],
+    };
+    const responses = await Promise.all([
+      learner.request<{ id: string; token: string; status: string }>(path, 'POST', request),
+      learner.request<{ id: string; token: string; status: string }>(path, 'POST', request),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([201, 201]);
+    expect(responses[0]!.data).toEqual(responses[1]!.data);
+    const job = responses[0]!.data;
+    expect(await db.studyCheckJob.count({ where: { attemptId: ticket.id } })).toBe(1);
+    expect(
+      (await db.attemptTicket.findUniqueOrThrow({ where: { id: ticket.id } })).submittedAt,
+    ).toBeNull();
+    expect((await learner.request(`/study/checks/${job.id}`)).status).toBe(404);
+    expect(
+      (
+        await learner.request(`/study/checks/${job.id}`, 'GET', undefined, {
+          'X-Check-Token': 'wrong',
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (await learner.request(`/study/checks/${job.id}/ack`, 'POST', { token: job.token })).status,
+    ).toBe(409);
+    expect((await learner.request(path, 'POST', { ...request, projectRevision: 8 })).status).toBe(
+      409,
+    );
+    const row = await db.studyCheckJob.findUniqueOrThrow({ where: { id: job.id } });
+    const { studyInputHash } = await import('@zdaj/checker');
+    expect(row.inputHash).toBe(
+      studyInputHash(request.files as { path: string; content: string; encoding: 'utf8' }[]),
+    );
+    expect(JSON.parse(await readFile(row.inputPath, 'utf8'))).toEqual(request.files);
+    const report = {
+      guideId: row.guideId,
+      guideVersion: 3,
+      activityId: row.activityId,
+      projectRevision: 7,
+      inputHash: row.inputHash,
+      createdAt: new Date().toISOString(),
+      status: 'failed',
+      results: [
+        {
+          id: 'calculator',
+          title: 'Kalkulator',
+          status: 'failed',
+          evidence: 'Brak działania.',
+          recommendation: 'Sprawdź obsługę kliknięcia.',
+        },
+      ],
+      disclaimer: 'Edukacyjne sprawdzenie.',
+    };
+    await db.studyCheckJob.update({
+      where: { id: job.id },
+      data: { status: 'completed', report, finishedAt: new Date() },
+    });
+    const received = await learner.request<StudyCheckResponse>(
+      `/study/checks/${job.id}`,
+      'GET',
+      undefined,
+      { 'X-Check-Token': job.token },
+    );
+    expect(received.data.report).toEqual(report);
+    expect(received.data.report).not.toHaveProperty('percentage');
+    const next = await learner.request<{ id: string; token: string }>(path, 'POST', {
+      ...request,
+      projectRevision: 8,
+      files: [{ path: 'raty.html', content: '<p>Druga wersja</p>' }],
+    });
+    expect(next.status).toBe(201);
+    expect(next.data.id).not.toBe(job.id);
+    expect(
+      (await db.attemptTicket.findUniqueOrThrow({ where: { id: ticket.id } })).submittedAt,
+    ).toBeNull();
+    await db.studyCheckJob.update({
+      where: { id: next.data.id },
+      data: { status: 'failed', error: 'Test cleanup' },
+    });
+    expect(
+      (await learner.request(`/study/checks/${job.id}/ack`, 'POST', { token: job.token })).status,
+    ).toBe(201);
+    expect(await readFile(row.inputPath).catch(() => null)).toBeNull();
+    expect(
+      (
+        await learner.request(`/study/checks/${next.data.id}/ack`, 'POST', {
+          token: next.data.token,
+        })
+      ).status,
+    ).toBe(201);
+    expect(await db.checkJob.count({ where: { attemptId: ticket.id } })).toBe(0);
+  });
+
+  it('enforces study secrets, exam gating, adapter allowlist and unavailable-runtime fallback', async () => {
+    const ticket = await studyPractice();
+    const request = {
+      token: ticket.token,
+      guideVersion: 3,
+      activityId: 'calculator/calculator-check',
+      projectRevision: 0,
+      files: [{ path: 'raty.html', content: '<p>Próba</p>' }],
+    };
+    const path = `/attempts/${ticket.id}/study/checks`;
+    expect((await learner.request(path, 'POST', request, { 'X-CSRF-Token': '' })).status).toBe(403);
+    expect(
+      (await learner.request(path, 'POST', { ...request, token: 'x'.repeat(32) })).status,
+    ).toBe(404);
+    expect((await learner.request(path, 'POST', { ...request, guideVersion: 999 })).status).toBe(
+      404,
+    );
+    expect(
+      (await learner.request(path, 'POST', { ...request, activityId: 'unknown/unknown' })).status,
+    ).toBe(404);
+    expect(
+      (await learner.request(path, 'POST', { ...request, command: 'arbitrary execution' })).status,
+    ).toBe(400);
+    const guide = seed.examStudyGuides.find((guide) => guide.taskId === 'inf03-01-25-01-sg')!;
+    const manual = guide.steps
+      .flatMap((step) =>
+        step.activities!.map((activity) => ({ id: `${step.id}/${activity.id}`, activity })),
+      )
+      .find(({ activity }) => !activity.checks?.some((check) => check.kind === 'runtime'))!;
+    expect(
+      (await learner.request(path, 'POST', { ...request, activityId: manual.id })).status,
+    ).toBe(503);
+    const exam = await studyPractice('egzamin');
+    expect(
+      (
+        await learner.request(`/attempts/${exam.id}/study/checks`, 'POST', {
+          ...request,
+          token: exam.token,
+        })
+      ).status,
+    ).toBe(403);
+    await owner.request('/admin/settings', 'PATCH', { checkingEnabled: false });
+    expect((await learner.request(path, 'POST', request)).status).toBe(503);
+    expect(await db.studyCheckJob.count()).toBe(0);
+    await enableStudyWorker();
+  });
+
+  it('shares one execution slot and queue capacity across final and study jobs', async () => {
+    await enableStudyWorker();
+    await db.checkJob.deleteMany();
+    await db.studyCheckJob.deleteMany();
+    const ticket = await studyPractice();
+    const finalTicket = await legacyPractice();
+    const final = await learner.request<{ id: string }>('/checks', 'POST', {
+      attemptId: finalTicket.id,
+      attemptToken: finalTicket.token,
+      files: [{ path: 'index.php', content: '<?php echo 1;' }],
+    });
+    expect(final.status).toBe(201);
+    const request = {
+      token: ticket.token,
+      guideVersion: 3,
+      activityId: 'calculator/calculator-check',
+      projectRevision: 0,
+      files: [{ path: 'raty.html', content: '<p>Test</p>' }],
+    };
+    const study = await learner.request<{ id: string }>(
+      `/attempts/${ticket.id}/study/checks`,
+      'POST',
+      request,
+    );
+    expect(study.status).toBe(201);
+    const { claimJob } = await import('../apps/worker/src/queue.js');
+    const claims = await Promise.all([claimJob(db), claimJob(db)]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    expect(claims.find(Boolean)!.kind).toBe('final');
+    const claimedFinal = claims.find(Boolean)!;
+    expect(
+      claimedFinal.leaseUntil!.getTime() - claimedFinal.startedAt!.getTime(),
+    ).toBeGreaterThanOrEqual(240000);
+    // Slow trusted preflight must not allow another worker to overlap the old
+    // three-minute lease boundary while the current four-minute lease is live.
+    await db.checkJob.update({
+      where: { id: claimedFinal.id },
+      data: {
+        startedAt: new Date(Date.now() - 185000),
+        leaseUntil: new Date(Date.now() + 55000),
+      },
+    });
+    expect(await claimJob(db)).toBeNull();
+    await db.checkJob.update({
+      where: { id: final.data.id },
+      data: { status: 'completed', leaseUntil: null },
+    });
+    const claimedStudy = await claimJob(db);
+    expect(claimedStudy?.kind).toBe('study');
+    expect(
+      claimedStudy!.leaseUntil!.getTime() - claimedStudy!.startedAt!.getTime(),
+    ).toBeGreaterThanOrEqual(240000);
+    await db.studyCheckJob.update({
+      where: { id: study.data.id },
+      data: { status: 'completed', leaseUntil: null },
+    });
+    const sample = await db.studyCheckJob.findUniqueOrThrow({ where: { id: study.data.id } });
+    for (let index = 0; index < 20; index++)
+      await db.studyCheckJob.create({
+        data: {
+          ...sample,
+          id: randomUUID(),
+          attemptId: randomUUID(),
+          status: 'queued',
+          inputPath: joinStudyPath(randomUUID()),
+          report: undefined,
+          createdAt: new Date(),
+        },
+      });
+    const another = await legacyPractice();
+    expect(
+      (
+        await learner.request('/checks', 'POST', {
+          attemptId: another.id,
+          attemptToken: another.token,
+          files: [{ path: 'index.php', content: '<?php echo 1;' }],
+        })
+      ).status,
+    ).toBe(429);
+    const anotherStudy = await studyPractice();
+    expect(
+      (
+        await learner.request(`/attempts/${anotherStudy.id}/study/checks`, 'POST', {
+          ...request,
+          token: anotherStudy.token,
+        })
+      ).status,
+    ).toBe(429);
+    expect(
+      (await db.attemptTicket.findUniqueOrThrow({ where: { id: anotherStudy.id } })).submittedAt,
+    ).toBeNull();
+    await db.checkJob.deleteMany();
+    await db.studyCheckJob.deleteMany();
+  });
+
+  it('removes expired study uploads and reports even without a running worker', async () => {
+    const id = randomUUID();
+    const inputPath = joinStudyPath(id);
+    await mkdir(resolve(inputPath, '..'), { recursive: true });
+    await writeFile(inputPath, '[]');
+    await db.studyCheckJob.create({
+      data: {
+        id,
+        secretHash: 'test',
+        attemptId: randomUUID(),
+        taskId: 'inf03-01-25-01-sg',
+        taskVersion: 1,
+        guideId: 'test',
+        guideVersion: 3,
+        activityId: 'calculator/calculator-check',
+        projectRevision: 0,
+        inputHash: 'test',
+        adapterId: 'kursy-calculator',
+        inputPath,
+        expiresAt: new Date(Date.now() - 1000),
+        status: 'queued',
+      },
+    });
+    const { cleanupExpiredStudyChecks } = await import('../apps/api/src/study-checks.js');
+    await cleanupExpiredStudyChecks();
+    expect(await db.studyCheckJob.findUnique({ where: { id } })).toBeNull();
+    expect(await readFile(inputPath).catch(() => null)).toBeNull();
+  });
   it('offers only reviewed CKE practice and theory while withholding authored exercises and private checks', async () => {
     const { status, data } = await learner.request<Bootstrap>('/bootstrap');
     expect(status).toBe(200);

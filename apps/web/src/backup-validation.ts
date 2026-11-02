@@ -1,10 +1,5 @@
-import {
-  MAX_EXTRACTED_BYTES,
-  MAX_PROJECT_FILES,
-  type AttemptSnapshot,
-  type PublicQuestion,
-} from '@zdaj/shared';
-import { safePath } from './safe-zip';
+import { MAX_EXTRACTED_BYTES, type AttemptSnapshot, type PublicQuestion } from '@zdaj/shared';
+import { validateProjectFiles, validateProjectState } from './backup-guide-validation';
 
 const fail = (): never => {
   throw new Error('Kopia zawiera nieprawidłowe dane próby. Nie zaimportowano żadnych zmian.');
@@ -17,7 +12,10 @@ const text = (value: unknown, max = 20000): string =>
   typeof value === 'string' && value.length <= max ? value : fail();
 const identifier = (value: unknown) => {
   const result = text(value, 128);
-  return /^[a-z0-9][a-z0-9._-]*$/i.test(result) ? result : fail();
+  return /^[a-z0-9][a-z0-9._-]*$/i.test(result) &&
+    !['constructor', 'prototype', '__proto__'].includes(result)
+    ? result
+    : fail();
 };
 const token = (value: unknown) => {
   const result = text(value, 300);
@@ -38,7 +36,7 @@ const date = (value: unknown) => {
 const array = (value: unknown, max: number) =>
   Array.isArray(value) && value.length <= max ? value : fail();
 const member = (value: unknown, allowed: string[]) =>
-  allowed.includes(String(value)) ? value : fail();
+  typeof value === 'string' && allowed.includes(value) ? value : fail();
 
 function validateQuestion(value: unknown): PublicQuestion {
   const q = record(value);
@@ -154,7 +152,7 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
     identifier(ticket.id);
     token(ticket.token);
     if (ticket.deadlineAt !== null) date(ticket.deadlineAt);
-    if (ticket.deadlineAt !== item.deadlineAt || ticket.id !== id) fail();
+    if (ticket.deadlineAt !== item.deadlineAt) fail();
     if (item.revealedHints !== undefined)
       for (const hint of array(item.revealedHints, 1000)) text(hint);
     if (item.kind === 'practice') {
@@ -162,24 +160,7 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
       integer(item.taskVersion);
       if (item.files === undefined) fail();
     }
-    if (item.files !== undefined) {
-      const paths = new Set<string>();
-      let bytes = 0;
-      for (const rawFile of array(item.files, MAX_PROJECT_FILES)) {
-        const file = record(rawFile);
-        const path = safePath(text(file.path, 240));
-        if (paths.has(path.toLocaleLowerCase('pl'))) fail();
-        paths.add(path.toLocaleLowerCase('pl'));
-        const content = text(file.content, MAX_EXTRACTED_BYTES);
-        if (file.encoding !== undefined) member(file.encoding, ['utf8', 'base64']);
-        if (file.encoding === 'base64') {
-          if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content))
-            fail();
-          bytes += (content.length * 3) / 4;
-        } else bytes += new TextEncoder().encode(content).length;
-        if (bytes > MAX_EXTRACTED_BYTES) fail();
-      }
-    }
+    if (item.files !== undefined) validateProjectFiles(item.files);
     if (item.kind === 'theory' && item.questions === undefined) fail();
     if (item.questions !== undefined) {
       const questions = array(item.questions, 40).map(validateQuestion);
@@ -203,6 +184,7 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
     }
     if (item.report !== undefined) validateReport(item.report);
     if (item.theoryResult !== undefined) validateTheory(item.theoryResult);
+    validateProjectState(item);
   }
   return attempts as AttemptSnapshot[];
 }
@@ -210,9 +192,17 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
 export function validateBackupLearning(
   value: unknown,
   completedValue: unknown,
-): { completed: string[]; exercises: Record<string, string> } {
+): {
+  completed: string[];
+  exercises: Record<string, string>;
+  records: Record<string, { completedAt: string }>;
+} {
   const completed = array(completedValue, 10000).map(identifier);
   const exercises: Record<string, string> = Object.create(null) as Record<string, string>;
+  const records: Record<string, { completedAt: string }> = Object.create(null) as Record<
+    string,
+    { completedAt: string }
+  >;
   if (value !== undefined) {
     const entries = Object.entries(record(value));
     if (entries.length > 10000) fail();
@@ -222,9 +212,9 @@ export function validateBackupLearning(
         exercises[key] = text(item, MAX_EXTRACTED_BYTES);
       } else {
         identifier(key);
-        date(record(item).completedAt);
+        records[key] = { completedAt: date(record(item).completedAt) };
       }
     }
   }
-  return { completed, exercises };
+  return { completed: [...new Set([...completed, ...Object.keys(records)])], exercises, records };
 }

@@ -10,7 +10,6 @@ import {
   Clock3,
   Code2,
   Download,
-  Eye,
   File,
   FilePlus2,
   FileText,
@@ -31,6 +30,7 @@ import type {
   AttemptSnapshot,
   AttemptTicket,
   CheckResponse,
+  ExamStudyResponse,
   Mode,
   ProjectFile,
   PublicTask,
@@ -40,6 +40,8 @@ import { api, errorMessage } from '../api';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { createPreview } from '../preview';
 import { Editor } from '../components/Editor';
+import { ProjectStore, projectStore, recoverySnapshot, type ProjectPatch } from '../project-store';
+import '../cumulative.css';
 import { Report } from '../components/Report';
 import { PdfReadingGuide } from '../components/PdfReadingGuide';
 import {
@@ -64,7 +66,15 @@ const OriginalPdfReader = lazy(() =>
 const ExamStudy = lazy(() =>
   import('../components/ExamStudy').then((module) => ({ default: module.ExamStudy })),
 );
-function TaskPdfPanel({ task, requestedPage }: { task: PublicTask; requestedPage?: number }) {
+function TaskPdfPanel({
+  task,
+  requestedPage,
+  onPageChange,
+}: {
+  task: PublicTask;
+  requestedPage?: number;
+  onPageChange?: (page: number) => void;
+}) {
   const { data } = useApp();
   const entry = data?.catalog.find((item) => item.id === task.sourceCatalogId);
   if (entry?.sourcePdf)
@@ -81,6 +91,7 @@ function TaskPdfPanel({ task, requestedPage }: { task: PublicTask; requestedPage
         sourceLabel={entry.sourcePdf.sourceLabel}
         downloadName={`${entry.id}.pdf`}
         requestedPage={requestedPage}
+        onPageChange={onPageChange}
       />
     );
   if (task.origin === 'exam')
@@ -89,7 +100,7 @@ function TaskPdfPanel({ task, requestedPage }: { task: PublicTask; requestedPage
         Oryginalny PDF jest chwilowo niedostępny. <Link to="/katalog">Otwórz katalog źródeł.</Link>
       </Notice>
     );
-  return <PdfSheet task={task} />;
+  return <PdfSheet task={task} requestedPage={requestedPage} onPageChange={onPageChange} />;
 }
 
 export function Workspace() {
@@ -106,15 +117,15 @@ export function Workspace() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [saved, setSaved] = useState(true);
-  const [selected, setSelected] = useState(''),
+  const [selected, setSelectedState] = useState(''),
     [newPath, setNewPath] = useState(''),
     [adding, setAdding] = useState(false),
-    [tab, setTab] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study'>('code'),
+    [tab, setTabState] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study'>('code'),
     [showSheet, setShowSheet] = useState(false),
-    [studyStep, setStudyStep] = useState(''),
-    [sheetPage, setSheetPage] = useState(1);
-  const [previewEntry, setPreviewEntry] = useState(''),
+    [sheetPage, setSheetPageState] = useState(1);
+  const [previewEntry, setPreviewEntryState] = useState(''),
     [preview, setPreview] = useState(''),
+    [previewScripts, setPreviewScripts] = useState(false),
     [checkStatus, setCheckStatus] = useState(''),
     [hintBusy, setHintBusy] = useState(false),
     [aiBusy, setAiBusy] = useState(false),
@@ -125,14 +136,82 @@ export function Workspace() {
     iframeRef = useRef<HTMLIFrameElement>(null),
     attemptRef = useRef<AttemptSnapshot | null>(null),
     autoSubmitted = useRef<string | null>(null);
+  const storeRef = useRef<ProjectStore | null>(null);
+  const [store, setStore] = useState<ProjectStore | null>(null);
   attemptRef.current = attempt;
+  useEffect(() => {
+    if (!store) return;
+    const sync = () => {
+      const state = store.get();
+      setAttempt(state.project);
+      attemptRef.current = state.project;
+      setSheetPageState(state.project.workspace?.sheetPage ?? 1);
+      setSaved(!state.saving && !state.error);
+      if (state.error) setError(state.error);
+    };
+    sync();
+    return store.subscribe(sync);
+  }, [store]);
+  useEffect(() => {
+    if (saved) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [saved]);
+  const remember = (patch: Partial<NonNullable<AttemptSnapshot['workspace']>>) => {
+    const controller = storeRef.current;
+    if (!controller) return;
+    void controller
+      .patch((current) => ({
+        ...current,
+        workspace: {
+          view: 'code',
+          activeFile: '',
+          previewEntry: '',
+          editors: {},
+          ...current.workspace,
+          ...patch,
+        },
+      }))
+      .catch((cause) => setError(errorMessage(cause)));
+  };
+  const setSelected = (path: string) => {
+    setSelectedState(path);
+    remember({ activeFile: path });
+  };
+  const setTab = (view: NonNullable<AttemptSnapshot['workspace']>['view']) => {
+    setTabState(view);
+    remember({ view });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set('widok', view === 'study' ? 'nauka' : view);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const setPreviewEntry = (path: string) => {
+    setPreviewEntryState(path);
+    remember({ previewEntry: path });
+  };
+  const setSheetPage = (page: number) => {
+    if (!Number.isSafeInteger(page) || page < 1) return;
+    setSheetPageState(page);
+    if (storeRef.current?.get().project.workspace?.sheetPage !== page)
+      remember({ sheetPage: page });
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setBusy(false);
     setError('');
     setAttempt(null);
     setAiText('');
-    setTab('code');
+    setTabState('code');
+    storeRef.current = null;
+    setStore(null);
     autoSubmitted.current = null;
     void (async () => {
       try {
@@ -153,25 +232,39 @@ export function Workspace() {
           ));
         if (cancelled) return;
         setTask(current);
-        setTab(
-          requestedStudy && stored && (stored.mode !== 'egzamin' || stored.submittedAt)
+        const restored = stored ? projectStore(stored) : null;
+        storeRef.current = restored;
+        setStore(restored);
+        const active = restored?.get().project ?? stored;
+        const requestedView = params.get('widok');
+        const allowedView = ['study', 'code', 'sheet', 'preview', 'report'].includes(
+          requestedView ?? '',
+        )
+          ? (requestedView as NonNullable<AttemptSnapshot['workspace']>['view'])
+          : requestedView === 'nauka'
             ? 'study'
-            : current.sourceCatalogId
-              ? 'sheet'
-              : 'code',
-        );
-        setAttempt(stored ?? null);
+            : undefined;
+        let initialView =
+          allowedView ??
+          active?.workspace?.view ??
+          (active?.mode === 'nauka' ? 'study' : current.sourceCatalogId ? 'sheet' : 'code');
+        if (active?.mode === 'egzamin' && !active.submittedAt && initialView === 'study')
+          initialView = 'sheet';
+        setTabState(initialView);
+        setAttempt(active ?? null);
         setMode(
           stored?.mode ??
             (requestedMode === 'trening' || requestedMode === 'egzamin' ? requestedMode : 'nauka'),
         );
-        setSelected(stored?.files?.[0]?.path ?? current.starterFiles[0]?.path ?? '');
-        setPreviewEntry(
-          stored?.files?.find((file) => /\.html?$/i.test(file.path))?.path ??
-            current.starterFiles.find((file) => /\.html?$/i.test(file.path))?.path ??
+        setSelectedState(active?.workspace?.activeFile ?? active?.files?.[0]?.path ?? '');
+        setSheetPageState(active?.workspace?.sheetPage ?? 1);
+        setPreviewEntryState(
+          active?.workspace?.previewEntry ??
+            stored?.files?.find((file) => /\.(?:html?|php)$/i.test(file.path))?.path ??
+            current.starterFiles.find((file) => /\.(?:html?|php)$/i.test(file.path))?.path ??
             '',
         );
-        if (stored?.submittedAt && !requestedStudy) setTab('report');
+        if (stored?.submittedAt && !allowedView && !active?.workspace) setTabState('report');
       } catch (e) {
         if (!cancelled) setError(errorMessage(e));
       } finally {
@@ -181,24 +274,14 @@ export function Workspace() {
     return () => {
       cancelled = true;
     };
-  }, [id, attemptId, data, requestedStudy, requestedMode]);
-  const update = useCallback(async (next: AttemptSnapshot) => {
-    setAttempt(next);
-    attemptRef.current = next;
-    setSaved(false);
-    try {
-      await saveAttempt(next);
-      setSaved(true);
-    } catch (e) {
-      setError(errorMessage(e));
-      throw e;
-    }
+  }, [id, attemptId]);
+  const update = useCallback(async (patch: ProjectPatch) => {
+    if (!storeRef.current) throw new Error('Projekt nie jest jeszcze gotowy.');
+    await storeRef.current.patch(patch);
   }, []);
   const changeFiles = (files: ProjectFile[]) => {
     if (!attemptRef.current || attemptRef.current.submittedAt || busy) return;
-    void update({ ...attemptRef.current, files, updatedAt: new Date().toISOString() }).catch(
-      () => undefined,
-    );
+    void update((current) => ({ ...current, files })).catch(() => undefined);
   };
   const start = async (copyFiles?: ProjectFile[]) => {
     if (!task) return;
@@ -226,10 +309,37 @@ export function Workspace() {
         hintCount: 0,
         revealedHints: [],
       };
-      await update(next);
+      if (mode === 'nauka' && !copyFiles && task.sourceCatalogId) {
+        const response = await api<ExamStudyResponse>(`/attempts/${ticket.id}/study`, {
+          method: 'POST',
+          body: { token: ticket.token, guideVersion: 3 },
+        });
+        next.files = structuredClone(response.guide.project?.starterFiles ?? task.starterFiles);
+        next.study = {
+          guide: response.guide,
+          current: `${response.guide.steps[0]?.id}/${response.guide.steps[0]?.activities?.[0]?.id}`,
+          completed: {},
+          viewedExamples: [],
+        };
+        next.hintCount = response.hintCount;
+      }
+      next.workspace = {
+        view: mode === 'nauka' ? 'study' : 'code',
+        studyPanel: 'lesson',
+        sheetPage,
+        activeFile: next.files?.[0]?.path ?? '',
+        previewEntry: next.files?.find((f) => /\.(?:html?|php)$/i.test(f.path))?.path ?? '',
+        editors: {},
+      };
+      next.revision = 0;
+      await saveAttempt(next);
+      const controller = projectStore(next);
+      storeRef.current = controller;
+      setStore(controller);
+      setAttempt(next);
       setParams({
         proba: next.id,
-        ...(requestedStudy && mode !== 'egzamin' ? { widok: 'nauka' } : {}),
+        ...(mode === 'nauka' ? { widok: 'nauka' } : {}),
       });
       await refreshProgress();
       void navigator.storage?.persist?.().catch(() => false);
@@ -240,45 +350,47 @@ export function Workspace() {
     }
   };
   const submit = useCallback(async () => {
-    const current = attemptRef.current;
-    if (!current || current.submittedAt) return;
+    const controller = storeRef.current;
+    const current = controller?.get().project;
+    if (!controller || !current || current.submittedAt) return;
     setBusy(true);
     setError('');
     try {
       if (task?.supportStatus === 'catalog-only') {
-        const result = await api<{ submittedAt: string }>(
-          `/attempts/${current.ticket.id}/complete`,
-          { method: 'POST', body: { token: current.ticket.token } },
+        const result = await controller.request((latest) =>
+          api<{ submittedAt: string }>(`/attempts/${latest.ticket.id}/complete`, {
+            method: 'POST',
+            body: { token: latest.ticket.token },
+          }),
         );
-        await update({
-          ...current,
-          submittedAt: result.submittedAt,
-          updatedAt: new Date().toISOString(),
-        });
-        setTab('report');
+        await controller.patch((latest) => ({ ...latest, submittedAt: result.submittedAt }));
+        if (storeRef.current === controller) setTab('report');
         await refreshProgress();
         return;
       }
-      const job = await api<{ id: string; token: string; status: string }>('/checks', {
-        method: 'POST',
-        body: {
-          attemptId: current.ticket.id,
-          attemptToken: current.ticket.token,
-          files: current.files ?? [],
-        },
-      });
-      await update({
-        ...current,
+      const job = await controller.request((latest) =>
+        api<{ id: string; token: string; status: string }>('/checks', {
+          method: 'POST',
+          body: {
+            attemptId: latest.ticket.id,
+            attemptToken: latest.ticket.token,
+            files: latest.files ?? [],
+          },
+        }),
+      );
+      await controller.patch((latest) => ({
+        ...latest,
         submittedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         checkJob: { id: job.id, token: job.token },
-      });
-      setCheckStatus(job.status);
-      setTab('report');
+      }));
+      if (storeRef.current === controller) {
+        setCheckStatus(job.status);
+        setTab('report');
+      }
     } catch (e) {
-      setError(errorMessage(e));
+      if (storeRef.current === controller) setError(errorMessage(e));
     } finally {
-      setBusy(false);
+      if (storeRef.current === controller) setBusy(false);
     }
   }, [update, task, refreshProgress]);
   const expire = useCallback(() => {
@@ -290,6 +402,8 @@ export function Workspace() {
   }, [submit]);
   useEffect(() => {
     if (!attempt?.checkJob || attempt.report) return;
+    const controller = storeRef.current;
+    if (!controller) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const job = attempt.checkJob;
@@ -298,14 +412,10 @@ export function Workspace() {
         const response = await api<CheckResponse>(`/checks/${job.id}`, {
           headers: { 'X-Check-Token': job.token },
         });
-        if (cancelled) return;
+        if (cancelled || storeRef.current !== controller) return;
         setCheckStatus(response.status);
         if (response.report && attemptRef.current) {
-          await update({
-            ...attemptRef.current,
-            report: response.report,
-            updatedAt: new Date().toISOString(),
-          });
+          await controller.patch((latest) => ({ ...latest, report: response.report }));
           await refreshProgress();
           try {
             await api(`/checks/${job.id}/ack`, { method: 'POST', body: { token: job.token } });
@@ -344,7 +454,7 @@ export function Workspace() {
       )
         return;
       const target = attemptRef.current?.files?.find(
-        (file) => file.path === event.data.path && /\.html?$/i.test(file.path),
+        (file) => file.path === event.data.path && /\.(?:html?|php)$/i.test(file.path),
       );
       if (target) setPreviewEntry(target.path);
     };
@@ -352,13 +462,19 @@ export function Workspace() {
     return () => window.removeEventListener('message', navigate);
   }, []);
   const file = attempt?.files?.find((item) => item.path === selected);
-  const htmlFiles = attempt?.files?.filter((item) => /\.html?$/i.test(item.path)) ?? [];
+  const htmlFiles = attempt?.files?.filter((item) => /\.(?:html?|php)$/i.test(item.path)) ?? [];
+  useEffect(() => {
+    if (!attempt?.files?.length || previewEntry) return;
+    const path = attempt.files.find((item) => /\.(?:html?|php)$/i.test(item.path))?.path;
+    if (path) setPreviewEntry(path);
+  }, [attempt?.files, previewEntry]);
   useEffect(() => {
     if (!attempt?.files || !previewEntry) {
       setPreview('');
       return;
     }
-    const document = createPreview(attempt.files, previewEntry);
+    const document = createPreview(attempt.files, previewEntry, { scripts: false });
+    setPreviewScripts(false);
     setPreview(document.html);
     return document.dispose;
   }, [attempt?.files, previewEntry]);
@@ -367,18 +483,19 @@ export function Workspace() {
     setHintBusy(true);
     setError('');
     try {
-      const result = await api<{ hint: string; index: number; remaining: number }>('/hints', {
-        method: 'POST',
-        body: { attemptId: attempt.ticket.id, attemptToken: attempt.ticket.token },
-      });
+      const result = await storeRef.current!.request((latest) =>
+        api<{ hint: string; index: number; remaining: number }>('/hints', {
+          method: 'POST',
+          body: { attemptId: latest.ticket.id, attemptToken: latest.ticket.token },
+        }),
+      );
       const current = attemptRef.current;
       if (current?.id === attempt.id)
-        await update({
-          ...current,
-          hintCount: current.hintCount + 1,
-          revealedHints: [...(current.revealedHints ?? []), result.hint],
-          updatedAt: new Date().toISOString(),
-        });
+        await update((latest) => ({
+          ...latest,
+          hintCount: latest.hintCount + 1,
+          revealedHints: [...(latest.revealedHints ?? []), result.hint],
+        }));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -390,17 +507,19 @@ export function Workspace() {
     setAiBusy(true);
     setError('');
     try {
-      const response = await api<{ text: string }>('/ai', {
-        method: 'POST',
-        body: {
-          attemptId: attempt.ticket.id,
-          attemptToken: attempt.ticket.token,
-          prompt: aiPrompt,
-          code: file?.encoding === 'base64' ? '' : (file?.content ?? ''),
-          consent,
-        },
-      });
-      setAiText(response.text);
+      const response = await storeRef.current!.request((latest) =>
+        api<{ text: string }>('/ai', {
+          method: 'POST',
+          body: {
+            attemptId: latest.ticket.id,
+            attemptToken: latest.ticket.token,
+            prompt: aiPrompt,
+            code: file?.encoding === 'base64' ? '' : (file?.content ?? ''),
+            consent,
+          },
+        }),
+      );
+      if (attemptRef.current?.id === attempt.id) setAiText(response.text);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -424,9 +543,13 @@ export function Workspace() {
             ),
             ...incoming,
           ];
-      await update({ ...current, files, updatedAt: new Date().toISOString() });
+      await update((latest) => ({
+        ...latest,
+        files,
+        recovery: recoverySnapshot(latest, 'Import plików'),
+      }));
       setSelected(incoming[0]?.path ?? '');
-      setPreviewEntry(files.find((item) => /\.html?$/i.test(item.path))?.path ?? '');
+      setPreviewEntry(files.find((item) => /\.(?:html?|php)$/i.test(item.path))?.path ?? '');
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -442,7 +565,7 @@ export function Workspace() {
         throw new Error('Plik o tej nazwie już istnieje.');
       changeFiles([...(attempt?.files ?? []), { path: newPath, content: '', encoding: 'utf8' }]);
       setSelected(newPath);
-      if (/\.html?$/i.test(newPath)) setPreviewEntry(newPath);
+      if (/\.(?:html?|php)$/i.test(newPath)) setPreviewEntry(newPath);
       setAdding(false);
       setNewPath('');
     } catch (e) {
@@ -487,7 +610,7 @@ export function Workspace() {
             wymagania, napiszesz własny fragment i porównasz go z przykładem.
           </Notice>
         )}
-        <p className="authored-sheet-note">
+        <p className="authored-sheet-note" hidden>
           Szukasz prawdziwych arkuszy egzaminacyjnych?{' '}
           <Link to="/katalog">
             Otwórz oryginalne PDF-y w katalogu
@@ -515,7 +638,7 @@ export function Workspace() {
         {showSheet && (
           <div className="sheet-before-start">
             <Suspense fallback={<Loading label="Otwieranie czytnika PDF…" />}>
-              <TaskPdfPanel task={task} />
+              <TaskPdfPanel task={task} requestedPage={sheetPage} onPageChange={setSheetPage} />
             </Suspense>
             {mode !== 'egzamin' && (
               <PdfReadingGuide taskId={task.id} taskVersion={task.version} level={level} />
@@ -564,6 +687,269 @@ export function Workspace() {
   const closed = !!attempt.submittedAt;
   const manual = task.supportStatus === 'catalog-only';
   const overtime = !!attempt.deadlineAt && Date.now() > Date.parse(attempt.deadlineAt);
+  const editorPanel = (
+    <div className="editor-shell">
+      <div className="file-tree">
+        <div className="file-tree-heading">
+          <span>Projekt</span>
+          {!closed && (
+            <button
+              className="icon-button"
+              aria-label="Dodaj plik"
+              disabled={busy}
+              onClick={() => setAdding((value) => !value)}
+            >
+              <FilePlus2 size={16} />
+            </button>
+          )}
+        </div>
+        {adding && !closed && (
+          <form
+            className="new-file-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addFile();
+            }}
+          >
+            <input
+              aria-label="Nazwa nowego pliku"
+              disabled={busy}
+              placeholder="np. skrypt.js"
+              value={newPath}
+              onChange={(e) => setNewPath(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className="icon-button" aria-label="Utwórz plik" disabled={busy}>
+              <Check size={16} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setAdding(false)}
+              aria-label="Anuluj"
+            >
+              <X size={16} />
+            </button>
+          </form>
+        )}
+        <div className="file-list">
+          {attempt.files?.map((item) => (
+            <button
+              className={selected === item.path ? 'active' : ''}
+              key={item.path}
+              onClick={() => setSelected(item.path)}
+              title={item.path}
+            >
+              <File size={14} />
+              <span>{item.path}</span>
+            </button>
+          ))}
+        </div>
+        {!closed && (
+          <>
+            <input
+              ref={uploadRef}
+              type="file"
+              multiple
+              accept=".zip,.html,.htm,.css,.js,.php,.sql,.txt,.json,.png,.jpg,.jpeg,.gif,.svg,.webp"
+              className="visually-hidden"
+              onChange={(e) => void upload(e.target.files)}
+            />
+            <button
+              className="upload-project"
+              disabled={busy}
+              onClick={() => uploadRef.current?.click()}
+            >
+              <Upload size={16} />
+              Wczytaj pliki / ZIP
+            </button>
+            <small className="file-help">
+              ZIP zastępuje pliki projektu.
+              <br />
+              Maksymalnie 10 MiB.
+            </small>
+          </>
+        )}
+      </div>
+      <div className="editor-pane">
+        <div className="editor-filebar">
+          <span>{selected || 'Wybierz plik'}</span>
+          {closed ? (
+            <span>Tylko odczyt</span>
+          ) : (
+            file && (
+              <button
+                className="icon-button"
+                aria-label={`Usuń plik ${file.path}`}
+                disabled={busy}
+                onClick={() => {
+                  if (window.confirm(`Usunąć plik ${file.path}?`)) {
+                    const files = attempt.files?.filter((item) => item.path !== file.path) ?? [];
+                    void update((latest) => ({
+                      ...latest,
+                      files,
+                      recovery: recoverySnapshot(latest, 'Usunięcie pliku'),
+                    })).catch((cause) => setError(errorMessage(cause)));
+                    setSelected(files[0]?.path ?? '');
+                  }
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            )
+          )}
+        </div>
+        {file ? (
+          file.encoding === 'base64' ? (
+            <div className="binary-file">
+              <File size={35} />
+              <h3>{file.path}</h3>
+              <p>Plik binarny zostanie przesłany razem z projektem.</p>
+              {/\.(png|jpe?g|gif|webp)$/i.test(file.path) && (
+                <img
+                  src={`data:image/${/\.png$/i.test(file.path) ? 'png' : /\.webp$/i.test(file.path) ? 'webp' : /\.gif$/i.test(file.path) ? 'gif' : 'jpeg'};base64,${file.content}`}
+                  alt={`Podgląd pliku ${file.path}`}
+                />
+              )}
+            </div>
+          ) : (
+            <Editor
+              path={file.path}
+              sessionKey={`${attempt.id}/${file.path}`}
+              initialView={attempt.workspace?.editors[file.path]}
+              onViewChange={(view) => {
+                const controller = storeRef.current;
+                if (!controller || controller.get().project.id !== attempt.id) return;
+                void controller
+                  .patch((latest) =>
+                    JSON.stringify(latest.workspace?.editors[file.path]) === JSON.stringify(view)
+                      ? latest
+                      : {
+                          ...latest,
+                          workspace: {
+                            view: tab,
+                            activeFile: file.path,
+                            previewEntry,
+                            ...latest.workspace,
+                            editors: { ...latest.workspace?.editors, [file.path]: view },
+                          },
+                        },
+                  )
+                  .catch(() => undefined);
+              }}
+              value={file.content}
+              readOnly={closed || busy}
+              onChange={(content) =>
+                changeFiles(
+                  (attemptRef.current?.files ?? []).map((item) =>
+                    item.path === file.path ? { ...item, content } : item,
+                  ),
+                )
+              }
+            />
+          )
+        ) : (
+          <div className="editor-empty">
+            <FolderOpen size={30} />
+            <p>
+              {selected
+                ? `W projekcie nie ma jeszcze pliku ${selected}.`
+                : 'Wybierz lub dodaj plik, aby zacząć pisać.'}
+            </p>
+            {!closed &&
+              selected &&
+              (/\.(html?|css|js|php|sql|txt|json|svg)$/i.test(selected) ? (
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    safePath(selected);
+                    void update((latest) =>
+                      latest.files?.some((item) => item.path === selected)
+                        ? latest
+                        : {
+                            ...latest,
+                            files: [
+                              ...(latest.files ?? []),
+                              { path: selected, content: '', encoding: 'utf8' },
+                            ],
+                          },
+                    ).catch((cause) => setError(errorMessage(cause)));
+                  }}
+                >
+                  <FilePlus2 size={16} />
+                  Utwórz pusty plik {selected}
+                </button>
+              ) : (
+                <button className="button secondary" onClick={() => uploadRef.current?.click()}>
+                  <Upload size={16} />
+                  Wczytaj przygotowany plik
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+  const previewPanel = (
+    <div className="preview-pane">
+      {task.runtimeProfile === 'php-mariadb' && (
+        <Notice>
+          Podgląd pokazuje statyczny HTML/CSS/JavaScript, także z plików .php. Bloki PHP są
+          pomijane; dane z bazy nie pojawią się tutaj.{' '}
+          {manual
+            ? 'PHP i SQL uruchom we własnym środowisku zgodnie z oryginalnym arkuszem.'
+            : 'PHP i SQL zostaną uruchomione po oddaniu pracy. Wynik zobaczysz w raporcie.'}
+        </Notice>
+      )}
+      {htmlFiles.length ? (
+        <>
+          <div className="preview-toolbar">
+            <label>
+              Strona
+              <select value={previewEntry} onChange={(e) => setPreviewEntry(e.target.value)}>
+                {htmlFiles.map((item) => (
+                  <option key={item.path}>{item.path}</option>
+                ))}
+              </select>
+            </label>
+            <span>
+              <ShieldCheck size={14} />
+              Izolowany podgląd
+            </span>
+            <button
+              className="button secondary small"
+              onClick={() => {
+                const document = createPreview(attempt.files ?? [], previewEntry);
+                setPreview(document.html);
+                setPreviewScripts(true);
+              }}
+              disabled={previewScripts}
+            >
+              <Play size={14} />
+              {previewScripts ? 'JS uruchomiony' : 'Uruchom JS'}
+            </button>
+          </div>
+          <iframe
+            ref={iframeRef}
+            title="Podgląd projektu"
+            sandbox="allow-scripts allow-forms"
+            referrerPolicy="no-referrer"
+            srcDoc={preview}
+          />
+          <p className="fine-print">
+            HTML i CSS odświeżają się po zmianie pliku. JavaScript uruchom przyciskiem. Zewnętrzne
+            zasoby, połączenia sieciowe i wysyłanie formularzy są zablokowane. Moduły z importami
+            wymagają własnej IDE.
+          </p>
+        </>
+      ) : (
+        <EmptyState title="Brak strony do podglądu">
+          Wybierz lub dodaj plik HTML albo PHP zgodnie z bieżącym krokiem. Kod PHP i zapytania SQL
+          uruchamiaj w swoim lokalnym środowisku.
+        </EmptyState>
+      )}
+    </div>
+  );
   return (
     <>
       <div className="workspace-heading">
@@ -603,9 +989,16 @@ export function Workspace() {
             </button>
           ) : (
             <button
-              className="button primary small"
+              className="button secondary small"
               disabled={busy || (!manual && !data?.features.checkingAvailable)}
-              onClick={() => void submit()}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Zakończyć pracę? Pliki zostaną zachowane do odczytu; dalsze poprawki wykonasz w nowej próbie.',
+                  )
+                )
+                  void submit();
+              }}
             >
               {busy ? <Loader2 className="spin" size={16} /> : <Send size={16} />}
               {manual ? 'Zakończ próbę' : 'Oddaj do sprawdzenia'}
@@ -614,6 +1007,45 @@ export function Workspace() {
         </div>
       </div>
       <ErrorNotice message={error} />
+      {store?.get().error && (
+        <div className="button-row">
+          <button
+            className="button secondary"
+            onClick={() => void store.retry().catch((cause) => setError(errorMessage(cause)))}
+          >
+            Ponów zapis
+          </button>
+          <button
+            className="button quiet"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Wczytać zapis z przeglądarki? Najpierw pobierz ZIP bieżącego kodu, jeśli chcesz go zachować.',
+                )
+              )
+                void store.reload().catch((cause) => setError(errorMessage(cause)));
+            }}
+          >
+            Wczytaj zapis z przeglądarki
+          </button>
+        </div>
+      )}
+      {!!attempt.recovery?.length && (
+        <details className="project-recovery">
+          <summary>Kopie przed zmianami plików</summary>
+          {attempt.recovery.map((copy) => (
+            <div key={copy.id}>
+              {copy.reason} · {new Date(copy.createdAt).toLocaleString('pl-PL')}{' '}
+              <button
+                className="button quiet small"
+                onClick={() => downloadProject(copy.files, 'kopia-projektu.zip')}
+              >
+                Pobierz kopię ZIP
+              </button>
+            </div>
+          ))}
+        </details>
+      )}
       {!manual && !data?.features.checkingAvailable && !closed && (
         <Notice>
           Sprawdzanie na serwerze jest teraz wyłączone. Możesz nadal pracować, zapisywać pliki i
@@ -706,14 +1138,14 @@ export function Workspace() {
           )}
         </aside>
         <section className="workspace-work">
-          <div className="workspace-tabs" role="tablist" aria-label="Widok projektu">
+          <div className="workspace-tabs glass-panel" role="tablist" aria-label="Widok projektu">
             <button role="tab" aria-selected={tab === 'sheet'} onClick={() => setTab('sheet')}>
               <FileText size={17} />
-              {task.origin === 'exam' ? 'Oryginalny arkusz PDF' : 'Arkusz ćwiczeniowy PDF'}
+              Arkusz PDF
             </button>
             <button role="tab" aria-selected={tab === 'code'} onClick={() => setTab('code')}>
               <Code2 size={17} />
-              Pliki i kod
+              Projekt
             </button>
             {task.sourceCatalogId && (
               <button
@@ -728,13 +1160,9 @@ export function Workspace() {
                 onClick={() => setTab('study')}
               >
                 <BookOpen size={17} />
-                Nauka i rozwiązania
+                Nauka
               </button>
             )}
-            <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')}>
-              <Eye size={17} />
-              Podgląd strony
-            </button>
             {closed && (
               <button role="tab" aria-selected={tab === 'report'} onClick={() => setTab('report')}>
                 <ShieldCheck size={17} />
@@ -749,7 +1177,7 @@ export function Workspace() {
           {tab === 'sheet' && (
             <div className="workspace-sheet">
               <Suspense fallback={<Loading label="Otwieranie czytnika PDF…" />}>
-                <TaskPdfPanel task={task} requestedPage={sheetPage} />
+                <TaskPdfPanel task={task} requestedPage={sheetPage} onPageChange={setSheetPage} />
               </Suspense>
               {(attempt.mode !== 'egzamin' || closed) && (
                 <PdfReadingGuide
@@ -760,225 +1188,24 @@ export function Workspace() {
               )}
             </div>
           )}
-          {tab === 'study' && (attempt.mode !== 'egzamin' || closed) && (
-            <Suspense fallback={<Loading label="Otwieranie nauki z arkuszem…" />}>
+          {tab === 'study' && store && (attempt.mode !== 'egzamin' || closed) && (
+            <Suspense fallback={<Loading label="Otwieranie nauki…" />}>
               <ExamStudy
-                attempt={attempt}
-                selectedStep={studyStep}
-                onSelectStep={setStudyStep}
+                store={store}
+                editor={editorPanel}
+                preview={previewPanel}
+                onOpenFile={setSelected}
                 onOpenSheet={(page) => {
                   setSheetPage(page);
                   setTab('sheet');
                 }}
-                onUsage={(count) => {
-                  const current = attemptRef.current;
-                  if (current?.id === attempt.id && count > current.hintCount)
-                    void update({
-                      ...current,
-                      hintCount: count,
-                      updatedAt: new Date().toISOString(),
-                    }).catch(() => undefined);
-                }}
               />
             </Suspense>
           )}
-          {tab === 'code' && (
-            <div className="editor-shell">
-              <div className="file-tree">
-                <div className="file-tree-heading">
-                  <span>Projekt</span>
-                  {!closed && (
-                    <button
-                      className="icon-button"
-                      aria-label="Dodaj plik"
-                      disabled={busy}
-                      onClick={() => setAdding((value) => !value)}
-                    >
-                      <FilePlus2 size={16} />
-                    </button>
-                  )}
-                </div>
-                {adding && !closed && (
-                  <form
-                    className="new-file-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      addFile();
-                    }}
-                  >
-                    <input
-                      aria-label="Nazwa nowego pliku"
-                      disabled={busy}
-                      placeholder="np. skrypt.js"
-                      value={newPath}
-                      onChange={(e) => setNewPath(e.target.value)}
-                      autoFocus
-                    />
-                    <button
-                      type="submit"
-                      className="icon-button"
-                      aria-label="Utwórz plik"
-                      disabled={busy}
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-button"
-                      onClick={() => setAdding(false)}
-                      aria-label="Anuluj"
-                    >
-                      <X size={16} />
-                    </button>
-                  </form>
-                )}
-                <div className="file-list">
-                  {attempt.files?.map((item) => (
-                    <button
-                      className={selected === item.path ? 'active' : ''}
-                      key={item.path}
-                      onClick={() => setSelected(item.path)}
-                      title={item.path}
-                    >
-                      <File size={14} />
-                      <span>{item.path}</span>
-                    </button>
-                  ))}
-                </div>
-                {!closed && (
-                  <>
-                    <input
-                      ref={uploadRef}
-                      type="file"
-                      multiple
-                      accept=".zip,.html,.htm,.css,.js,.php,.sql,.txt,.json,.png,.jpg,.jpeg,.gif,.svg,.webp"
-                      className="visually-hidden"
-                      onChange={(e) => void upload(e.target.files)}
-                    />
-                    <button
-                      className="upload-project"
-                      disabled={busy}
-                      onClick={() => uploadRef.current?.click()}
-                    >
-                      <Upload size={16} />
-                      Wczytaj pliki / ZIP
-                    </button>
-                    <small className="file-help">
-                      ZIP zastępuje pliki projektu.
-                      <br />
-                      Maksymalnie 10 MiB.
-                    </small>
-                  </>
-                )}
-              </div>
-              <div className="editor-pane">
-                <div className="editor-filebar">
-                  <span>{selected || 'Wybierz plik'}</span>
-                  {closed ? (
-                    <span>Tylko odczyt</span>
-                  ) : (
-                    file && (
-                      <button
-                        className="icon-button"
-                        aria-label={`Usuń plik ${file.path}`}
-                        disabled={busy}
-                        onClick={() => {
-                          if (window.confirm(`Usunąć plik ${file.path}?`)) {
-                            const files =
-                              attempt.files?.filter((item) => item.path !== file.path) ?? [];
-                            changeFiles(files);
-                            setSelected(files[0]?.path ?? '');
-                          }
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )
-                  )}
-                </div>
-                {file ? (
-                  file.encoding === 'base64' ? (
-                    <div className="binary-file">
-                      <File size={35} />
-                      <h3>{file.path}</h3>
-                      <p>Plik binarny zostanie przesłany razem z projektem.</p>
-                      {/\.(png|jpe?g|gif|webp)$/i.test(file.path) && (
-                        <img
-                          src={`data:image/${/\.png$/i.test(file.path) ? 'png' : /\.webp$/i.test(file.path) ? 'webp' : /\.gif$/i.test(file.path) ? 'gif' : 'jpeg'};base64,${file.content}`}
-                          alt={`Podgląd pliku ${file.path}`}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <Editor
-                      path={file.path}
-                      value={file.content}
-                      readOnly={closed || busy}
-                      onChange={(content) =>
-                        changeFiles(
-                          (attemptRef.current?.files ?? []).map((item) =>
-                            item.path === file.path ? { ...item, content } : item,
-                          ),
-                        )
-                      }
-                    />
-                  )
-                ) : (
-                  <div className="editor-empty">
-                    <FolderOpen size={30} />
-                    <p>Dodaj lub wczytaj plik, aby zacząć pisać.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {tab === 'preview' && (
-            <div className="preview-pane">
-              {task.runtimeProfile === 'php-mariadb' && (
-                <Notice>
-                  Ten podgląd wyświetla tylko HTML/CSS/JavaScript.{' '}
-                  {manual
-                    ? 'PHP i SQL uruchom we własnym środowisku zgodnie z oryginalnym arkuszem.'
-                    : 'PHP i SQL zostaną uruchomione po oddaniu pracy. Wynik zobaczysz w raporcie.'}
-                </Notice>
-              )}
-              {htmlFiles.length ? (
-                <>
-                  <div className="preview-toolbar">
-                    <label>
-                      Strona
-                      <select
-                        value={previewEntry}
-                        onChange={(e) => setPreviewEntry(e.target.value)}
-                      >
-                        {htmlFiles.map((item) => (
-                          <option key={item.path}>{item.path}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <span>
-                      <ShieldCheck size={14} />
-                      Izolowany podgląd
-                    </span>
-                  </div>
-                  <iframe
-                    ref={iframeRef}
-                    title="Podgląd projektu"
-                    sandbox="allow-scripts allow-forms"
-                    referrerPolicy="no-referrer"
-                    srcDoc={preview}
-                  />
-                  <p className="fine-print">
-                    Podgląd korzysta z plików projektu. Zewnętrzne zasoby, połączenia sieciowe i
-                    wysyłanie formularzy są zablokowane. Moduły z importami wymagają własnej IDE.
-                  </p>
-                </>
-              ) : (
-                <EmptyState title="Brak pliku HTML do podglądu">
-                  Dodaj stronę .html. Projekt PHP uruchom we własnej IDE lub oddaj do sprawdzenia na
-                  serwerze.
-                </EmptyState>
-              )}
+          {(tab === 'code' || tab === 'preview') && (
+            <div className="project-workbench">
+              {editorPanel}
+              {previewPanel}
             </div>
           )}
           {tab === 'report' && (

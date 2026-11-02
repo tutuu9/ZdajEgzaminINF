@@ -38,7 +38,7 @@ export async function login(body: unknown, req: Request, res: Response) {
   return { authenticated: true, username: account.username };
 }
 export async function dashboard(): Promise<AdminDashboard> {
-  const [options, budget, stats, events, jobs] = await Promise.all([
+  const [options, budget, stats, events, jobs, studyJobs] = await Promise.all([
     settings(),
     db.aiBudget.findUnique({ where: { id: 'site' } }),
     db.metric.groupBy({
@@ -48,6 +48,11 @@ export async function dashboard(): Promise<AdminDashboard> {
     }),
     db.event.findMany({ orderBy: { createdAt: 'desc' }, take: 40 }),
     db.checkJob.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 40,
+      select: { id: true, status: true, taskId: true, createdAt: true },
+    }),
+    db.studyCheckJob.findMany({
       orderBy: { createdAt: 'desc' },
       take: 40,
       select: { id: true, status: true, taskId: true, createdAt: true },
@@ -62,7 +67,10 @@ export async function dashboard(): Promise<AdminDashboard> {
     },
     stats: Object.fromEntries(stats.map((row) => [row.key, row._sum.value ?? 0])),
     events: events.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })),
-    jobs: jobs.map((job) => ({ ...job, createdAt: job.createdAt.toISOString() })),
+    jobs: [...jobs, ...studyJobs]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 40)
+      .map((job) => ({ ...job, createdAt: job.createdAt.toISOString() })),
   };
 }
 const settingsSchema = z

@@ -23,7 +23,9 @@ export function validateTaskChecks(task: TaskVersion): void {
     validatePath(check.path.split('?')[0]);
     if (
       check.type === 'javascript' &&
-      !['workshop-calculator', 'panel-switching'].includes(String(check.action))
+      !['workshop-calculator', 'panel-switching', 'kursy-calculator', 'smoki-tabs'].includes(
+        String(check.action),
+      )
     )
       throw new Error('Nieobsługiwany scenariusz JavaScript.');
     if (

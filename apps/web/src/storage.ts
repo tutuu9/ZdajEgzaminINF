@@ -9,7 +9,7 @@ import {
   type ProjectFile,
 } from '@zdaj/shared';
 import { extractBrowserZip, safePath } from './safe-zip';
-import { validateBackupAttempts, validateBackupLearning } from './backup-validation';
+import { planBackupMerge, readProgressBackup, type LearningValue } from './backup-merge';
 export { safePath } from './safe-zip';
 
 const database = () =>
@@ -39,6 +39,23 @@ export async function saveAttempt(attempt: AttemptSnapshot): Promise<void> {
     );
   }
 }
+/** Compare-and-swap prevents another tab or an older queued update from erasing code. */
+export async function saveProjectRevision(
+  attempt: AttemptSnapshot,
+  expectedRevision: number,
+): Promise<void> {
+  const db = await database();
+  const tx = db.transaction('attempts', 'readwrite');
+  const old = (await tx.store.get(attempt.id)) as AttemptSnapshot | undefined;
+  if ((old?.revision ?? 0) !== expectedRevision) {
+    await tx.done;
+    throw new Error(
+      'Projekt zmienił się w innej karcie. Zachowaliśmy Twój tekst na tej stronie. Pobierz kopię przed wczytaniem nowszego zapisu.',
+    );
+  }
+  await tx.store.put(structuredClone(attempt));
+  await tx.done;
+}
 export async function removeAttempt(id: string): Promise<void> {
   await (await database()).delete('attempts', id);
 }
@@ -58,6 +75,21 @@ export async function readExercise(id: string): Promise<string | undefined> {
 }
 export async function saveExercise(id: string, code: string): Promise<void> {
   await (await database()).put('learning', code, `exercise:${id}`);
+}
+export async function readStudyArchive(
+  projectId: string,
+): Promise<{ key: string; content: string }[]> {
+  const db = await database();
+  const keys = (await db.getAllKeys('learning'))
+    .map(String)
+    .filter(
+      (key) =>
+        key.startsWith(`exercise:study-${projectId}-`) ||
+        key.startsWith(`exercise:study-flow-${projectId}-`),
+    );
+  return Promise.all(
+    keys.map(async (key) => ({ key, content: String(await db.get('learning', key)) })),
+  );
 }
 export async function markLesson(id: string, completed: boolean): Promise<void> {
   const db = await database();
@@ -133,7 +165,7 @@ export async function exportProgress(): Promise<void> {
   );
   const payload = {
     format: 'zdaj-egzamin-inf',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     attempts: await listAttempts(),
     level: await getLevel(),
@@ -157,29 +189,31 @@ export async function importProgress(file: File): Promise<number> {
   const unzipped = await extractBrowserZip(new Uint8Array(await file.arrayBuffer()));
   if (!unzipped['postep.json'] || Object.keys(unzipped).length !== 1)
     throw new Error('To nie jest kopia postępu Zdaj Egzamin INF.');
-  const data = JSON.parse(strFromU8(unzipped['postep.json'])) as Record<string, unknown>;
-  if (
-    data.format !== 'zdaj-egzamin-inf' ||
-    data.version !== 1 ||
-    !Array.isArray(data.attempts) ||
-    data.attempts.length > 1000
-  )
-    throw new Error('Nieobsługiwany format kopii postępu.');
-  const attempts = validateBackupAttempts(data.attempts);
-  const learning = validateBackupLearning(data.learning, data.completedLessons);
-  if (!['beginner', 'intermediate', 'advanced'].includes(String(data.level)))
-    throw new Error('Kopia zawiera nieprawidłowy poziom nauki.');
+  const data = readProgressBackup(JSON.parse(strFromU8(unzipped['postep.json'])));
   const db = await database();
   const tx = db.transaction(['attempts', 'preferences', 'learning'], 'readwrite');
-  for (const attempt of attempts) {
-    const old = (await tx.objectStore('attempts').get(attempt.id)) as AttemptSnapshot | undefined;
-    if (!old || old.updatedAt < attempt.updatedAt) await tx.objectStore('attempts').put(attempt);
+  try {
+    const existing = (await tx.objectStore('attempts').getAll()) as AttemptSnapshot[];
+    const keys = await tx.objectStore('learning').getAllKeys();
+    const values = await tx.objectStore('learning').getAll();
+    const existingLearning = Object.fromEntries(
+      keys.map((key, index) => [String(key), values[index]]),
+    ) as Record<string, LearningValue>;
+    const additions = planBackupMerge(existing, existingLearning, data);
+    for (const attempt of additions.attempts) await tx.objectStore('attempts').put(attempt);
+    for (const [key, value] of Object.entries(additions.learning))
+      await tx.objectStore('learning').put(value, key);
+    if ((await tx.objectStore('preferences').get('level')) === undefined)
+      await tx.objectStore('preferences').put(data.level, 'level');
+    await tx.done;
+  } catch (cause) {
+    try {
+      tx.abort();
+    } catch {
+      /* A failed request may have already aborted the transaction. */
+    }
+    await tx.done.catch(() => undefined);
+    throw cause;
   }
-  await tx.objectStore('preferences').put(data.level, 'level');
-  for (const id of learning.completed)
-    await tx.objectStore('learning').put({ completedAt: new Date().toISOString() }, id);
-  for (const [key, value] of Object.entries(learning.exercises))
-    await tx.objectStore('learning').put(value, key);
-  await tx.done;
   return data.attempts.length;
 }

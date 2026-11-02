@@ -263,7 +263,7 @@ export function StudySequence({
     );
   const { step, activity } = current;
   const phase = progress.phases[current.id] ?? 'explain';
-  const draft = progress.drafts[current.id] ?? activity.starterCode;
+  const draft = progress.drafts[current.id] ?? activity.starterCode ?? '';
   const written = hasWrittenAttempt(progress, current);
   const completed = progress.completed.includes(current.id);
   const currentIndex = sequence.findIndex((item) => item.id === current.id);

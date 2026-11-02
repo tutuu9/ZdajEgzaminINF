@@ -144,7 +144,7 @@ export function hasWrittenAttempt(progress: StudyProgress, position: StudyPositi
   return (
     typeof draft === 'string' &&
     draft.trim().length > 0 &&
-    draft.trim() !== position.activity.starterCode.trim()
+    draft.trim() !== (position.activity.starterCode ?? '').trim()
   );
 }
 

@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   GraduationCap,
   Loader2,
   RotateCcw,
@@ -24,7 +23,6 @@ import {
   ErrorNotice,
   Loading,
   ModePicker,
-  Notice,
   PageHeading,
   Timer,
   modeLabel,
@@ -40,7 +38,7 @@ export function Theory() {
   const [attempt, setAttempt] = useState<AttemptSnapshot | null>(null),
     [mode, setMode] = useState<Mode>('nauka'),
     [topic, setTopic] = useState(params.get('temat') || 'all'),
-    [count, setCount] = useState(10),
+    [count, setCount] = useState(5),
     [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false),
     [busy, setBusy] = useState(false),
@@ -165,101 +163,92 @@ export function Theory() {
   if (loading) return <Loading label="Otwieranie zapisanej próby…" />;
   if (!attempt)
     return (
-      <>
-        <PageHeading kicker="Rozumiej odpowiedź, nie tylko literę" title="Ćwicz teorię">
-          Krótkie serie opublikowanych przykładów CKE. Po oddaniu poznasz uzasadnienie każdej
-          odpowiedzi.
+      <div className="theory-landing">
+        <PageHeading title="Teoria w małych porcjach.">
+          Wybierz odpowiedź. Po oddaniu serii poznasz jej wyjaśnienie.
         </PageHeading>
         <ErrorNotice message={error} />
-        <div className="theory-setup">
-          <section className="theory-welcome">
-            <div className="theory-illustration">
-              <GraduationCap size={58} />
-              <span>A</span>
-              <span>B</span>
-              <span>C</span>
-              <span>D</span>
-            </div>
-            <h2>Sprawdź to, co już umiesz.</h2>
-            <p>
-              Pracuj z opublikowanymi przykładami CKE: {data?.questionCount ?? 0}. Wracaj do
-              tematów, które sprawiają trudność, i porównuj kolejne podejścia.
-            </p>
-            <div className="theory-facts">
-              <div>
-                <strong>40</strong>
-                <span>pytań w egzaminie</span>
-              </div>
-              <div>
-                <strong>60 min</strong>
-                <span>na egzaminie CKE</span>
-              </div>
-              <div>
-                <strong>50%</strong>
-                <span>próg części pisemnej</span>
-              </div>
-            </div>
-            <Notice>
-              Wyłącznie opublikowane przykłady CKE. To mały, jawny zestaw, nie pełny bank pytań
-              egzaminacyjnych. Pełny tryb 40 pytań / 60 minut pozostaje wyłączony.
-            </Notice>
-          </section>
-          <aside className="start-panel">
-            <h2>Ustaw swoją próbę</h2>
-            <ModePicker value={mode} onChange={setMode} disabledModes={['egzamin']} />
-            {mode !== 'egzamin' && (
-              <div className="setup-fields">
-                <label className="field">
-                  <span>Temat</span>
-                  <select value={topic} onChange={(e) => setTopic(e.target.value)}>
-                    <option value="all">Wszystkie tematy</option>
-                    {data?.topics.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.title}
+        <section className="theory-start glass-panel">
+          <span className="theory-start-icon">
+            <GraduationCap size={34} strokeWidth={1.5} />
+          </span>
+          <h2>Chwila skupienia. Kolejny krok.</h2>
+          <p>
+            Opublikowane przykłady CKE z objaśnieniami odpowiedzi. Zacznij od krótkiej serii i
+            wracaj do trudniejszych tematów.
+          </p>
+          <div className="theory-set-summary">
+            <strong>{Math.min(count, data?.questionCount ?? 0)} pytań</strong>
+            <span>
+              {topic === 'all'
+                ? 'Wszystkie tematy'
+                : data?.topics.find((item) => item.id === topic)?.title}
+            </span>
+            <span>Bez limitu czasu</span>
+          </div>
+          <button
+            className="button primary full"
+            disabled={busy || !data || data.questionCount === 0 || mode === 'egzamin'}
+            onClick={() => void start()}
+          >
+            {busy ? <Loader2 className="spin" size={17} /> : <ArrowRight size={17} />}Rozpocznij{' '}
+            {mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
+          </button>
+          <details className="theory-set-options">
+            <summary>
+              Zmień zestaw
+              <ChevronRight size={16} />
+            </summary>
+            <div className="setup-fields">
+              <label className="field">
+                <span>Temat</span>
+                <select value={topic} onChange={(event) => setTopic(event.target.value)}>
+                  <option value="all">Wszystkie tematy</option>
+                  {data?.topics.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Liczba pytań</span>
+                <select
+                  value={Math.min(count, data?.questionCount ?? 0)}
+                  onChange={(event) => setCount(Number(event.target.value))}
+                >
+                  {[5, 10, 20]
+                    .filter((value) => value < (data?.questionCount ?? 0))
+                    .map((value) => (
+                      <option key={value} value={value}>
+                        {value} pytań
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Liczba pytań</span>
-                  <select
-                    value={Math.min(count, data?.questionCount ?? 0)}
-                    onChange={(e) => setCount(Number(e.target.value))}
-                  >
-                    {[5, 10, 20, 40]
-                      .filter((value) => value < (data?.questionCount ?? 0))
-                      .map((value) => (
-                        <option key={value} value={value}>
-                          {value} pytań
-                        </option>
-                      ))}
-                    <option value={data?.questionCount ?? 0}>
-                      Wszystkie dostępne ({data?.questionCount ?? 0})
-                    </option>
-                  </select>
-                </label>
-                <p className="fine-print">
-                  Jeśli temat zawiera mniej pytań, otrzymasz wszystkie dostępne.
-                </p>
-              </div>
-            )}
-            {mode === 'egzamin' && (
-              <p className="start-exam-note">
-                <Clock3 size={18} />
-                Ten tryb jest obecnie niedostępny. Wybierz naukę lub trening.
-              </p>
-            )}
-            <button
-              className="button primary full"
-              disabled={busy || !data || data.questionCount === 0 || mode === 'egzamin'}
-              onClick={() => void start()}
-            >
-              {busy ? <Loader2 className="spin" size={17} /> : <ArrowRight size={17} />}Rozpocznij{' '}
-              {mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
-            </button>
-          </aside>
-        </div>
-      </>
+                  <option value={data?.questionCount ?? 0}>
+                    Wszystkie dostępne ({data?.questionCount ?? 0})
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p className="fine-print">
+              Jeśli temat zawiera mniej pytań, otrzymasz wszystkie dostępne.
+            </p>
+            <ModePicker value={mode} onChange={setMode} disabledModes={['egzamin']} />
+          </details>
+        </section>
+        <details className="theory-source-note">
+          <summary>Skąd pochodzą pytania?</summary>
+          <p>
+            To {data?.questionCount ?? 0} opublikowanych przykładów CKE, a nie pełny bank
+            egzaminacyjny. Dokumenty źródłowe zawierają także klucze odpowiedzi, dlatego pełny tryb
+            egzaminu pozostaje wyłączony.
+          </p>
+          <p>
+            Prawdziwa część pisemna to 40 pytań w 60 minut, z progiem 50%. Wyniki na tej stronie
+            służą nauce.
+          </p>
+        </details>
+      </div>
     );
   const result = attempt.theoryResult;
   if (result) {
@@ -355,7 +344,7 @@ export function Theory() {
               </div>
               {!item.selectedOptionId && <p className="muted">Nie zaznaczono odpowiedzi.</p>}
               <p className="feedback-explanation">{item.explanation}</p>
-              <Link className="text-link" to={`/nauka?temat=${item.question.topicId}`}>
+              <Link className="text-link" to={`/nauka/podstawy?temat=${item.question.topicId}`}>
                 Powtórz ten temat
                 <ArrowRight size={15} />
               </Link>
@@ -375,7 +364,11 @@ export function Theory() {
     answered = Object.keys(attempt.answers ?? {}).length;
   if (!question)
     return (
-      <EmptyState title="Nie udało się odczytać pytań" to="/postepy" label="Otwórz zapisane próby">
+      <EmptyState
+        title="Nie udało się odczytać pytań"
+        to="/moje-prace"
+        label="Otwórz zapisane próby"
+      >
         Zaimportuj prawidłową kopię postępu lub rozpocznij nowy test.
       </EmptyState>
     );
@@ -383,7 +376,7 @@ export function Theory() {
     <>
       <div className="quiz-heading">
         <div>
-          <Link className="back-link" to="/postepy">
+          <Link className="back-link" to="/moje-prace">
             <ArrowLeft size={15} />
             Zapisane próby
           </Link>

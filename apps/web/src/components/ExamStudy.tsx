@@ -1,30 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, BookOpen, Download, Lightbulb } from 'lucide-react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { ArrowUpRight, BookOpen, Download } from 'lucide-react';
 import Markdown from 'react-markdown';
-import type { AttemptSnapshot, ExamStudyGuide } from '@zdaj/shared';
-import { api, errorMessage } from '../api';
+import type { ExamStudyGuide } from '@zdaj/shared';
+import type { ProjectStore } from '../project-store';
 import { Editor } from './Editor';
-import { LegacyStudyNotebook, StudySequence } from './StudySequence';
-import { ErrorNotice, Loading, Notice } from './common';
+import { LegacyStudyNotebook } from './StudySequence';
+import { ProjectLesson } from './ProjectLesson';
+import { ArchivedNotes } from './ArchivedNotes';
+import { Notice } from './common';
 import '../study.css';
-
-type GuideResponse = { guide: ExamStudyGuide; hintCount: number };
-const guides = new Map<string, Promise<GuideResponse>>();
-function loadGuide(attempt: AttemptSnapshot) {
-  const cached = guides.get(attempt.id);
-  if (cached) return cached;
-  const pending = api<GuideResponse>(`/attempts/${encodeURIComponent(attempt.id)}/study`, {
-    method: 'POST',
-    body: { token: attempt.ticket.token },
-  }).catch((error) => {
-    guides.delete(attempt.id);
-    throw error;
-  });
-  if (guides.size >= 20) guides.delete(guides.keys().next().value!);
-  guides.set(attempt.id, pending);
-  return pending;
-}
-
+import '../cumulative.css';
 const resourceNames: Record<string, string> = {
   'starter-archive': 'Pliki wejściowe',
   'solution-archive': 'Pliki rozwiązania',
@@ -90,45 +75,49 @@ function StudyReference({ guide, attemptId }: { guide: ExamStudyGuide; attemptId
             To dodatkowe materiały edukacyjne. Nie są oficjalnym rozwiązaniem CKE ani oceną Twojej
             pracy. Możesz zajrzeć tutaj bez kończenia całej ścieżki.
           </p>
-          <h2>Pełne fragmenty i wcześniejsze notatki</h2>
-          {guide.steps.map((step) => (
-            <details className="study-reference-step" key={step.id}>
-              <summary>
-                {step.title.replace(/^\d+[.)]\s*/, '')} · {step.fileName}
-              </summary>
-              <div className="prose">
-                <Markdown>{step.explanation}</Markdown>
-              </div>
-              <Editor
-                path={step.fileName}
-                value={step.code}
-                readOnly
-                minHeight={150}
-                onChange={() => undefined}
-                label={`Pełny fragment: ${step.title}`}
-              />
-              <div className="study-explanation-columns">
-                <div>
-                  <h4>Dlaczego to działa</h4>
-                  <ul>
-                    {step.why.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+          {guide.steps.some((step) => step.code.trim()) && (
+            <h2>Pełne fragmenty i wcześniejsze notatki</h2>
+          )}
+          {guide.steps
+            .filter((step) => step.code.trim())
+            .map((step) => (
+              <details className="study-reference-step" key={step.id}>
+                <summary>
+                  {step.title.replace(/^\d+[.)]\s*/, '')} · {step.fileName}
+                </summary>
+                <div className="prose">
+                  <Markdown>{step.explanation}</Markdown>
                 </div>
-                <div>
-                  <h4>Częste błędy</h4>
-                  <ul>
-                    {step.commonMistakes.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+                <Editor
+                  path={step.fileName}
+                  value={step.code}
+                  readOnly
+                  minHeight={150}
+                  onChange={() => undefined}
+                  label={`Pełny fragment: ${step.title}`}
+                />
+                <div className="study-explanation-columns">
+                  <div>
+                    <h4>Dlaczego to działa</h4>
+                    <ul>
+                      {step.why.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4>Częste błędy</h4>
+                    <ul>
+                      {step.commonMistakes.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-              <p className="fine-print">Sprawdź samodzielnie: {step.checkpoint}</p>
-              <LegacyStudyNotebook attemptId={attemptId} step={step} />
-            </details>
-          ))}
+                <p className="fine-print">Sprawdź samodzielnie: {step.checkpoint}</p>
+                <LegacyStudyNotebook attemptId={attemptId} step={step} />
+              </details>
+            ))}
           <section className="study-resources">
             <h2>Materiały źródłowe i omówienia</h2>
             <p>
@@ -191,87 +180,30 @@ function StudyReference({ guide, attemptId }: { guide: ExamStudyGuide; attemptId
 }
 
 export function ExamStudy({
-  attempt,
-  onSelectStep,
+  store,
+  onOpenFile,
   onOpenSheet,
-  onUsage,
+  editor,
+  preview,
 }: {
-  attempt: AttemptSnapshot;
-  selectedStep: string;
-  onSelectStep: (id: string) => void;
+  store: ProjectStore;
+  onOpenFile: (path: string) => void;
   onOpenSheet: (page: number) => void;
-  onUsage: (count: number) => void;
+  editor: ReactNode;
+  preview: ReactNode;
 }) {
-  const [guide, setGuide] = useState<ExamStudyGuide | null>(null),
-    [error, setError] = useState(''),
-    [loading, setLoading] = useState(true),
-    [retry, setRetry] = useState(0);
-  const usage = useRef(onUsage);
-  usage.current = onUsage;
-  const allowed = attempt.mode !== 'egzamin' || !!attempt.submittedAt;
-  useEffect(() => {
-    if (!allowed) return;
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    void loadGuide(attempt)
-      .then((result) => {
-        if (!cancelled) {
-          setGuide(result.guide);
-          usage.current(result.hintCount);
-        }
-      })
-      .catch((cause) => {
-        if (!cancelled) setError(errorMessage(cause));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt.id, allowed, retry]);
-  if (!allowed)
-    return (
-      <Notice>Omówienie i rozwiązania są dostępne po zakończeniu próby egzaminacyjnej.</Notice>
-    );
-  if (loading) return <Loading label="Otwieranie nauki z arkuszem…" />;
-  if (!guide)
-    return (
-      <ErrorNotice
-        message={error || 'Omówienie tego arkusza jest chwilowo niedostępne.'}
-        onRetry={() => setRetry((value) => value + 1)}
-      />
-    );
-  const inputs = guide.resources.filter((resource) => resource.kind === 'starter-archive');
-  return (
-    <section className="exam-study">
-      <header className="study-intro">
-        <span className="pill">
-          <BookOpen size={15} />
-          Nauka na podstawie arkusza
-        </span>
-        <h2>{guide.title}</h2>
-        <div className="prose">
-          <Markdown>{guide.introduction}</Markdown>
-        </div>
-        <p className="study-provenance">
-          Omówienie edukacyjne, nie oficjalne rozwiązanie CKE. Oryginalne wymagania zawsze sprawdzaj
-          w PDF.
-        </p>
-        {!attempt.submittedAt && (
-          <p className="fine-print">
-            Otwarcie omówienia jest odnotowane jako skorzystanie z pomocy w tej próbie. Użyta pomoc:{' '}
-            {attempt.hintCount}.
-          </p>
-        )}
-      </header>
-      {guide.prerequisites.length > 0 && (
-        <details className="study-prerequisites">
-          <summary>
-            <Lightbulb size={17} />
-            Przygotuj się do pracy
-          </summary>
+  const { project } = useSyncExternalStore(store.subscribe, store.get);
+  if (project.mode === 'egzamin' && !project.submittedAt)
+    return <Notice>Nauka jest dostępna po zakończeniu egzaminu.</Notice>;
+  const guide = project.study?.guide;
+  const reference = (
+    <div className="course-materials">
+      {guide && (
+        <details>
+          <summary>Oryginalne pliki i przygotowanie stanowiska</summary>
+          <StudyResources
+            resources={guide.resources.filter((item) => item.kind === 'starter-archive')}
+          />
           <ul>
             {guide.prerequisites.map((item) => (
               <li key={item}>{item}</li>
@@ -279,23 +211,18 @@ export function ExamStudy({
           </ul>
         </details>
       )}
-      {inputs.length > 0 && (
-        <details className="study-inputs">
-          <summary>
-            <Download size={17} />
-            Pliki wejściowe do arkusza — pobierz przed pracą
-          </summary>
-          <StudyResources resources={inputs} />
-        </details>
-      )}
-      <StudySequence
-        key={`${attempt.id}:${guide.id}:${guide.version}`}
-        guide={guide}
-        attemptId={attempt.id}
-        onSelectStep={onSelectStep}
-        onOpenSheet={onOpenSheet}
-      />
-      <StudyReference key={`${attempt.id}:${guide.version}`} guide={guide} attemptId={attempt.id} />
-    </section>
+      <ArchivedNotes projectId={project.legacyProjectId ?? project.id} />
+      {guide && <StudyReference guide={guide} attemptId={project.legacyProjectId ?? project.id} />}
+    </div>
+  );
+  return (
+    <ProjectLesson
+      store={store}
+      onOpenFile={onOpenFile}
+      onOpenSheet={onOpenSheet}
+      editor={editor}
+      preview={preview}
+      reference={reference}
+    />
   );
 }
