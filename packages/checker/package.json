@@ -1,0 +1,16 @@
+{
+  "name": "@zdaj/checker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@zdaj/shared": "*",
+    "yauzl": "^3.2.0",
+    "cheerio": "^1.1.2",
+    "@playwright/test": "^1.58.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^2.10.3"
+  }
+}

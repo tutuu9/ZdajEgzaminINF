@@ -1,0 +1,97 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Types, lint, content and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # A syntactically valid URL is enough for Prisma generation; no connection is made.
+      DATABASE_URL: postgresql://zdaj:unused@127.0.0.1:54329/zdaj
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run check
+      - run: npm run build
+
+  integration:
+    name: PostgreSQL, sandbox and browser journeys
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_DB: zdaj
+          POSTGRES_USER: zdaj
+          POSTGRES_PASSWORD: temporary-ci-database-only
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U zdaj -d zdaj"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://zdaj:temporary-ci-database-only@127.0.0.1:54329/zdaj
+      SESSION_SECRET: ephemeral-ci-session-secret-not-a-production-credential
+      IP_HASH_SECRET: ephemeral-ci-rate-limit-secret-not-a-production-credential
+      DEEPSEEK_API_KEY: ''
+      RUNNER_PROFILE: local-development
+      PUBLIC_SANDBOX_VERIFIED: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - name: Real API and PostgreSQL boundaries
+        run: npm run test:api
+      - name: Build the fixed exam runtime
+        run: npm run sandbox:build
+      - name: Alternative solutions, intentional mistakes and isolation gates
+        run: npm run test:checker
+      - name: Prepare the browser test database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+      - name: Install CI browser and operating system dependencies
+        run: npm exec -- playwright install --with-deps chromium
+      - name: Browser learning journeys
+        run: npm run test:e2e
+      - name: Preserve synthetic test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verification-reports
+          path: |
+            artifacts/*-report.json
+            artifacts/checker-benchmark.json
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

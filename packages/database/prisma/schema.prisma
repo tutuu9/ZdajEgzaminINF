@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ContentRevision {
+  id          String   @id @default(uuid())
+  kind        String
+  key         String
+  version     Int
+  status      String   @default("draft")
+  payload     Json
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+  @@unique([kind, key, version])
+  @@index([kind, status])
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  csrfHash  String
+  kind      String   @default("guest")
+  adminId   String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model AttemptTicket {
+  id            String   @id @default(uuid())
+  tokenHash     String
+  taskId        String?
+  taskVersion   Int?
+  mode          String
+  level         String   @default("beginner")
+  questionRefs  Json?
+  result        Json?
+  hintCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  deadlineAt    DateTime?
+  submittedAt   DateTime?
+  expiresAt     DateTime
+  @@index([expiresAt])
+}
+
+model CheckJob {
+  id          String   @id @default(uuid())
+  secretHash  String
+  attemptId   String   @unique
+  taskId      String
+  taskVersion Int
+  executionProfile String @default("local-development")
+  status      String   @default("queued")
+  inputPath   String
+  report      Json?
+  error       String?
+  leaseUntil  DateTime?
+  createdAt   DateTime @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  expiresAt   DateTime
+  @@index([status, createdAt])
+  @@index([executionProfile, status, createdAt])
+  @@index([expiresAt])
+}
+
+model Setting {
+  id        String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AiBudget {
+  id               String @id
+  limitMicroUsd    Int    @default(2000000)
+  spentMicroUsd    Int    @default(0)
+  reservedMicroUsd Int    @default(0)
+}
+
+model AiUsage {
+  id               String   @id @default(uuid())
+  status           String   @default("reserved")
+  reservedMicroUsd  Int
+  chargedMicroUsd   Int?
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime @default(now())
+  completedAt      DateTime?
+  @@index([status])
+}
+
+model RateLimit {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model Metric {
+  key   String
+  day   DateTime @db.Date
+  value Int      @default(0)
+  @@id([key, day])
+}
+
+model Event {
+  id        String   @id @default(uuid())
+  type      String
+  detail    Json?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}

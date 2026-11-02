@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.env
+.env.*
+data
+.data
+.cache
+artifacts
+output
+tmp
+test-results
+playwright-report
+**/dist

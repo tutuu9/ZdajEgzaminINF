@@ -1,0 +1,126 @@
+import type { CatalogEntry } from '@zdaj/shared';
+
+/** Source metadata only. No third-party exam files are redistributed by this package. */
+export const catalog: CatalogEntry[] = [
+  {
+    id: 'cke-wedkowanie',
+    title: 'Wędkowanie — oficjalny przykład',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: null,
+    session: null,
+    identifier: null,
+    variant: null,
+    topics: ['html-css', 'sql', 'php', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'PHP', 'MySQL/MariaDB', 'Grafika'],
+    sourceUrl:
+      'https://cke.gov.pl/images/_EGZAMIN_ZAWODOWY/Formula_2019/Przykladowe_zadania/inf_03.pdf',
+    sourceName: 'Centralna Komisja Egzaminacyjna',
+    attachments: [
+      {
+        title: 'Arkusz przykładowy CKE',
+        url: 'https://cke.gov.pl/images/_EGZAMIN_ZAWODOWY/Formula_2019/Przykladowe_zadania/inf_03.pdf',
+        type: 'pdf',
+      },
+      {
+        title: 'Pliki wejściowe pliki1.zip — zgodny arkusz INF.03-01-22.06-SG',
+        url: 'https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2022-czerwiec-01/zalacznik/36/pliki1.zip',
+        type: 'zip',
+        sha256: '5c807a8473dc93bbefd909c830e4b46d7c943a95fd30b02695aee667f140c7db',
+      },
+      {
+        title: 'Kryteria zgodnego arkusza INF.03-01-22.06-SG — kopia archiwalna',
+        url: 'https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2022-czerwiec-01/klucz-odpowiedzi.pdf',
+        type: 'pdf',
+        sha256: 'eead99c079cd92942a37709a892037bacc6052f9aec34fad10da2c2aff13aa14',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T00:00:00.000Z',
+    notes:
+      'Potwierdzono oficjalny PDF. Treść zadania na stronach 2–5 odpowiada arkuszowi INF.03-01-22.06-SG; nie ustala to daty ani oznaczenia tego przykładu. W zewnętrznym archiwum sprawdzono listę plików pliki1.zip (baza.sql, ryba1.jpg), odczytano SQL i kryteria zgodnego arkusza. Kryteria zawierają pustą pozycję R.2.10. Nie potwierdzono kopii załączników na serwerze CKE/OKE ani praw redystrybucji. Automatyczna ocena pełnego zadania nie jest dostępna.',
+  },
+  {
+    id: 'inf03-01-25-01-sg',
+    title: 'Kursy komputerowe',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2025,
+    session: 'Styczeń',
+    identifier: 'INF.03-01-25.01-SG',
+    variant: '01',
+    topics: ['html-css', 'javascript', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'JavaScript', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/3',
+    sourceName: 'KURSINF — dodatkowe archiwum',
+    attachments: [
+      {
+        title: 'Arkusz egzaminacyjny — kopia z KURSINF',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753367876245_sheet.pdf',
+        type: 'pdf',
+      },
+      {
+        title: 'Pliki wejściowe pliki10.7z — kopia z KURSINF',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753367876851_files.7z',
+        type: '7z',
+        sha256: '75ad4c759d3efe6af48e45400e8da344203057173740adfff3004dd095b48f1d',
+      },
+      {
+        title: 'Kryteria w dodatkowym archiwum',
+        url: 'https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-styczen-01/klucz-odpowiedzi.pdf',
+        type: 'pdf',
+        sha256: '992564aa3c406c5099ec5ba245a00fcaa4541b614e2c3c9bf22fe904510f260c',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T00:00:00.000Z',
+    notes:
+      'Identyfikator odczytano z kopii arkusza. Pobrano pliki10.7z, sprawdzono listę plików baza.sql i klawiatura.jpg oraz odczytano strukturę SQL. Zweryfikowano PDF kryteriów z oznaczeniem INF.03-01-25.01-SG. To kopie z archiwów zewnętrznych; prawa redystrybucji pozostają nieustalone. Sprawdzenie źródeł nie jest testem działania pełnego rozwiązania ani gotową automatyczną oceną.',
+  },
+  {
+    id: 'inf03-08-25-06-sg',
+    title: 'Baza Smoków',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2025,
+    session: 'Czerwiec',
+    identifier: 'INF.03-08-25.06-SG',
+    variant: '08',
+    topics: ['html-css', 'javascript', 'sql', 'php', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'JavaScript', 'PHP', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/95',
+    sourceName: 'KURSINF — dodatkowe archiwum',
+    attachments: [
+      {
+        title: 'Arkusz egzaminacyjny — kopia z KURSINF',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761142765209_sheet.pdf',
+        type: 'pdf',
+      },
+      {
+        title: 'Pliki wejściowe pliki7.7z — kopia z KURSINF',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761142765820_files.7z',
+        type: '7z',
+        sha256: '6c6aa5a5031988903268d6e3645e880efe6a533ea55b326eea2cfbf07b6d78d3',
+      },
+      {
+        title: 'Kryteria INF.03-08-25.06-SG — kopia archiwalna',
+        url: 'https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-czerwiec-08/klucz-odpowiedzi.pdf',
+        type: 'pdf',
+        sha256: '4ded5a6a5d1a2a2e6b0887fc43e8a80599c8a3cbc82e0d1d9be632aac92af510',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T00:00:00.000Z',
+    notes:
+      'Identyfikator odczytano z kopii PDF. Pobrano pliki7.7z i sprawdzono listę plików: bazasmoki.sql, opis.txt, smok1.JPG, smok2.JPG i smok3.JPG w katalogu pliki7; odczytano SQL i potwierdzono oznaczenie PDF kryteriów. Uważaj na wielkość liter rozszerzeń plików. Prawa redystrybucji pozostają nieustalone. Weryfikacja źródeł nie potwierdza działania całego rozwiązania; automatyczna ocena tego arkusza pozostaje niedostępna.',
+  },
+];

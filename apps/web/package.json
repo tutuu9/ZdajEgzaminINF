@@ -1,0 +1,41 @@
+{
+  "name": "@zdaj/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.0",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-php": "^6.0.2",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "^6.12.0",
+    "@codemirror/state": "^6.5.3",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.39.0",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/source-sans-3": "^5.2.8",
+    "@zdaj/shared": "*",
+    "fflate": "^0.8.2",
+    "idb": "^8.0.3",
+    "lucide-react": "^0.563.0",
+    "parse5": "7.3.0",
+    "pdfjs-dist": "6.5.438",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.12.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "vite": "^7.3.0"
+  }
+}

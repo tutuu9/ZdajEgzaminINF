@@ -1,0 +1,84 @@
+name: zdaj-egzamin-inf
+services:
+  sandbox-image:
+    build:
+      context: infra/sandbox
+    image: zdaj-inf-sandbox:0.1.0
+    entrypoint: ['/bin/true']
+    network_mode: none
+    read_only: true
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: zdaj
+      POSTGRES_USER: zdaj
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - '127.0.0.1:54329:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U zdaj -d zdaj']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    mem_limit: 384m
+  initialize:
+    build:
+      context: .
+      dockerfile: infra/app.Dockerfile
+    image: zdaj-inf-app:0.1.0
+    command: ['sh', '-c', 'npm run db:migrate && npm run db:seed']
+    environment:
+      DATABASE_URL: postgresql://zdaj:${POSTGRES_PASSWORD}@postgres:5432/zdaj
+    depends_on:
+      postgres:
+        condition: service_healthy
+  api:
+    image: zdaj-inf-app:0.1.0
+    build:
+      context: .
+      dockerfile: infra/app.Dockerfile
+    command: ['npm', 'run', 'start', '--workspace', '@zdaj/api']
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: postgresql://zdaj:${POSTGRES_PASSWORD}@postgres:5432/zdaj
+      DATA_DIR: /app/data
+      WEB_ORIGIN: http://localhost:8080
+      FRONTEND_ORIGIN: http://localhost:8080
+      SERVE_WEB: 'true'
+    volumes:
+      - ${DATA_DIR_HOST:-./data}:/app/data
+    ports:
+      - '127.0.0.1:8080:3001'
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    mem_limit: 512m
+  worker:
+    image: zdaj-inf-app:0.1.0
+    build:
+      context: .
+      dockerfile: infra/app.Dockerfile
+    command: ['npm', 'run', 'worker']
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://zdaj:${POSTGRES_PASSWORD}@postgres:5432/zdaj
+      DATA_DIR: /app/data
+      SANDBOX_HOST_DATA_DIR: ${DATA_DIR_HOST:?Set DATA_DIR_HOST to the absolute host data path}
+    volumes:
+      - ${DATA_DIR_HOST}:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+      sandbox-image:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    mem_limit: 256m
+volumes:
+  postgres-data:

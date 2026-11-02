@@ -1,0 +1,14 @@
+Locally hosted font assets
+
+Source Sans 3 is distributed through @fontsource/source-sans-3.
+Its copyright notice and SIL Open Font License 1.1 are preserved in
+Source-Sans-3-OFL.txt.
+
+IBM Plex Mono is distributed through @fontsource/ibm-plex-mono.
+Its copyright notice and SIL Open Font License 1.1 are preserved in
+IBM-Plex-Mono-OFL.txt.
+
+Font assets are hosted by this application; no Google Fonts request is made.
+
+The PDF reader and its locally hosted worker use Mozilla PDF.js (pdfjs-dist).
+Its Apache License 2.0 is preserved in PDFjs-Apache-2.0.txt.

@@ -1,0 +1,1228 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { resolve, sep } from 'node:path';
+import { config as loadEnv } from 'dotenv';
+import { Pool } from 'pg';
+import { hash as passwordHash } from 'bcryptjs';
+import type {
+  AttemptTicket,
+  Bootstrap,
+  CheckResponse,
+  ExamStudyResponse,
+  TheoryResult,
+  TheoryTicket,
+} from '@zdaj/shared';
+import { toPublicQuestion } from '@zdaj/shared';
+
+loadEnv({ quiet: true });
+const originalDatabaseUrl = process.env.DATABASE_URL;
+const databaseName = `zdaj_api_test_${randomUUID().replaceAll('-', '')}`;
+const dataDir = resolve('data', databaseName);
+let control: Pool;
+let db: (typeof import('@zdaj/database'))['db'];
+let app: Awaited<ReturnType<(typeof import('../apps/api/src/main.js'))['createApp']>>;
+let baseUrl = '';
+let createdDatabase = false;
+const actualFetch = globalThis.fetch;
+
+class Client {
+  cookies = new Map<string, string>();
+  csrf = '';
+  async request<T = Record<string, unknown>>(
+    path: string,
+    method = 'GET',
+    body?: unknown,
+    extraHeaders?: Record<string, string>,
+  ) {
+    const response = await actualFetch(baseUrl + path, {
+      method,
+      headers: {
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        Cookie: [...this.cookies].map(([key, value]) => `${key}=${value}`).join('; '),
+        'X-CSRF-Token': this.csrf,
+        Origin: 'http://127.0.0.1:5173',
+        ...extraHeaders,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    for (const cookie of response.headers.getSetCookie()) {
+      const [pair] = cookie.split(';');
+      const index = pair!.indexOf('=');
+      this.cookies.set(pair!.slice(0, index), pair!.slice(index + 1));
+    }
+    return { status: response.status, data: (await response.json()) as T };
+  }
+  async init() {
+    this.csrf = (await this.request<{ csrfToken: string }>('/session')).data.csrfToken;
+    return this;
+  }
+}
+let learner: Client;
+let owner: Client;
+let seed: typeof import('@zdaj/content');
+async function legacyPractice(mode: 'nauka' | 'trening' | 'egzamin' = 'trening') {
+  // Existing authored attempts remain valid; public creation is tested separately below.
+  const token = randomBytes(32).toString('base64url');
+  const deadlineAt = mode === 'egzamin' ? new Date(Date.now() + 150 * 60_000) : null;
+  const row = await db.attemptTicket.create({
+    data: {
+      taskId: 'biblioteka',
+      taskVersion: seed.tasks.find((task) => task.id === 'biblioteka')!.version,
+      mode,
+      level: 'beginner',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      deadlineAt,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    },
+  });
+  return { id: row.id, token, deadlineAt: deadlineAt?.toISOString() ?? null };
+}
+
+async function legacyTheory(
+  mode: 'nauka' | 'trening' | 'egzamin' = 'egzamin',
+  count = 40,
+): Promise<TheoryTicket> {
+  const selected = seed.questions.slice(0, count);
+  const token = randomBytes(32).toString('base64url');
+  const deadlineAt = mode === 'egzamin' ? new Date(Date.now() + 3_600_000) : null;
+  const row = await db.attemptTicket.create({
+    data: {
+      mode,
+      level: 'beginner',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      deadlineAt,
+      expiresAt: new Date(Date.now() + 86_400_000),
+      questionRefs: selected.map((q) => ({
+        key: q.id,
+        version: q.version,
+        optionOrder: q.options.map((option) => option.id),
+      })),
+    },
+  });
+  return {
+    id: row.id,
+    token,
+    deadlineAt: deadlineAt?.toISOString() ?? null,
+    questions: selected.map(toPublicQuestion),
+  };
+}
+
+beforeAll(async () => {
+  if (!originalDatabaseUrl)
+    throw new Error(
+      'DATABASE_URL must point to the project development PostgreSQL. API tests create and remove a separate test database.',
+    );
+  control = new Pool({ connectionString: originalDatabaseUrl });
+  if (!/^zdaj_api_test_[a-f0-9]+$/.test(databaseName))
+    throw new Error('Unsafe test database name.');
+  await control.query(`CREATE DATABASE "${databaseName}"`);
+  createdDatabase = true;
+  const url = new URL(originalDatabaseUrl);
+  url.pathname = `/${databaseName}`;
+  process.env.DATABASE_URL = url.toString();
+  process.env.DATA_DIR = dataDir;
+  process.env.API_NO_LISTEN = '1';
+  process.env.APP_ORIGIN = 'http://127.0.0.1:5173';
+  process.env.DEEPSEEK_API_KEY = 'test-provider-key-never-sent';
+  process.env.NODE_ENV = 'test';
+  process.env.RUNNER_PROFILE = 'local-development';
+  process.env.PUBLIC_SANDBOX_VERIFIED = 'false';
+  const testPool = new Pool({ connectionString: url.toString() });
+  const migrations = 'packages/database/prisma/migrations';
+  for (const directory of (await readdir(migrations, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .sort((a, b) => a.name.localeCompare(b.name))) {
+    await testPool.query(await readFile(`${migrations}/${directory.name}/migration.sql`, 'utf8'));
+  }
+  await testPool.end();
+  ({ db } = await import('@zdaj/database'));
+  seed = await import('@zdaj/content');
+  for (const [kind, records] of Object.entries({
+    task: [...seed.tasks, ...seed.officialTasks],
+    lesson: seed.lessons,
+    question: [...seed.questions, ...seed.officialQuestions],
+    catalog: seed.catalog,
+  })) {
+    for (const record of records) {
+      await db.contentRevision.create({
+        data: {
+          kind,
+          key: record.id,
+          version: 'version' in record ? record.version : 1,
+          status: 'published',
+          payload: JSON.parse(JSON.stringify(record)) as object,
+          publishedAt: new Date(),
+        },
+      });
+    }
+  }
+  const { DEFAULT_SETTINGS } = await import('@zdaj/shared');
+  await db.setting.create({ data: { id: 'site', value: { ...DEFAULT_SETTINGS } } });
+  await db.aiBudget.create({ data: { id: 'site' } });
+  await db.admin.create({
+    data: {
+      username: 'test-owner',
+      passwordHash: await passwordHash('This-is-only-a-test-password!', 12),
+    },
+  });
+  const day = new Date(new Date().toISOString().slice(0, 10));
+  await db.metric.create({
+    data: { key: 'worker.local-development.lastSeen', day, value: Math.floor(Date.now() / 1000) },
+  });
+  const { createApp } = await import('../apps/api/src/main.js');
+  app = await createApp();
+  await app.listen(0, '127.0.0.1');
+  baseUrl = `${await app.getUrl()}/api/v1`;
+  learner = await new Client().init();
+  owner = await new Client().init();
+  const login = await owner.request('/admin/login', 'POST', {
+    username: 'test-owner',
+    password: 'This-is-only-a-test-password!',
+  });
+  expect(login.status).toBe(201);
+}, 180_000);
+
+afterAll(async () => {
+  vi.unstubAllGlobals();
+  await app?.close();
+  await db?.$disconnect();
+  if (createdDatabase) await control.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
+  await control?.end();
+  const allowed = resolve('data') + sep;
+  if (!dataDir.startsWith(allowed)) throw new Error('Unsafe test cleanup path.');
+  await rm(dataDir, { recursive: true, force: true });
+  if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+}, 180_000);
+
+describe('real Nest API and PostgreSQL boundaries', () => {
+  it('offers only reviewed CKE practice and theory while withholding authored exercises and private checks', async () => {
+    const { status, data } = await learner.request<Bootstrap>('/bootstrap');
+    expect(status).toBe(200);
+    expect(data.tasks).toHaveLength(3);
+    expect(data.questionCount).toBe(seed.officialQuestions.length);
+    expect(data.questionCount).toBeLessThan(40);
+    expect(data.exercises).toEqual([]);
+    expect(data.tasks.map((task) => task.id).sort()).toEqual(
+      seed.officialTasks.map((task) => task.id).sort(),
+    );
+    expect(data.tasks.some((task) => seed.tasks.some((authored) => authored.id === task.id))).toBe(
+      false,
+    );
+    expect(data.lessons[0]?.id).toBe('pliki-projektu');
+    for (const task of data.tasks) {
+      expect(task.origin).toBe('exam');
+      expect(task.qualification).toBe('INF.03');
+      expect(task.sourceCatalogId).toBeTruthy();
+      expect(task.supportStatus).toBe('catalog-only');
+      expect(task).not.toHaveProperty('hints');
+      task.criteria.forEach((criterion) => expect(criterion).not.toHaveProperty('check'));
+    }
+    expect(data.lessons.every((lesson) => lesson.exerciseIds.length === 0)).toBe(true);
+  });
+
+  it('requires CSRF and administrator identity on modifying routes', async () => {
+    const missingCsrf = await learner.request('/attempts', 'POST', {}, { 'X-CSRF-Token': '' });
+    expect(missingCsrf.status).toBe(403);
+    const hostileOrigin = await learner.request(
+      '/attempts',
+      'POST',
+      {},
+      { Origin: 'https://attacker.invalid' },
+    );
+    expect(hostileOrigin.status).toBe(403);
+    expect((await learner.request('/admin/dashboard')).status).toBe(401);
+    expect((await learner.request('/admin/settings', 'PATCH', { aiEnabled: true })).status).toBe(
+      401,
+    );
+  });
+
+  it('starts official practical work and closes it manually without a fabricated score or checker job', async () => {
+    const task = seed.officialTasks[0]!;
+    const started = await learner.request<AttemptTicket>('/attempts', 'POST', {
+      taskId: task.id,
+      taskVersion: task.version,
+      mode: 'egzamin',
+      level: 'beginner',
+    });
+    expect(started.status).toBe(201);
+    expect(new Date(started.data.deadlineAt!).getTime() - Date.now()).toBeGreaterThan(149 * 60_000);
+    const id = started.data.id;
+    const token = started.data.token;
+    expect(
+      (
+        await learner.request('/checks', 'POST', {
+          attemptId: id,
+          attemptToken: token,
+          files: [{ path: '../invalid.php', content: 'not executed' }],
+        })
+      ).status,
+    ).toBe(503);
+    expect(await db.checkJob.count({ where: { attemptId: id } })).toBe(0);
+    expect((await db.attemptTicket.findUniqueOrThrow({ where: { id } })).submittedAt).toBeNull();
+    expect(
+      (await learner.request(`/attempts/${id}/complete`, 'POST', { token }, { 'X-CSRF-Token': '' }))
+        .status,
+    ).toBe(403);
+    expect(
+      (await learner.request(`/attempts/${id}/complete`, 'POST', { token: 'wrong-secret' })).status,
+    ).toBe(404);
+    const completed = await learner.request<{ submittedAt: string }>(
+      `/attempts/${id}/complete`,
+      'POST',
+      { token },
+    );
+    expect(completed.status).toBe(201);
+    expect(Object.keys(completed.data)).toEqual(['submittedAt']);
+    expect(Number.isFinite(new Date(completed.data.submittedAt).getTime())).toBe(true);
+    expect((await learner.request(`/attempts/${id}/complete`, 'POST', { token })).data).toEqual(
+      completed.data,
+    );
+    expect(await db.checkJob.count({ where: { attemptId: id } })).toBe(0);
+    const authored = seed.tasks[0]!;
+    expect((await learner.request(`/tasks/${authored.id}`)).status).toBe(404);
+    expect(
+      (await learner.request(`/tasks/${authored.id}?version=${authored.version}`)).status,
+    ).toBe(200);
+    expect(
+      (
+        await learner.request('/attempts', 'POST', {
+          taskId: authored.id,
+          taskVersion: authored.version,
+          mode: 'nauka',
+          level: 'beginner',
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it('reveals source-specific study guides only through a valid matching attempt secret', async () => {
+    expect(seed.examStudyGuides).toHaveLength(3);
+    const publicData = (await learner.request<Bootstrap>('/bootstrap')).data;
+    const publicJson = JSON.stringify(publicData);
+    expect(publicData).not.toHaveProperty('examStudyGuides');
+    for (const guide of seed.examStudyGuides) {
+      const task = seed.officialTasks.find(
+        (task) => task.id === guide.taskId && task.version === guide.taskVersion,
+      )!;
+      expect(task).toBeDefined();
+      const publicTask = await learner.request(`/tasks/${task.id}?version=${task.version}`);
+      const publicTaskJson = JSON.stringify(publicTask.data);
+      for (const resource of guide.resources.filter(
+        (resource) => resource.kind === 'solution-archive',
+      )) {
+        expect(publicJson).not.toContain(resource.url);
+        expect(publicTaskJson).not.toContain(resource.url);
+      }
+      for (const step of guide.steps.filter((step) => step.code.length > 60)) {
+        const code = JSON.stringify(step.code).slice(1, -1);
+        expect(publicJson).not.toContain(code);
+        expect(publicTaskJson).not.toContain(code);
+      }
+      for (const mode of ['nauka', 'trening'] as const) {
+        const started = await learner.request<AttemptTicket>('/attempts', 'POST', {
+          taskId: task.id,
+          taskVersion: task.version,
+          mode,
+          level: 'beginner',
+        });
+        expect(started.status).toBe(201);
+        const path = `/attempts/${started.data.id}/study`;
+        expect(
+          (
+            await learner.request(
+              path,
+              'POST',
+              { token: started.data.token },
+              { 'X-CSRF-Token': '' },
+            )
+          ).status,
+        ).toBe(403);
+        expect((await learner.request(path, 'POST', { token: 'wrong-secret' })).status).toBe(404);
+        expect(
+          (
+            await learner.request(path, 'POST', {
+              token: started.data.token,
+              taskId: 'a-different-task',
+            })
+          ).status,
+        ).toBe(400);
+        const revealed = await learner.request<ExamStudyResponse>(path, 'POST', {
+          token: started.data.token,
+        });
+        expect(revealed.status).toBe(201);
+        expect(revealed.data.guide).toEqual(guide);
+        expect(revealed.data.guide.taskId).toBe(task.id);
+        expect(revealed.data.guide.taskVersion).toBe(task.version);
+        expect(revealed.data.hintCount).toBe(1);
+      }
+    }
+    const guide = seed.examStudyGuides[0]!;
+    const token = randomBytes(32).toString('base64url');
+    const mismatched = await db.attemptTicket.create({
+      data: {
+        taskId: guide.taskId,
+        taskVersion: guide.taskVersion + 1000,
+        mode: 'nauka',
+        level: 'beginner',
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+    expect(
+      (await learner.request(`/attempts/${mismatched.id}/study`, 'POST', { token })).status,
+    ).toBe(404);
+    expect(
+      (await db.attemptTicket.findUniqueOrThrow({ where: { id: mismatched.id } })).hintCount,
+    ).toBe(0);
+  });
+
+  it('blocks study solutions during an open exam and permits review without changing historical aid counts', async () => {
+    const guide = seed.examStudyGuides[0]!;
+    const started = await learner.request<AttemptTicket>('/attempts', 'POST', {
+      taskId: guide.taskId,
+      taskVersion: guide.taskVersion,
+      mode: 'egzamin',
+      level: 'advanced',
+    });
+    expect(started.status).toBe(201);
+    const path = `/attempts/${started.data.id}/study`;
+    const body = { token: started.data.token };
+    expect((await learner.request(path, 'POST', body)).status).toBe(403);
+    expect(
+      (await db.attemptTicket.findUniqueOrThrow({ where: { id: started.data.id } })).hintCount,
+    ).toBe(0);
+    expect(
+      (await learner.request(`/attempts/${started.data.id}/complete`, 'POST', body)).status,
+    ).toBe(201);
+    const revealed = await learner.request<ExamStudyResponse>(path, 'POST', body);
+    expect(revealed.status).toBe(201);
+    expect(revealed.data.guide).toEqual(guide);
+    expect(revealed.data.hintCount).toBe(0);
+    expect((await learner.request<ExamStudyResponse>(path, 'POST', body)).data.hintCount).toBe(0);
+  });
+
+  it('uses only verified CKE question references and disables a misleading exam with source answers available', async () => {
+    const exam = await learner.request('/theory/start', 'POST', { mode: 'egzamin', count: 40 });
+    expect(exam.status).toBe(503);
+    const started = await learner.request<TheoryTicket>('/theory/start', 'POST', {
+      mode: 'trening',
+      count: 40,
+    });
+    expect(started.status).toBe(201);
+    expect(started.data.deadlineAt).toBeNull();
+    expect(started.data.questions).toHaveLength(seed.officialQuestions.length);
+    const officialById = new Map(seed.officialQuestions.map((question) => [question.id, question]));
+    for (const question of started.data.questions) {
+      const source = officialById.get(question.id)!;
+      expect(source).toBeDefined();
+      expect(question.source).toEqual(source.source);
+      expect(question.source?.catalogId).toBe('cke-inf03-informator-2022');
+      expect(question.source?.url).toBe('https://bip.cke.gov.pl/attachments/download/8580');
+      expect(question.options.map((option) => option.id)).toEqual(
+        source.options.map((option) => option.id),
+      );
+      expect(question).not.toHaveProperty('correctOptionId');
+      expect(question.options.every((option) => !('explanation' in option))).toBe(true);
+    }
+    const answers = Object.fromEntries(
+      started.data.questions.map((question) => [
+        question.id,
+        officialById.get(question.id)!.correctOptionId,
+      ]),
+    );
+    const result = await learner.request<TheoryResult>(
+      `/theory/${started.data.id}/submit`,
+      'POST',
+      { token: started.data.token, answers },
+    );
+    expect(result.status).toBe(201);
+    expect(result.data.correct).toBe(seed.officialQuestions.length);
+    expect(
+      result.data.results.every(
+        (result) => result.question.source?.catalogId === 'cke-inf03-informator-2022',
+      ),
+    ).toBe(true);
+  });
+
+  it('preserves existing exam attempts and enforces hint restrictions with idempotent grading', async () => {
+    const started = { data: await legacyTheory() };
+    expect(started.data.questions).toHaveLength(40);
+    for (const question of started.data.questions) {
+      expect(question).not.toHaveProperty('correctOptionId');
+      question.options.forEach((option) => expect(option).not.toHaveProperty('explanation'));
+    }
+    const practical = await legacyPractice('egzamin');
+    expect(
+      (
+        await learner.request('/hints', 'POST', {
+          attemptId: practical.id,
+          attemptToken: practical.token,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await learner.request('/ai', 'POST', {
+          attemptId: practical.id,
+          attemptToken: practical.token,
+          prompt: 'Pomóż mi.',
+          code: '',
+          consent: true,
+        })
+      ).status,
+    ).toBe(403);
+    const answers = Object.fromEntries(
+      started.data.questions.map((q) => [
+        q.id,
+        seed.questions.find((original) => original.id === q.id)!.correctOptionId,
+      ]),
+    );
+    const result = await learner.request<TheoryResult>(
+      `/theory/${started.data.id}/submit`,
+      'POST',
+      { token: started.data.token, answers },
+    );
+    expect(result.data.correct).toBe(40);
+    expect(result.data.passed).toBe(true);
+    expect(result.data.results[0]?.optionExplanations).toBeDefined();
+    const retry = await learner.request<TheoryResult>(`/theory/${started.data.id}/submit`, 'POST', {
+      token: started.data.token,
+      answers: {},
+    });
+    expect(retry.data).toEqual(result.data);
+  });
+
+  it('preserves late work but explicitly does not pass an expired exam', async () => {
+    const started = await legacyTheory();
+    await db.attemptTicket.update({
+      where: { id: started.id },
+      data: { deadlineAt: new Date(Date.now() - 60_000) },
+    });
+    const answers = Object.fromEntries(
+      started.questions.map((q) => [
+        q.id,
+        seed.questions.find((original) => original.id === q.id)!.correctOptionId,
+      ]),
+    );
+    const result = (
+      await learner.request<TheoryResult>(`/theory/${started.id}/submit`, 'POST', {
+        token: started.token,
+        answers,
+      })
+    ).data;
+    expect(result.correct).toBe(40);
+    expect(result.timedOut).toBe(true);
+    expect(result.passed).toBe(false);
+  });
+
+  it('recovers a lost check submission response without changing submitted files or its secret', async () => {
+    const ticket = await legacyPractice();
+    const files = seed.tasks[0]!.starterFiles;
+    const first = await learner.request<{ id: string; token: string; status: string }>(
+      '/checks',
+      'POST',
+      { attemptId: ticket.id, attemptToken: ticket.token, files },
+    );
+    expect(first.status).toBe(201);
+    const retry = await learner.request<{ id: string; token: string; status: string }>(
+      '/checks',
+      'POST',
+      {
+        attemptId: ticket.id,
+        attemptToken: ticket.token,
+        files: [{ path: 'changed.txt', content: 'should not replace submission' }],
+      },
+    );
+    expect(retry.data).toEqual(first.data);
+    const job = await db.checkJob.findUniqueOrThrow({ where: { id: first.data.id } });
+    expect(JSON.parse(await readFile(job.inputPath, 'utf8'))).toEqual(
+      files.map((file) => ({ ...file, encoding: file.encoding ?? 'utf8' })),
+    );
+    expect(
+      (await learner.request(`/checks/${job.id}`, 'GET', undefined, { 'X-Check-Token': 'wrong' }))
+        .status,
+    ).toBe(404);
+    const status = await learner.request<CheckResponse>(`/checks/${job.id}`, 'GET', undefined, {
+      'X-Check-Token': first.data.token,
+    });
+    expect(status.data.status).toBe('queued');
+  });
+
+  it('publishes a new question revision without changing a started theory attempt', async () => {
+    const started = await legacyTheory('trening', 1);
+    const original = seed.questions.find((q) => q.id === started.questions[0]!.id)!;
+    const newCorrect = original.options.find(
+      (option) => option.id !== original.correctOptionId,
+    )!.id;
+    const draft = await owner.request<{ id: string; version: number }>(
+      '/admin/content/drafts',
+      'POST',
+      { kind: 'question', key: original.id, payload: { ...original, correctOptionId: newCorrect } },
+    );
+    expect(draft.status).toBe(201);
+    expect(draft.data.version).toBe(original.version + 1);
+    expect(
+      (await owner.request(`/admin/content/${draft.data.id}/publish`, 'POST', {})).status,
+    ).toBe(201);
+    expect(
+      (await owner.request(`/admin/content/${draft.data.id}/publish`, 'POST', {})).status,
+    ).toBe(409);
+    const graded = await learner.request<TheoryResult>(`/theory/${started.id}/submit`, 'POST', {
+      token: started.token,
+      answers: { [original.id]: original.correctOptionId },
+    });
+    expect(graded.data.correct).toBe(1);
+  });
+
+  it('detects source duplicates and only imports validated metadata', async () => {
+    const preview = await owner.request<{ duplicates: string[] }>(
+      '/admin/sources/preview',
+      'POST',
+      { entries: [seed.catalog[0]] },
+    );
+    expect(preview.data.duplicates).toContain(seed.catalog[0]!.id);
+    expect(
+      (await owner.request('/admin/sources/import', 'POST', { entries: [seed.catalog[0]] })).status,
+    ).toBe(409);
+    expect(
+      (
+        await owner.request('/admin/sources/preview', 'POST', {
+          entries: [{ ...seed.catalog[0], sourceUrl: 'http://127.0.0.1/private' }],
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('rejects ambiguous options and references to nonexistent curriculum items before publication', async () => {
+    const question = seed.questions[0]!;
+    const duplicateText = {
+      ...question,
+      options: question.options.map((option, index) =>
+        index === 1 ? { ...option, text: question.options[0]!.text } : option,
+      ),
+    };
+    expect(
+      (
+        await owner.request('/admin/content/drafts', 'POST', {
+          kind: 'question',
+          key: 'invalid-duplicate',
+          payload: duplicateText,
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.request('/admin/content/drafts', 'POST', {
+          kind: 'question',
+          key: 'invalid-topic',
+          payload: { ...question, topicId: 'not-a-topic' },
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.request('/admin/content/drafts', 'POST', {
+          kind: 'lesson',
+          key: 'invalid-exercise',
+          payload: { ...seed.lessons[0], exerciseIds: ['missing-exercise'] },
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.request('/admin/content/drafts', 'POST', {
+          kind: 'task',
+          key: 'invalid-starter',
+          payload: {
+            ...seed.tasks[0],
+            starterFiles: [{ path: '../outside.php', content: '<?php' }],
+          },
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('atomically reserves the AI budget, blocks concurrent calls and accounts for uncertain calls', async () => {
+    await owner.request('/admin/settings', 'PATCH', { aiEnabled: true });
+    const ticket = await legacyPractice();
+    const body = {
+      attemptId: ticket.id,
+      attemptToken: ticket.token,
+      prompt: 'Wyjaśnij pierwszy krok.',
+      code: '',
+      consent: true,
+    };
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let providerCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        providerCalls++;
+        await gate;
+        return new Response(
+          JSON.stringify({
+            choices: [{ message: { content: 'Zacznij od utworzenia tabel.' } }],
+            usage: { prompt_tokens: 100, completion_tokens: 20 },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }),
+    );
+    const first = learner.request('/ai', 'POST', body);
+    await vi.waitFor(() => expect(providerCalls).toBe(1));
+    const during = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    expect(during.reservedMicroUsd).toBeGreaterThan(0);
+    expect((await learner.request('/ai', 'POST', body)).status).toBe(429);
+    release();
+    expect((await first).status).toBe(201);
+    expect(providerCalls).toBe(1);
+    const completed = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    expect(completed.spentMicroUsd).toBe(54);
+    expect(completed.reservedMicroUsd).toBe(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('simulated provider timeout');
+      }),
+    );
+    expect((await learner.request('/ai', 'POST', body)).status).toBe(503);
+    const uncertain = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    expect(uncertain.reservedMicroUsd).toBeGreaterThan(0);
+    expect((await learner.request('/ai', 'POST', body)).status).toBe(429);
+    expect((await owner.request('/admin/ai/settle-uncertain', 'POST', {})).status).toBe(201);
+    const settled = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    expect(settled.reservedMicroUsd).toBe(0);
+    expect(settled.spentMicroUsd).toBe(completed.spentMicroUsd + uncertain.reservedMicroUsd);
+    vi.unstubAllGlobals();
+  });
+
+  it('does not debit a reservation twice when a delayed response follows conservative admin settlement', async () => {
+    await db.rateLimit.deleteMany({ where: { key: { startsWith: 'ai:' } } });
+    const ticket = await legacyPractice();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const provider = vi.fn(async () => {
+      await gate;
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: 'Sprawdź typy kolumn.' } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal('fetch', provider);
+    const pending = learner.request('/ai', 'POST', {
+      attemptId: ticket.id,
+      attemptToken: ticket.token,
+      prompt: 'Wyjaśnij typy kolumn.',
+      code: '',
+      consent: true,
+    });
+    await vi.waitFor(() => expect(provider).toHaveBeenCalledOnce());
+    await db.aiUsage.updateMany({
+      where: { status: 'reserved' },
+      data: { createdAt: new Date(Date.now() - 130_000) },
+    });
+    expect((await owner.request('/admin/ai/settle-uncertain', 'POST', {})).status).toBe(201);
+    const settled = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    release();
+    expect((await pending).status).toBe(201);
+    const after = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    expect(after.reservedMicroUsd).toBe(0);
+    expect(after.spentMicroUsd).toBe(settled.spentMicroUsd);
+    expect(await db.aiUsage.count({ where: { status: 'uncertain' } })).toBe(0);
+    vi.unstubAllGlobals();
+  });
+
+  it('never contacts the AI provider after the kill switch or when the remaining budget is insufficient', async () => {
+    await db.rateLimit.deleteMany({ where: { key: { startsWith: 'ai:' } } });
+    const ticket = await legacyPractice();
+    const body = {
+      attemptId: ticket.id,
+      attemptToken: ticket.token,
+      prompt: 'Pomóż w zadaniu.',
+      code: '',
+      consent: true,
+    };
+    const provider = vi.fn();
+    vi.stubGlobal('fetch', provider);
+    await owner.request('/admin/settings', 'PATCH', { aiEnabled: false });
+    expect((await learner.request('/ai', 'POST', body)).status).toBe(503);
+    await owner.request('/admin/settings', 'PATCH', { aiEnabled: true });
+    await db.aiBudget.update({
+      where: { id: 'site' },
+      data: { limitMicroUsd: 2_000_000, spentMicroUsd: 1_999_999 },
+    });
+    expect((await learner.request('/ai', 'POST', body)).status).toBe(429);
+    expect(provider).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('bounds a concurrent HTTP submission burst at 20 queued jobs and claims only one job at a time', async () => {
+    const { claimJob } = await import('../apps/worker/src/queue.js');
+    await db.checkJob.deleteMany();
+    await db.rateLimit.deleteMany({
+      where: { OR: [{ key: { startsWith: 'check:' } }, { key: { startsWith: 'attempt:' } }] },
+    });
+    await db.metric.updateMany({
+      where: { key: 'worker.local-development.lastSeen' },
+      data: { value: Math.floor(Date.now() / 1000) },
+    });
+    await owner.request('/admin/settings', 'PATCH', { checkingEnabled: true, queueLimit: 20 });
+    const tickets = await Promise.all(Array.from({ length: 24 }, () => legacyPractice()));
+    const started = performance.now();
+    const timings: number[] = [];
+    const responses = await Promise.all(
+      tickets.map(async (ticket) => {
+        const requestStarted = performance.now();
+        const response = await learner.request('/checks', 'POST', {
+          attemptId: ticket.id,
+          attemptToken: ticket.token,
+          files: [{ path: 'index.php', content: '<?php echo "synthetic burst";' }],
+        });
+        timings.push(performance.now() - requestStarted);
+        return response;
+      }),
+    );
+    const durationMs = Math.round(performance.now() - started);
+    expect(responses.filter((response) => response.status === 201)).toHaveLength(20);
+    expect(responses.filter((response) => response.status === 429)).toHaveLength(4);
+    expect(await db.checkJob.count({ where: { status: 'queued' } })).toBe(20);
+    expect(
+      await db.attemptTicket.count({
+        where: { id: { in: tickets.map((ticket) => ticket.id) }, submittedAt: null },
+      }),
+    ).toBe(4);
+    const claimed = await Promise.all([
+      claimJob(db, 'local-development'),
+      claimJob(db, 'local-development'),
+    ]);
+    expect(claimed.filter(Boolean)).toHaveLength(1);
+    expect(await db.checkJob.count({ where: { status: 'running' } })).toBe(1);
+    expect(await claimJob(db, 'local-development')).toBeNull();
+    await db.checkJob.update({
+      where: { id: claimed.find(Boolean)!.id },
+      data: { status: 'completed', leaseUntil: null },
+    });
+    expect(await claimJob(db, 'local-development')).not.toBeNull();
+    const readsStarted = performance.now();
+    const reads = await Promise.all(
+      Array.from({ length: 30 }, () => learner.request('/bootstrap')),
+    );
+    expect(reads.every((response) => response.status === 200)).toBe(true);
+    timings.sort((a, b) => a - b);
+    await mkdir('artifacts', { recursive: true });
+    await writeFile(
+      'artifacts/api-load-report.json',
+      JSON.stringify(
+        {
+          recordedAt: new Date().toISOString(),
+          environment:
+            'Local real HTTP/Nest/PostgreSQL; synthetic inputs; no code execution or paid AI',
+          submissionBurst: {
+            concurrentRequests: 24,
+            accepted: 20,
+            rejectedWith429: 4,
+            durationMs,
+            p50Ms: Math.round(timings[11]!),
+            p95Ms: Math.round(timings[22]!),
+          },
+          contentBurst: {
+            concurrentRequests: 30,
+            successful: reads.length,
+            durationMs: Math.round(performance.now() - readsStarted),
+          },
+          concurrentClaimers: 2,
+          maximumActiveJobs: 1,
+        },
+        null,
+        2,
+      ),
+    );
+    await db.checkJob.deleteMany();
+  });
+
+  it('requires verified public isolation and its matching heartbeat and never hands a public job to a local worker', async () => {
+    const { config: apiConfig } = await import('../apps/api/src/config.js');
+    const { claimJob } = await import('../apps/worker/src/queue.js');
+    const previousProfile = apiConfig.runnerProfile;
+    const previousVerified = apiConfig.publicSandboxVerified;
+    const day = new Date(new Date().toISOString().slice(0, 10));
+    const key = 'worker.public-sandbox.lastSeen';
+    try {
+      apiConfig.runnerProfile = 'public-sandbox';
+      apiConfig.publicSandboxVerified = false;
+      await db.metric.upsert({
+        where: { key_day: { key, day } },
+        create: { key, day, value: Math.floor(Date.now() / 1000) },
+        update: { value: Math.floor(Date.now() / 1000) },
+      });
+      const ticket = await legacyPractice();
+      const body = {
+        attemptId: ticket.id,
+        attemptToken: ticket.token,
+        files: [{ path: 'index.php', content: '<?php echo "public profile probe";' }],
+      };
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features.checkingAvailable).toBe(
+        false,
+      );
+      expect((await learner.request('/checks', 'POST', body)).status).toBe(503);
+      apiConfig.publicSandboxVerified = true;
+      await db.metric.updateMany({
+        where: { key },
+        data: { value: Math.floor(Date.now() / 1000) - 60 },
+      });
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features.checkingAvailable).toBe(
+        false,
+      );
+      expect((await learner.request('/checks', 'POST', body)).status).toBe(503);
+      await db.metric.updateMany({
+        where: { key },
+        data: { value: Math.floor(Date.now() / 1000) },
+      });
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features.checkingAvailable).toBe(
+        true,
+      );
+      const submitted = await learner.request<{ id: string }>('/checks', 'POST', body);
+      expect(submitted.status).toBe(201);
+      expect(
+        (await db.checkJob.findUniqueOrThrow({ where: { id: submitted.data.id } }))
+          .executionProfile,
+      ).toBe('public-sandbox');
+      expect(await claimJob(db, 'local-development')).toBeNull();
+      expect((await claimJob(db, 'public-sandbox'))?.id).toBe(submitted.data.id);
+    } finally {
+      apiConfig.runnerProfile = previousProfile;
+      apiConfig.publicSandboxVerified = previousVerified;
+      await db.checkJob.deleteMany();
+    }
+  });
+
+  it('serves every HTML route with a fresh matching CSP nonce without requiring a frontend build', async () => {
+    const { createApp } = await import('../apps/api/src/main.js');
+    const webDist = resolve(dataDir, 'synthetic-web');
+    await mkdir(resolve(webDist, 'assets'), { recursive: true });
+    await writeFile(
+      resolve(webDist, 'index.html'),
+      '<!doctype html><html lang="pl"><head><meta name="csp-nonce" content="__CSP_NONCE__"></head><body>Próba CSP<script src="/assets/app.js"></script></body></html>',
+    );
+    await writeFile(
+      resolve(webDist, 'assets', 'index.html'),
+      '<p>UNPROCESSED_HTML __CSP_NONCE__</p>',
+    );
+    await writeFile(resolve(webDist, 'assets', 'app.js'), 'window.syntheticAssetLoaded = true;');
+    const previousServeWeb = process.env.SERVE_WEB;
+    let webApp: typeof app | undefined;
+    try {
+      process.env.SERVE_WEB = 'true';
+      webApp = await createApp({ webDist });
+      await webApp.listen(0, '127.0.0.1');
+      const webBase = await webApp.getUrl();
+      const nonces = new Set<string>();
+      const routes = [
+        '/',
+        '/index.html',
+        '/%69ndex.html',
+        '/INDEX.HTML',
+        '/assets/index.html',
+        '/assets/index.htm%6c',
+        '/theory',
+      ];
+      for (const route of routes) {
+        const response = await actualFetch(webBase + route);
+        expect(response.status, route).toBe(200);
+        expect(response.headers.get('content-type'), route).toContain('text/html');
+        expect(response.headers.get('cache-control'), route).toBe('no-store');
+        const html = await response.text();
+        const nonce = html.match(/name="csp-nonce" content="([A-Za-z0-9+/=]+)"/)?.[1];
+        expect(nonce, route).toMatch(/^[A-Za-z0-9+/]{32}$/);
+        expect(html, route).not.toContain('__CSP_NONCE__');
+        expect(html, route).not.toContain('UNPROCESSED_HTML');
+        const scriptPolicy = response.headers
+          .get('content-security-policy')
+          ?.split(';')
+          .find((directive) => directive.trim().startsWith('script-src '));
+        expect(scriptPolicy, route).toContain(`'nonce-${nonce}'`);
+        expect(scriptPolicy, route).toContain("'self'");
+        expect(scriptPolicy, route).not.toMatch(/unsafe-inline|unsafe-eval|blob:/);
+        nonces.add(nonce!);
+      }
+      expect(nonces.size).toBe(routes.length);
+      const asset = await actualFetch(`${webBase}/assets/app.js`);
+      expect(asset.status).toBe(200);
+      expect(await asset.text()).toBe('window.syntheticAssetLoaded = true;');
+      const health = await actualFetch(`${webBase}/api/v1/health`);
+      expect(health.status).toBe(200);
+      expect(await health.json()).toMatchObject({ ok: true });
+      const missing = await actualFetch(`${webBase}/api/v1/not-a-route`);
+      expect(missing.status).toBe(404);
+      expect(missing.headers.get('content-type')).toContain('application/json');
+    } finally {
+      await webApp?.close();
+      if (previousServeWeb === undefined) delete process.env.SERVE_WEB;
+      else process.env.SERVE_WEB = previousServeWeb;
+    }
+  });
+
+  it('serves readable Polish task PDFs with immutable versions and no private hints or check specifications', async () => {
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const readSheet = async (taskId: string, version?: number) => {
+      const response = await actualFetch(
+        `${baseUrl}/tasks/${taskId}/sheet.pdf${version === undefined ? '' : `?version=${version}`}`,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('application/pdf');
+      expect(response.headers.get('content-disposition')).toMatch(
+        /^inline; filename="[a-zA-Z0-9._-]+-v\d+\.pdf"$/,
+      );
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      expect(Buffer.from(bytes.subarray(0, 5)).toString('ascii')).toBe('%PDF-');
+      const loadingTask = getDocument({ data: bytes, useSystemFonts: false });
+      const document = await loadingTask.promise;
+      try {
+        expect(document.numPages).toBeGreaterThanOrEqual(3);
+        expect(document.numPages).toBeLessThanOrEqual(4);
+        const text: string[] = [];
+        for (let number = 1; number <= document.numPages; number++) {
+          const page = await document.getPage(number);
+          const content = await page.getTextContent();
+          const pageText = content.items
+            .map((item) => ('str' in item ? item.str : ''))
+            .join(' ')
+            .replace(/\s+/g, ' ');
+          expect(
+            pageText.length,
+            `Page ${number} must contain actual task content rather than only an overflow footer.`,
+          ).toBeGreaterThan(250);
+          expect(pageText).toContain(`Strona ${number} z ${document.numPages}`);
+          text.push(pageText);
+        }
+        return { text: text.join(' '), version: response.headers.get('x-task-version') };
+      } finally {
+        await loadingTask.destroy();
+      }
+    };
+    for (const task of seed.tasks) {
+      const sheet = await readSheet(task.id, task.version);
+      expect(sheet.version).toBe(String(task.version));
+      expect(sheet.text).toContain(task.title);
+      expect(sheet.text).toContain('Autorskie zadanie szkoleniowe');
+      expect(sheet.text).toContain('nie jest oficjalnym arkuszem CKE');
+      expect(sheet.text).toContain(`${task.durationMinutes} minut`);
+      for (const requirement of task.requirements)
+        expect(sheet.text).toContain(requirement.replace(/\s+/g, ' '));
+      for (const hint of task.hints) expect(sheet.text).not.toContain(hint);
+      expect(sheet.text).not.toContain('expectedRows');
+      expect(sheet.text).not.toContain('queryIndex');
+    }
+    const original = seed.tasks[0]!;
+    const updated = {
+      ...original,
+      version: original.version + 1,
+      requirements: ['Nowa opublikowana wersja: sprawdź zażółć gęślą jaźń.'],
+      hints: ['PRIVATE_PDF_HINT_SENTINEL'],
+      criteria: original.criteria.map((criterion) => ({
+        ...criterion,
+        check: { ...criterion.check, privateSentinel: 'PRIVATE_PDF_CHECK_SENTINEL' },
+      })),
+    };
+    await db.contentRevision.create({
+      data: {
+        kind: 'task',
+        key: original.id,
+        version: updated.version,
+        status: 'published',
+        payload: JSON.parse(JSON.stringify(updated)) as object,
+        publishedAt: new Date(),
+      },
+    });
+    const pinned = await readSheet(original.id, original.version);
+    expect(pinned.text).toContain(original.requirements[0]);
+    expect(pinned.text).not.toContain(updated.requirements[0]);
+    const latest = await readSheet(original.id, updated.version);
+    expect(latest.version).toBe(String(updated.version));
+    expect(latest.text).toContain(updated.requirements[0]);
+    expect(latest.text).not.toContain('PRIVATE_PDF_HINT_SENTINEL');
+    expect(latest.text).not.toContain('PRIVATE_PDF_CHECK_SENTINEL');
+    expect((await actualFetch(`${baseUrl}/tasks/${original.id}/sheet.pdf`)).status).toBe(404);
+    expect(
+      (await actualFetch(`${baseUrl}/tasks/${original.id}/sheet.pdf?version=99999`)).status,
+    ).toBe(404);
+    expect((await actualFetch(`${baseUrl}/tasks/not-a-task/sheet.pdf?version=1`)).status).toBe(404);
+    expect((await actualFetch(`${baseUrl}/tasks/${original.id}/sheet.pdf?version=0`)).status).toBe(
+      400,
+    );
+  });
+
+  it('proxies only reviewed original sheets without rewriting bytes or accepting an arbitrary URL', async () => {
+    const { REVIEWED_EXAM_PDFS } = await import('../apps/api/src/exam-pdf.js');
+    const originalBytes = Buffer.from('%PDF-1.7\nsynthetic source bytes\n%%EOF');
+    const provider = vi.fn(
+      async () => new Response(originalBytes, { headers: { 'Content-Type': 'application/pdf' } }),
+    );
+    vi.stubGlobal('fetch', provider);
+    try {
+      for (const [id, source] of Object.entries(REVIEWED_EXAM_PDFS)) {
+        const response = await actualFetch(`${baseUrl}/catalog/${id}/sheet.pdf`);
+        if (source.sha256) {
+          expect(response.status).toBe(502);
+          expect(((await response.json()) as { message: string }).message).toContain('zmienił się');
+          continue;
+        }
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toContain('application/pdf');
+        expect(response.headers.get('content-disposition')).toBe(
+          `inline; filename="${id}-original.pdf"`,
+        );
+        expect(response.headers.get('x-pdf-source-url')).toBe(source.url);
+        expect(response.headers.get('x-pdf-provenance')).toBe(source.provenance);
+        expect(response.headers.get('cache-control')).toBe('no-store');
+        expect(Buffer.from(await response.arrayBuffer())).toEqual(originalBytes);
+        expect(provider).toHaveBeenLastCalledWith(
+          source.url,
+          expect.objectContaining({ redirect: 'manual', signal: expect.any(AbortSignal) }),
+        );
+      }
+      for (const task of seed.officialTasks) {
+        const response = await actualFetch(
+          `${baseUrl}/tasks/${task.id}/sheet.pdf?version=${task.version}`,
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-disposition')).toBe(
+          `inline; filename="${task.sourceCatalogId}-original.pdf"`,
+        );
+        expect(response.headers.get('x-pdf-source-url')).toBe(
+          REVIEWED_EXAM_PDFS[task.sourceCatalogId!]!.url,
+        );
+        expect(Buffer.from(await response.arrayBuffer())).toEqual(originalBytes);
+      }
+      const calls = provider.mock.calls.length;
+      expect((await actualFetch(`${baseUrl}/catalog/not-reviewed/sheet.pdf`)).status).toBe(404);
+      expect(
+        (
+          await actualFetch(
+            `${baseUrl}/catalog/cke-wedkowanie/sheet.pdf?url=http://127.0.0.1/private`,
+          )
+        ).status,
+      ).toBe(400);
+      expect(provider).toHaveBeenCalledTimes(calls);
+      const bootstrap = (await learner.request<Bootstrap>('/bootstrap')).data;
+      expect(
+        bootstrap.catalog.find((entry) => entry.id === 'cke-wedkowanie')?.sourcePdf?.sourceKind,
+      ).toBe('official-source');
+      expect(
+        bootstrap.catalog.find((entry) => entry.id === 'inf03-01-25-01-sg')?.sourcePdf?.sourceKind,
+      ).toBe('archive-copy');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('rejects PDF-source redirects, invalid content, oversized streams and timeouts, and recovers', async () => {
+    const request = () => actualFetch(`${baseUrl}/catalog/cke-wedkowanie/sheet.pdf`);
+    try {
+      const redirect = vi.fn(
+        async () =>
+          new Response(null, { status: 302, headers: { Location: 'http://127.0.0.1/private' } }),
+      );
+      vi.stubGlobal('fetch', redirect);
+      expect((await request()).status).toBe(502);
+      expect(redirect).toHaveBeenCalledOnce();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response('<html>not a PDF</html>', { headers: { 'Content-Type': 'text/html' } }),
+        ),
+      );
+      expect((await request()).status).toBe(502);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () => new Response('not a PDF', { headers: { 'Content-Type': 'application/pdf' } }),
+        ),
+      );
+      expect((await request()).status).toBe(502);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response('%PDF-1.7', {
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Length': String(10 * 1024 * 1024 + 1),
+              },
+            }),
+        ),
+      );
+      expect((await request()).status).toBe(502);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  controller.enqueue(new Uint8Array(6 * 1024 * 1024));
+                  controller.enqueue(new Uint8Array(6 * 1024 * 1024));
+                  controller.close();
+                },
+              }),
+              { headers: { 'Content-Type': 'application/pdf' } },
+            ),
+        ),
+      );
+      expect((await request()).status).toBe(502);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => {
+          throw new DOMException('synthetic timeout', 'TimeoutError');
+        }),
+      );
+      expect((await request()).status).toBe(503);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response('%PDF-1.7\n%%EOF', { headers: { 'Content-Type': 'application/pdf' } }),
+        ),
+      );
+      expect((await request()).status).toBe(200);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('bounds simultaneous original-PDF downloads and releases slots after completion', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const provider = vi.fn(async () => {
+      await gate;
+      return new Response('%PDF-1.7\n%%EOF', { headers: { 'Content-Type': 'application/pdf' } });
+    });
+    vi.stubGlobal('fetch', provider);
+    const request = () => actualFetch(`${baseUrl}/catalog/cke-wedkowanie/sheet.pdf`);
+    const pending = [request(), request()];
+    try {
+      await vi.waitFor(() => expect(provider).toHaveBeenCalledTimes(2));
+      expect((await request()).status).toBe(429);
+    } finally {
+      release();
+    }
+    try {
+      expect((await Promise.all(pending)).map((response) => response.status)).toEqual([200, 200]);
+      expect((await request()).status).toBe(200);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

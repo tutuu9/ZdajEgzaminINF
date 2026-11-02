@@ -1,0 +1,79 @@
+# Zdaj Egzamin INF
+
+[Polski](README.pl.md) · English
+
+A Polish learning workshop for the vocational qualification **INF.03**, with a path toward INF.04. Read an original examination sheet, work locally, and practise with published CKE theory examples.
+
+New assignments use **3 original CKE practical papers and 25 published CKE theory examples**, supported by 12 explanatory lessons. Two practical PDFs come from an explicitly labelled third-party archive. This is not the complete CKE question bank or an official examination service. Earlier authored assignments and questions remain only for compatibility and checker fixtures; they are not offered for new learner attempts.
+
+## What is included
+
+- Three learning levels and **Nauka**, **Trening** and practical **Egzamin** modes.
+- A project editor, isolated HTML/CSS/JavaScript preview, project ZIP import/export and local completion records. The current CKE papers have no automatic grading adapter; completion does not award a score.
+- An original PDF viewer with page navigation and separate reading guidance. Guidance stays hidden until completion in Egzamin mode. See [original PDFs and reading guidance](docs/reading-exam-pdfs.md).
+- Gradual coding guidance for all three papers: one explanation, one small writing action, comparison and a manual checkpoint before continuing. The local scratchpad and current place are saved; completed steps can be revisited. In HTML, `!` followed by Tab inserts a basic document. Reviewed external links distinguish input archives, worked solutions, alternative implementations and criteria; see [solution sources](docs/solution-sources.md). Teaching fragments are separate from the original task and unavailable during an unfinished Egzamin attempt.
+- Theory learning and practice using reviewed excerpts from an official informator. Its published answer key remains accessible in the source, so a hidden-key theory exam and a fabricated 40-question set are not offered.
+- Browser-local progress, draft recovery and a portable backup. Student registration and cross-device synchronisation are not included.
+- An administrator panel for versioned content, source metadata, checking controls and aggregate operational statistics.
+- Optional DeepSeek explanations, disabled without a key and an administrator setting. The initial application budget is **$2 total**, not a renewing subscription.
+
+The interface and learning material are Polish. Technical documentation is English. Current original-paper solutions stay in the browser. The retained checker infrastructure uses temporary uploads for supported legacy attempts; the administrator does not receive a permanent student history. See [architecture](docs/architecture.md) and [checking](docs/checking.md).
+
+## Local development
+
+Use Node.js **24.13 or later in the 24.x line**, npm, and Docker Desktop with Linux containers/WSL2 on Windows. Run commands from the repository root.
+
+```powershell
+npm ci
+npm run setup:local
+npm run db:generate
+docker compose up -d postgres
+npm run db:migrate
+npm run db:seed
+npm run sandbox:build
+npm run dev
+```
+
+To exercise the retained checking infrastructure, start its trusted worker in another terminal:
+
+```powershell
+npm run worker
+```
+
+Open [the local website](http://127.0.0.1:5173). The API listens on port 3001; the project PostgreSQL port is 54329. `setup:local` creates a private `.env` with random local secrets and never overwrites an existing one. It does not create an administrator or configure a paid API key.
+
+Create your administrator in an interactive terminal:
+
+```powershell
+npm run admin:create
+```
+
+For the containerised application, run `npm ci` and `npm run setup:local` to prepare `.env`, then run `docker compose up --build`. Compose builds the application and the fixed sandbox image, applies migrations and seeds the content. A separate `npm run sandbox:build` is needed only for the development or standalone checker workflow above. Open [the containerised website](http://localhost:8080). Only the worker receives the Docker socket; the API does not. Details and troubleshooting are in [local development](docs/local-development.md).
+
+## Checks
+
+```powershell
+npm run check
+npm run build
+npm run test:integration
+npm run test:e2e
+```
+
+Integration tests need the project PostgreSQL service and generated Prisma client. API tests create a separate test database; checking tests need the sandbox image. Browser test prerequisites are described in [local development](docs/local-development.md). These commands describe the verification process, not a claim that every environment has been certified.
+
+## Material sources and limitations
+
+Every newly offered assignment and theory question refers to a verified published CKE document. An official publisher and an archive copy are distinguished; uncertain rights, missing attachments and unsupported automatic checks are explicitly recorded. The viewer retrieves reviewed source PDFs without rewriting them or retaining permanent server copies. No third-party exam archives are bundled. See the [source register](docs/sources.md).
+
+The 25 theory examples are a small published sample, not full syllabus coverage. The video-based example is excluded. One CSS example contains a typographic ambiguity, explained after submission while preserving CKE's original text and key. Coding guidance explains selected requirements; neither the fragments nor a downloaded third-party solution are a certified complete submission. Full PHP/SQL projects are tested in the learner's local environment. Automatic checker tests still use three private authored projects; they do not establish support for the current CKE papers. No score is invented for an unsupported paper.
+
+The Windows development profile is **not a certification for public anonymous code execution**. Public checking requires the Linux/gVisor profile and separate isolation and resource verification. The target VPS specifications and its suitability remain unverified. No deployment or GitHub publishing is configured automatically.
+
+## Repository guide
+
+- `apps/web`, `apps/api`, `apps/worker`: browser application, NestJS API and trusted worker.
+- `packages/shared`, `packages/content`, `packages/database`, `packages/checker`: contracts, source-backed content metadata, persistence and checking.
+- `fixtures/content`: alternative correct solutions and intentional mistakes, excluded from public content.
+- `docs`: [content format](docs/content-format.md), [architecture](docs/architecture.md), [checking](docs/checking.md) and [roadmap](docs/roadmap.md).
+
+Contributions follow [CONTRIBUTING.md](CONTRIBUTING.md). Project code, explanatory commentary and original fixtures are provided under [MIT](LICENSE); CKE papers and other third-party material retain their own status. Font notices are preserved in [third-party notices](docs/third-party-notices.md).

@@ -1,0 +1,33 @@
+{
+  "name": "@zdaj/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "@zdaj/checker": "*",
+    "@zdaj/content": "*",
+    "@zdaj/database": "*",
+    "@zdaj/shared": "*",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "pdfkit": "0.20.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.5",
+    "@types/multer": "^2.0.0",
+    "@types/pdfkit": "0.17.7"
+  }
+}

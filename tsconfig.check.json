@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["*.config.ts", "apps/**/*.ts", "apps/**/*.tsx", "packages/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "**/dist/**", "packages/database/generated/**"]
+}

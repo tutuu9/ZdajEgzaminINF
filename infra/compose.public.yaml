@@ -1,0 +1,27 @@
+# Linux deployment preparation only. This file does not configure a public proxy or TLS.
+# Merge from the repository root: docker compose -f compose.yaml -f infra/compose.public.yaml ...
+# PUBLIC_SANDBOX_VERIFIED remains false until this exact Linux host passes the documented checks.
+services:
+  api:
+    environment:
+      NODE_ENV: production
+      APP_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set PUBLIC_WEB_ORIGIN to the intended HTTPS origin}
+      WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set PUBLIC_WEB_ORIGIN to the intended HTTPS origin}
+      FRONTEND_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set PUBLIC_WEB_ORIGIN to the intended HTTPS origin}
+      TRUST_PROXY: ${PUBLIC_TRUST_PROXY:-false}
+      RUNNER_PROFILE: public-sandbox
+      PUBLIC_SANDBOX_VERIFIED: ${PUBLIC_SANDBOX_VERIFIED:-false}
+    volumes:
+      - ${PUBLIC_DATA_DIR_HOST:?Set PUBLIC_DATA_DIR_HOST to an absolute Linux data directory}:/app/data
+    # The base file's 127.0.0.1:8080 binding is retained for a future trusted TLS proxy.
+  worker:
+    environment:
+      NODE_ENV: production
+      RUNNER_PROFILE: public-sandbox
+      PUBLIC_SANDBOX_VERIFIED: ${PUBLIC_SANDBOX_VERIFIED:-false}
+      SANDBOX_HOST_DATA_DIR: ${PUBLIC_DATA_DIR_HOST:?Set PUBLIC_DATA_DIR_HOST to an absolute Linux data directory}
+    volumes:
+      - ${PUBLIC_DATA_DIR_HOST:?Set PUBLIC_DATA_DIR_HOST to an absolute Linux data directory}:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: 'no'
+    # The trusted worker uses the Linux engine; learner containers explicitly require runsc.

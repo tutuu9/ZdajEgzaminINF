@@ -1,0 +1,8 @@
+#!/bin/sh
+for argument in "$@"; do
+  case "$argument" in
+    --user-data-dir=/tmp/playwright_chromiumdev_profile-*)
+      chown 10003:10003 "${argument#--user-data-dir=}" ;;
+  esac
+done
+exec setpriv --reuid=10003 --regid=10003 --clear-groups /usr/bin/chromium "$@"

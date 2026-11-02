@@ -1,0 +1,17 @@
+node_modules
+dist
+**/dist
+**/generated
+data
+coverage
+test-results
+playwright-report
+package-lock.json
+fixtures
+artifacts
+.cache
+docs/licenses
+apps/web/public/licenses
+assets/fonts/LICENSE.md
+output
+tmp
