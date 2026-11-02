@@ -11,7 +11,6 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import '../study.css';
 import type { PublicExercise } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
@@ -20,7 +19,6 @@ import {
   CompletedLabel,
   EmptyState,
   ErrorNotice,
-  LevelPicker,
   Loading,
   PageHeading,
   TopicIcon,
@@ -114,7 +112,7 @@ function ExerciseBlock({ exercise }: { exercise: PublicExercise }) {
 }
 
 export function Learn() {
-  const { data, loading, level, setLevel, completed, refreshProgress } = useApp();
+  const { data, loading, completed, refreshProgress } = useApp();
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const [error, setError] = useState('');
@@ -130,7 +128,7 @@ export function Learn() {
     const lesson = data.lessons.find((item) => item.id === id);
     if (!lesson)
       return (
-        <EmptyState title="Nie znaleziono lekcji" to="/nauka" label="Wróć do ścieżki">
+        <EmptyState title="Nie znaleziono lekcji" to="/nauka/podstawy" label="Wróć do podstaw">
           Wybierz lekcję z aktualnej listy tematów.
         </EmptyState>
       );
@@ -148,7 +146,7 @@ export function Learn() {
     return (
       <div className="lesson-layout">
         <div className="lesson-main">
-          <Link className="back-link" to={`/nauka?temat=${lesson.topicId}`}>
+          <Link className="back-link" to={`/nauka/podstawy?temat=${lesson.topicId}`}>
             <ArrowLeft size={16} />
             Wróć do tematu
           </Link>
@@ -236,28 +234,13 @@ export function Learn() {
   const filtered = data.lessons.filter((lesson) => topic === 'all' || lesson.topicId === topic);
   return (
     <>
-      <PageHeading kicker="Krok po kroku" title="Zbuduj solidne podstawy">
-        Wybierz temat, zrozum przykład i napisz własne rozwiązanie.
+      <Link className="back-link" to="/nauka">
+        <ArrowLeft size={16} />
+        Nauka
+      </Link>
+      <PageHeading title="Podstawy, do których możesz wrócić.">
+        Wybierz temat. Każda lekcja wyjaśnia jeden fragment pracy nad stroną.
       </PageHeading>
-      <LevelPicker value={level} onChange={setLevel} />
-      <section className="learning-exam-entry">
-        <div>
-          <h2>Od wymagania CKE do własnego kodu</h2>
-          <p>
-            Wybierz arkusz: przeczytaj wymaganie, napisz fragment i porównaj go z objaśnionym
-            przykładem. Omówienia są materiałem edukacyjnym; oryginalne zadania pozostają w PDF CKE.
-          </p>
-        </div>
-        <div>
-          {data.tasks.map((task) => (
-            <Link key={task.id} to={`/praktyka/${task.id}?tryb=nauka&widok=nauka`}>
-              <BookOpen size={19} />
-              <span>{task.title}</span>
-              <ArrowRight size={17} />
-            </Link>
-          ))}
-        </div>
-      </section>
       <div className="topic-filter" role="group" aria-label="Temat lekcji">
         <button className={topic === 'all' ? 'active' : ''} onClick={() => setParams({})}>
           Wszystkie tematy
@@ -302,13 +285,14 @@ export function Learn() {
           </Link>
         ))}
       </div>
-      <div className="notice">
-        <Lightbulb size={20} />
-        <p>
-          Poziom określa ilość pomocy w projektach. Każda lekcja i każdy temat pozostają dla Ciebie
-          dostępne.
-        </p>
-      </div>
+      <Link className="library-next" to="/arkusze">
+        <BookOpen size={22} />
+        <span>
+          <strong>Połącz podstawy w projekt.</strong>
+          <small>Wybierz arkusz CKE i przejdź przez niego krok po kroku.</small>
+        </span>
+        <ArrowRight size={20} />
+      </Link>
     </>
   );
 }

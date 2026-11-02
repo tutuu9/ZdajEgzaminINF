@@ -31,3 +31,9 @@ Do not replace missing evidence with a passing score or a claim of official CKE 
 Keep the default local environment bound to loopback. The public sandbox requires Linux, runsc/gVisor, cgroup checks and environment-specific isolation testing; never silently fall back to runc. Retain resource limits, restricted networking and guaranteed cleanup.
 
 Use the checked-in lockfile. Avoid unrelated frameworks, services and broad refactors. Do not commit generated runtime data or secrets. Respect the user's current task scope for Git, publishing and deployment; this repository does not imply an automatic production release.
+
+## Authorized GitHub milestones
+
+For the approved release and course expansion, commit and push each verified milestone: release baseline, navigation, FAQ, each complete course, and final verification. Preserve commit history; use pull requests and wait for all GitHub Actions jobs, including the full Playwright suite, before merging. Create immutable release tags only on verified commits. Keep subsequent features on a separate branch from the v1.0.0 baseline. Do not force-push or move published tags.
+
+Exclude secrets, databases, learner work, downloaded examination archives and temporary evidence. Code rollback uses a release checkout or a reviewed revert; it must not delete learner progress or automatically reverse data migrations. Retain data backups and check format compatibility before rollback.

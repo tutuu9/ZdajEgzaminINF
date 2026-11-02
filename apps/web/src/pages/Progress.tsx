@@ -11,10 +11,12 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useApp } from '../context';
 import { exportProgress, importProgress, removeAttempt } from '../storage';
 import { errorMessage } from '../api';
+import { resumeHref } from '../resume';
 import { EmptyState, ErrorNotice, PageHeading, dateLabel, modeLabel } from '../components/common';
 
 export function Progress() {
@@ -65,7 +67,7 @@ export function Progress() {
       const count = await importProgress(file);
       await refreshProgress();
       setNotice(
-        `Wczytano kopię zawierającą ${count} prób. Nowsze lokalne zapisy zostały zachowane.`,
+        `Wczytano kopię zawierającą ${count} prób. Identyczne zapisy pominięto; różne wersje prac i notatek zachowano osobno.`,
       );
     } catch (e) {
       setError(errorMessage(e));
@@ -90,8 +92,8 @@ export function Progress() {
   };
   return (
     <>
-      <PageHeading kicker="Twoja praca, Twój postęp" title="Małe kroki się sumują.">
-        Zapisane projekty, ukończone lekcje i tematy, do których warto wrócić.
+      <PageHeading title="Twoje prace są tutaj.">
+        Wróć do zapisanego miejsca lub przejrzyj zakończone próby.
       </PageHeading>
       <ErrorNotice message={error} />
       {notice && (
@@ -100,94 +102,100 @@ export function Progress() {
           {notice}
         </div>
       )}
-      <div className="progress-stats">
-        <div>
-          <BookOpen size={24} />
-          <strong>
-            {completed.length}
-            <small>/{data?.lessons.length ?? 12}</small>
-          </strong>
-          <span>ukończonych lekcji</span>
-        </div>
-        <div>
-          <GraduationCap size={25} />
-          <strong>{theory.length}</strong>
-          <span>rozwiązanych testów</span>
-        </div>
-        <div>
-          <FileCheck2 size={25} />
-          <strong>{practice.length}</strong>
-          <span>zakończonych prób praktycznych</span>
-        </div>
-        <div>
-          <FolderOpen size={25} />
-          <strong>{attempts.filter((a) => !a.submittedAt).length}</strong>
-          <span>rozpoczętych prób</span>
-        </div>
+      <div className="progress-summary">
+        <span>
+          <BookOpen size={17} />
+          {completed.length} ukończonych lekcji
+        </span>
+        <span>
+          <GraduationCap size={17} />
+          {theory.length} rozwiązanych testów
+        </span>
+        <span>
+          <FolderOpen size={17} />
+          {attempts.filter((attempt) => !attempt.submittedAt).length} prac w toku
+        </span>
       </div>
       <div className="progress-columns">
         <section>
-          <div className="section-heading">
-            <h2>Historia Twojej pracy</h2>
-            <span className="muted">Tylko w tej przeglądarce</span>
-          </div>
           {attempts.length ? (
-            <div className="attempt-list">
-              {attempts.map((attempt) => (
-                <article className="attempt-row" key={attempt.id}>
-                  <span className="attempt-icon">
-                    {attempt.kind === 'theory' ? (
-                      <GraduationCap size={22} />
-                    ) : (
-                      <FileCheck2 size={22} />
-                    )}
-                  </span>
-                  <div>
-                    <Link
-                      to={
-                        attempt.kind === 'theory'
-                          ? `/teoria?proba=${attempt.id}`
-                          : `/praktyka/${attempt.taskId}?proba=${attempt.id}`
-                      }
-                    >
-                      <h3>{attempt.title}</h3>
-                    </Link>
-                    <p>
-                      {modeLabel(attempt.mode)} · {dateLabel(attempt.updatedAt)}
-                    </p>
-                    <span className={`attempt-status ${attempt.submittedAt ? 'submitted' : ''}`}>
-                      {attempt.theoryResult
-                        ? `${attempt.theoryResult.correct}/${attempt.theoryResult.total} poprawnych`
-                        : attempt.report
-                          ? attempt.report.complete && attempt.report.percentage !== null
-                            ? `${attempt.report.percentage}% · wynik ćwiczeniowy`
-                            : 'Raport z częściową oceną'
-                          : attempt.submittedAt
-                            ? attempt.checkJob
-                              ? 'Oddano do sprawdzenia'
-                              : 'Zakończono samodzielnie'
-                            : 'W trakcie pracy'}
+            <div className="work-groups">
+              {[false, true].map((closed) => (
+                <section key={String(closed)}>
+                  <div className="section-heading">
+                    <h2>{closed ? 'Zakończone' : 'W toku'}</h2>
+                    <span className="muted">
+                      {attempts.filter((attempt) => !!attempt.submittedAt === closed).length}
                     </span>
                   </div>
-                  <button
-                    className="icon-button danger"
-                    aria-label={`Usuń próbę ${attempt.title}`}
-                    onClick={() => void remove(attempt.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <Link
-                    className="icon-button"
-                    aria-label={`Otwórz próbę ${attempt.title}`}
-                    to={
-                      attempt.kind === 'theory'
-                        ? `/teoria?proba=${attempt.id}`
-                        : `/praktyka/${attempt.taskId}?proba=${attempt.id}`
-                    }
-                  >
-                    <ArrowRight size={18} />
-                  </Link>
-                </article>
+                  <div className="attempt-list">
+                    {attempts
+                      .filter((attempt) => !!attempt.submittedAt === closed)
+                      .map((attempt) => (
+                        <article className="attempt-row" key={attempt.id}>
+                          <span className="attempt-icon">
+                            {attempt.kind === 'theory' ? (
+                              <GraduationCap size={22} />
+                            ) : (
+                              <FileCheck2 size={22} />
+                            )}
+                          </span>
+                          <div>
+                            <Link to={resumeHref(attempt)}>
+                              <h3>{attempt.title}</h3>
+                            </Link>
+                            <p>
+                              {modeLabel(attempt.mode)} · {dateLabel(attempt.updatedAt)}
+                            </p>
+                            <span
+                              className={`attempt-status ${attempt.submittedAt ? 'submitted' : ''}`}
+                            >
+                              {attempt.theoryResult
+                                ? `${attempt.theoryResult.correct}/${attempt.theoryResult.total} poprawnych`
+                                : attempt.report
+                                  ? attempt.report.complete && attempt.report.percentage !== null
+                                    ? `${attempt.report.percentage}% · wynik ćwiczeniowy`
+                                    : 'Raport z częściową oceną'
+                                  : attempt.submittedAt
+                                    ? attempt.checkJob
+                                      ? 'Oddano do sprawdzenia'
+                                      : 'Zakończono samodzielnie'
+                                    : 'W trakcie pracy'}
+                            </span>
+                          </div>
+                          <details className="attempt-options">
+                            <summary
+                              className="icon-button"
+                              aria-label={`Opcje pracy ${attempt.title}`}
+                            >
+                              <MoreHorizontal size={18} />
+                            </summary>
+                            <button
+                              className="button danger small"
+                              onClick={() => void remove(attempt.id)}
+                            >
+                              <Trash2 size={15} />
+                              Usuń próbę
+                            </button>
+                          </details>
+                          <Link
+                            className="icon-button"
+                            aria-label={`Otwórz próbę ${attempt.title}`}
+                            to={resumeHref(attempt)}
+                          >
+                            <ArrowRight size={18} />
+                          </Link>
+                        </article>
+                      ))}
+                  </div>
+                  {!attempts.some((attempt) => !!attempt.submittedAt === closed) && (
+                    <p className="empty-work-group">
+                      {closed
+                        ? 'Zakończone prace pojawią się tutaj.'
+                        : 'Nie masz rozpoczętej pracy. Wybierz arkusz lub krótką serię pytań.'}
+                    </p>
+                  )}
+                </section>
               ))}
             </div>
           ) : (
@@ -202,7 +210,7 @@ export function Progress() {
             {weakTopics.length ? (
               <div className="weak-topics">
                 {weakTopics.map(([topic, count]) => (
-                  <Link key={topic} to={`/nauka?temat=${topic}`}>
+                  <Link key={topic} to={`/nauka/podstawy?temat=${topic}`}>
                     <div>
                       <strong>
                         {data?.topics.find((item) => item.id === topic)?.title ?? topic}
@@ -217,9 +225,9 @@ export function Progress() {
               <p>Po sprawdzeniu pierwszych prób zobaczysz tu tematy wymagające uwagi.</p>
             )}
           </section>
-          <section className="backup-panel">
+          <section className="backup-panel glass-panel">
             <ShieldCheck size={25} />
-            <h2>Zadbaj o swoją kopię.</h2>
+            <h2>Zachowaj kopię.</h2>
             <p>
               Usunięcie danych przeglądarki usuwa również postęp. Eksport pozwala przenieść go na
               inne urządzenie.

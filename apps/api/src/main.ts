@@ -17,6 +17,7 @@ import { readFile } from 'node:fs/promises';
 import type { Response } from 'express';
 import { db } from '@zdaj/database';
 import { ApiController } from './controller.js';
+import { cleanupExpiredStudyChecks } from './study-checks.js';
 import { config, DAY_MS, projectRoot } from './config.js';
 
 @Module({ controllers: [ApiController] })
@@ -130,6 +131,7 @@ export async function createApp(options: { webDist?: string } = {}) {
 async function cleanup() {
   const now = new Date();
   await Promise.all([
+    cleanupExpiredStudyChecks(now),
     db.session.deleteMany({ where: { expiresAt: { lt: now } } }),
     db.rateLimit.deleteMany({ where: { expiresAt: { lt: now } } }),
     db.attemptTicket.deleteMany({ where: { expiresAt: { lt: now } } }),

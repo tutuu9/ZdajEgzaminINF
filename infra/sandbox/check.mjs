@@ -345,6 +345,99 @@ async function imageDimensions(check) {
     `Wymiary: ${width} × ${height}; format: ${format}.`,
   ];
 }
+async function checkCourseCalculator(page) {
+  const checkboxes = page.locator('input[type="checkbox"]');
+  const react = (await page.locator('#react').count()) ? page.locator('#react') : checkboxes.nth(0);
+  const javascript = (await page.locator('#javascript').count())
+    ? page.locator('#javascript')
+    : checkboxes.nth(1);
+  const installments = (await page.locator('#raty').count())
+    ? page.locator('#raty')
+    : page.locator('input[type="number"]').first();
+  const cities = (await page.locator('#miasto').count())
+    ? page.locator('#miasto')
+    : page.locator('select').first();
+  const button = page.getByRole('button', { name: /^Oblicz$/i }).first();
+  for (const [reactSelected, javascriptSelected, count, city, total, installment] of [
+    [true, true, 10, 'Katowice', 8000, 800],
+    [true, false, 5, 'Warszawa', 5000, 1000],
+    [false, true, 3, 'Gdańsk', 3000, 1000],
+    [true, true, 8, 'Warszawa', 8000, 1000],
+    [false, false, 4, 'Gdańsk', 0, 0],
+    [true, false, 2, 'Katowice', 5000, 2500],
+  ]) {
+    await react.setChecked(reactSelected);
+    await javascript.setChecked(javascriptSelected);
+    await installments.fill(String(count));
+    await cities.selectOption({ label: city });
+    await button.click();
+    const result = (await page.locator('#wynik').count())
+      ? page.locator('#wynik')
+      : page
+          .locator('p')
+          .filter({ hasText: /Kurs odbędzie się|Koszt całkowity/i })
+          .last();
+    const text = await result.innerText();
+    const numbers = (text.match(/\d+(?:[ \u00a0]\d{3})*(?:[.,]\d+)?/g) ?? []).map((value) =>
+      Number(value.replace(/[ \u00a0]/g, '').replace(',', '.')),
+    );
+    const includesNumber = (expected) => numbers.some((value) => Math.abs(value - expected) < 0.01);
+    if (
+      !text.toLocaleLowerCase('pl').includes(city.toLocaleLowerCase('pl')) ||
+      !includesNumber(total) ||
+      !includesNumber(installment) ||
+      !includesNumber(count) ||
+      (total === installment && numbers.filter((value) => value === total).length < 2)
+    )
+      return [
+        false,
+        `Dla wyboru React.js: ${reactSelected ? 'tak' : 'nie'}, JavaScript: ${javascriptSelected ? 'tak' : 'nie'}, ${count} rat i miasta ${city} oczekiwano kwoty ${total} zł oraz raty ${installment} zł w komunikacie.`,
+      ];
+  }
+  return [
+    true,
+    'Sprawdzono oba kursy osobno i razem, brak zaznaczeń, różne miasta i liczby rat oraz wielokrotne kliknięcie bez sumowania poprzednich wyników.',
+  ];
+}
+
+async function checkDragonTabs(page) {
+  const ids = ['baza', 'opisy', 'galeria'];
+  for (const id of ids) {
+    if ((await page.locator(`#${id}`).isVisible()) !== (id === 'baza'))
+      return [
+        false,
+        'Początkowo ma być widoczny tylko widok Baza; Opisy i Galeria powinny być ukryte.',
+      ];
+  }
+  for (const selected of ['galeria', 'opisy', 'baza', 'galeria', 'baza']) {
+    await page.locator(`#nav-${selected}`).click();
+    for (const id of ids) {
+      const visible = await page.locator(`#${id}`).isVisible();
+      const display = await page
+        .locator(`#${id}`)
+        .evaluate((element) => getComputedStyle(element).display);
+      if (visible !== (id === selected) || display !== (id === selected ? 'block' : 'none'))
+        return [
+          false,
+          `Po kliknięciu ${selected} wyświetl ten widok i ukryj pozostałe dwa. Sprawdź także powrót do wcześniejszego widoku.`,
+        ];
+      const color = await page
+        .locator(`#nav-${id}`)
+        .evaluate((element) => getComputedStyle(element).backgroundColor);
+      const expected = id === selected ? 'rgb(255,228,225)' : 'rgb(255,174,165)';
+      if (color.replace(/\s/g, '') !== expected)
+        return [
+          false,
+          `Po kliknięciu ${selected} tylko aktywna nawigacja powinna mieć MistyRose; pozostałe powinny wrócić do #FFAEA5.`,
+        ];
+    }
+  }
+  return [
+    true,
+    'Pięć kolejnych przełączeń zachowuje dokładnie jeden widoczny widok i właściwe kolory wszystkich trzech elementów nawigacji.',
+  ];
+}
+
 async function rendered(check, criterion) {
   await resetDatabase();
   const context = await browser.newContext({
@@ -376,6 +469,8 @@ async function rendered(check, criterion) {
       return [actual === check.value, `Odczytana właściwość ${check.property}: ${actual}.`];
     }
     if (check.type === 'javascript') {
+      if (check.action === 'kursy-calculator') return await checkCourseCalculator(page);
+      if (check.action === 'smoki-tabs') return await checkDragonTabs(page);
       if (check.action === 'workshop-calculator') {
         for (const [course, count, discount, expected] of [
           ['html', '1', false, 120],

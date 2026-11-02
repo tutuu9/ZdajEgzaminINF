@@ -122,10 +122,68 @@ export interface StudyActivity {
   title: string;
   explanation: string;
   instruction: string;
-  starterCode: string;
+  /** Legacy isolated exercises only. Cumulative activities edit the project directly. */
+  starterCode?: string;
   exampleCode: string;
   why: string[];
   check: { type: 'self-check'; prompt: string };
+  targetFiles?: string[];
+  placement?: string;
+  checks?: StudyCheckSpec[];
+}
+export type StudyCheckStatus = 'passed' | 'failed' | 'manual' | 'unsupported' | 'error';
+export type StudyCheckSpec = { id: string; title: string } & (
+  | { kind: 'file'; path: string; nonEmpty?: boolean }
+  | {
+      kind: 'html';
+      path: string;
+      selector: string;
+      attribute?: string;
+      equals?: string;
+      text?: string;
+      minCount?: number;
+    }
+  | {
+      kind: 'css';
+      path: string;
+      entry: string;
+      selector: string;
+      property: string;
+      expected: string[];
+    }
+  | { kind: 'runtime'; adapter: 'kursy-calculator' | 'smoki-tabs'; entry: string }
+  | { kind: 'manual'; prompt: string }
+);
+export interface StudyCheckRequest {
+  token: string;
+  guideVersion: number;
+  activityId: string;
+  projectRevision: number;
+  files: ProjectFile[];
+}
+export interface StudyCheckResult {
+  id: string;
+  title: string;
+  status: StudyCheckStatus;
+  evidence: string;
+  recommendation: string;
+}
+export interface StudyCheckReport {
+  guideId: string;
+  guideVersion: number;
+  activityId: string;
+  projectRevision: number;
+  inputHash: string;
+  createdAt: string;
+  status: StudyCheckStatus;
+  results: StudyCheckResult[];
+  disclaimer: string;
+}
+export interface StudyCheckResponse {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  report?: StudyCheckReport;
+  error?: string;
 }
 export interface ExamStudyStep {
   id: string;
@@ -172,6 +230,11 @@ export interface ExamStudyGuide {
   steps: ExamStudyStep[];
   resources: ExamStudyResource[];
   variants: ExamSolutionVariant[];
+  project?: {
+    starterFiles: ProjectFile[];
+    requiredFiles: string[];
+    coverage: { requirement: string; page: number; activityIds: string[] }[];
+  };
 }
 export interface ExamStudyResponse {
   guide: ExamStudyGuide;
@@ -306,6 +369,33 @@ export interface AttemptSnapshot {
   report?: CheckReport;
   theoryResult?: TheoryResult;
   checkJob?: { id: string; token: string };
+  revision?: number;
+  hintOffset?: number;
+  legacyProjectId?: string;
+  workspace?: {
+    view: 'study' | 'code' | 'sheet' | 'preview' | 'report';
+    studyPanel?: 'lesson' | 'code' | 'preview';
+    sheetPage?: number;
+    activeFile: string;
+    previewEntry: string;
+    editors: Record<string, { anchor: number; head: number; scrollTop: number }>;
+  };
+  study?: {
+    guide: ExamStudyGuide;
+    current: string;
+    completed: Record<
+      string,
+      {
+        status: 'passed' | 'manual';
+        revision: number;
+        filesHash: string;
+        checkedAt: string;
+        evidence: string;
+      }
+    >;
+    viewedExamples: string[];
+  };
+  recovery?: { id: string; createdAt: string; reason: string; files: ProjectFile[] }[];
 }
 export interface ContentDraft {
   id: string;

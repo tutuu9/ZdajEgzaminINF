@@ -1,6 +1,8 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { examStudyGuides, legacyExamStudyGuides } from '@zdaj/content';
+import { allExamStudyGuides, legacyExamStudyGuides } from '@zdaj/content';
+
+const examStudyGuides = allExamStudyGuides.filter((guide) => guide.version === 2);
 
 describe('exam learning code examples', () => {
   it('adds small explained activities to every step without replacing earlier guide revisions', () => {

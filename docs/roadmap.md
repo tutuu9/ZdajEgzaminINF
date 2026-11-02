@@ -4,6 +4,8 @@
 
 The current release uses CKE INF.03 assignments and questions exclusively: three original practical papers, 25 static examples from the official informator and twelve explanatory lessons. The user's CKE-only requirement supersedes the earlier authored-project and 80-question target. Authored content survives only in historical compatibility and regression fixtures. A source-backed paper and a fully verified automatic checking adapter are separate levels of support.
 
+The cumulative-learning redesign adds 175 small actions across the three papers. Version 3 starts with the HTML document and grows the same saved project through the remaining requirements. See [course coverage](cumulative-guide-coverage.md) and [interface design](design.md). Educational HTML/CSS and selected JavaScript checks remain separate from complete-paper grading.
+
 | Stage                     | Deliverable                                                             | Evidence required                                                                                     |
 | ------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Foundation                | Reproducible local environment, content contracts and one PHP/SQL check | Fresh setup, working migration/seed, measured execution and cleanup                                   |

@@ -39,6 +39,7 @@ import { askAi, providerBalance, settleUncertain } from './ai.js';
 import { createTaskSheet } from './task-pdf.js';
 import { originalExamSheet } from './exam-pdf.js';
 import { revealStudyGuide } from './study.js';
+import { acknowledgeStudyCheck, getStudyCheck, submitStudyCheck } from './study-checks.js';
 import {
   contentRows,
   createDraft,
@@ -133,6 +134,20 @@ export class ApiController {
   }
   @Post('attempts/:id/study') async study(@Param('id') id: string, @Body() body: unknown) {
     return revealStudyGuide(id, body);
+  }
+  @Post('attempts/:id/study/checks') async studyCheck(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    return submitStudyCheck(id, body, req);
+  }
+  @Get('study/checks/:id') studyCheckResult(@Param('id') id: string, @Req() req: Request) {
+    return getStudyCheck(id, req.get('x-check-token') ?? '');
+  }
+  @Post('study/checks/:id/ack') studyCheckAck(@Param('id') id: string, @Body() body: unknown) {
+    const value = parse(z.object({ token: z.string().max(100) }).strict(), body);
+    return acknowledgeStudyCheck(id, value.token);
   }
   @Post('theory/start') async theoryStart(@Body() body: unknown, @Req() req: Request) {
     await protectMutation(req);

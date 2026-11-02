@@ -1,18 +1,11 @@
 import { StrictMode, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import '@fontsource/source-sans-3/latin-400.css';
-import '@fontsource/source-sans-3/latin-ext-400.css';
-import '@fontsource/source-sans-3/latin-500.css';
-import '@fontsource/source-sans-3/latin-ext-500.css';
-import '@fontsource/source-sans-3/latin-600.css';
-import '@fontsource/source-sans-3/latin-ext-600.css';
-import '@fontsource/source-sans-3/latin-700.css';
-import '@fontsource/source-sans-3/latin-ext-700.css';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import '@fontsource/ibm-plex-mono/latin-400.css';
 import '@fontsource/ibm-plex-mono/latin-ext-400.css';
 import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-ext-500.css';
+import './workspace-base.css';
 import './styles.css';
 import { AppProvider } from './context';
 import { Shell } from './components/Shell';
@@ -20,9 +13,6 @@ import { Home } from './pages/Home';
 import { EmptyState } from './components/common';
 
 const Learn = lazy(() => import('./pages/Learn').then((module) => ({ default: module.Learn })));
-const Catalog = lazy(() =>
-  import('./pages/Catalog').then((module) => ({ default: module.Catalog })),
-);
 const PracticeList = lazy(() =>
   import('./pages/PracticeList').then((module) => ({ default: module.PracticeList })),
 );
@@ -35,20 +25,43 @@ const Progress = lazy(() =>
 );
 const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })));
 
+function RouteAlias({ to, task = false }: { to: string; task?: boolean }) {
+  const location = useLocation();
+  const { id } = useParams();
+  return (
+    <Navigate
+      replace
+      to={`${to}${task && id ? `/${encodeURIComponent(id)}` : ''}${location.search}${location.hash}`}
+    />
+  );
+}
+function LearningEntry() {
+  const location = useLocation();
+  return new URLSearchParams(location.search).has('temat') ? (
+    <RouteAlias to="/nauka/podstawy" />
+  ) : (
+    <Home />
+  );
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AppProvider>
         <Routes>
           <Route element={<Shell />}>
-            <Route index element={<Home />} />
-            <Route path="nauka" element={<Learn />} />
+            <Route index element={<RouteAlias to="/nauka" />} />
+            <Route path="nauka" element={<LearningEntry />} />
+            <Route path="nauka/podstawy" element={<Learn />} />
             <Route path="nauka/:id" element={<Learn />} />
-            <Route path="katalog" element={<Catalog />} />
-            <Route path="praktyka" element={<PracticeList />} />
+            <Route path="katalog" element={<RouteAlias to="/arkusze" />} />
+            <Route path="praktyka" element={<RouteAlias to="/arkusze" />} />
+            <Route path="arkusze" element={<PracticeList />} />
+            <Route path="arkusze/:id" element={<RouteAlias to="/praktyka" task />} />
             <Route path="praktyka/:id" element={<Workspace />} />
             <Route path="teoria" element={<Theory />} />
-            <Route path="postepy" element={<Progress />} />
+            <Route path="postepy" element={<RouteAlias to="/moje-prace" />} />
+            <Route path="moje-prace" element={<Progress />} />
             <Route path="admin" element={<Admin />} />
             <Route
               path="*"

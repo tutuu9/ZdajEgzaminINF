@@ -1,99 +1,125 @@
-import { ArrowRight, BookOpen, CheckCircle2, Clock3, Code2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, BookOpen, ChevronDown, Clock3, FileCode2, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import '../study.css';
 import { useApp } from '../context';
-import { EmptyState, LevelPicker, Loading, Notice, PageHeading, Tags } from '../components/common';
+import { resumeHref } from '../resume';
+import { EmptyState, Loading, PageHeading, Tags } from '../components/common';
+import { CatalogSource } from './Catalog';
 
 export function PracticeList() {
-  const { data, loading, level, setLevel, attempts } = useApp();
+  const { data, loading, attempts } = useApp();
+  const [search, setSearch] = useState(''),
+    [technology, setTechnology] = useState('all');
   if (!data)
     return loading ? (
       <Loading />
     ) : (
-      <EmptyState title="Projekty są chwilowo niedostępne">
-        Spróbuj ponownie połączyć się z serwerem.
+      <EmptyState title="Nie udało się wczytać arkuszy">
+        Sprawdź połączenie z serwerem i spróbuj ponownie.
       </EmptyState>
     );
+  const tasks = data.tasks.filter(
+    (task) =>
+      `${task.title} ${task.id} ${task.technologies.join(' ')}`
+        .toLocaleLowerCase('pl')
+        .includes(search.toLocaleLowerCase('pl')) &&
+      (technology === 'all' || task.technologies.includes(technology)),
+  );
+  const technologies = [...new Set(data.tasks.flatMap((task) => task.technologies))];
   return (
-    <>
-      <PageHeading kicker="Od pomysłu do działającego rozwiązania" title="Zadania praktyczne">
-        Pracuj z oryginalnymi arkuszami CKE. Pisz we własnej IDE albo w przeglądarce i zachowaj
-        rozwiązanie lokalnie.
+    <div className="exam-library">
+      <PageHeading title="Jeden arkusz. Wiele umiejętności.">
+        Czytaj oryginał CKE, ucz się małymi krokami albo rozwiąż zadanie samodzielnie.
       </PageHeading>
-      <LevelPicker value={level} onChange={setLevel} />
-      <div className="practice-projects">
-        {data.tasks.map((task, index) => {
-          const past = attempts.filter((a) => a.taskId === task.id);
-          const draft = past.find((a) => !a.submittedAt);
+      <div className="library-toolbar glass-panel">
+        <label className="search-field">
+          <Search size={19} />
+          <input
+            aria-label="Szukaj arkusza"
+            placeholder="Nazwa lub kod arkusza"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <label className="library-filter">
+          <span>Technologia</span>
+          <select
+            value={technology}
+            aria-label="Technologia"
+            onChange={(event) => setTechnology(event.target.value)}
+          >
+            <option value="all">Wszystkie</option>
+            {technologies.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <span className="library-count">{tasks.length} arkusze</span>
+      </div>
+      <div className="exam-library-list">
+        {tasks.map((task, index) => {
+          const past = attempts.filter((attempt) => attempt.taskId === task.id);
+          const draft = past.find((attempt) => !attempt.submittedAt);
+          const source = data.catalog.find((entry) => entry.id === task.sourceCatalogId);
           return (
-            <article className="practice-project" key={task.id}>
-              <div className={`practice-project-art project-${index}`}>
-                <Code2 size={38} />
-                <strong>
-                  {(
-                    {
-                      'cke-wedkowanie': 'PHP + SQL',
-                      'inf03-01-25-01-sg': 'HTML / CSS / JS',
-                      'inf03-08-25-06-sg': 'Pełna aplikacja',
-                    } as Record<string, string>
-                  )[task.id] ?? task.technologies.join(' / ')}
-                </strong>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-              </div>
-              <div className="practice-project-body">
-                <div className="project-title-row">
-                  <span className="pill subtle">Arkusz CKE</span>
-                  <span className="meta-line">
-                    <Clock3 size={15} />
-                    {task.durationMinutes} min
+            <article className="exam-library-row surface-panel" key={task.id}>
+              <div className="exam-row-heading">
+                <span className={`exam-app-icon exam-color-${index % 3}`}>
+                  <FileCode2 size={28} strokeWidth={1.6} />
+                </span>
+                <div>
+                  <span className="subtle-label">
+                    {source?.identifier ?? 'Oficjalny przykład CKE'}
                   </span>
+                  <h2>{task.title}</h2>
                 </div>
-                <h2>{task.title}</h2>
+                <span className="exam-duration">
+                  <Clock3 size={16} />
+                  {task.durationMinutes} min
+                </span>
+              </div>
+              <div className="exam-row-content">
                 <p>{task.summary}</p>
                 <Tags items={task.technologies} />
-                <Link
-                  className="practice-study-link"
-                  to={`/praktyka/${task.id}?tryb=nauka&widok=nauka`}
-                >
-                  <BookOpen size={18} />
-                  <span>
-                    Ucz się pisać kod z tym arkuszem
-                    <small>Kroki, własny notatnik, przykłady i pliki rozwiązania</small>
-                  </span>
-                  <ArrowRight size={16} />
-                </Link>
-                <div className="project-requirements">
-                  {task.requirements.slice(0, 3).map((requirement) => (
-                    <span key={requirement}>
-                      <CheckCircle2 size={15} />
-                      {requirement}
-                    </span>
-                  ))}
-                </div>
-                <div className="project-action-row">
+                <div className="exam-row-actions">
+                  <Link
+                    className="button primary"
+                    to={draft ? resumeHref(draft) : `/praktyka/${task.id}?tryb=nauka&widok=nauka`}
+                  >
+                    {draft ? <ArrowRight size={17} /> : <BookOpen size={17} />}
+                    {draft ? 'Kontynuuj' : 'Ucz się krok po kroku'}
+                  </Link>
+                  <Link className="button quiet" to={`/praktyka/${task.id}?tryb=trening`}>
+                    Rozwiąż samodzielnie
+                    <ArrowRight size={16} />
+                  </Link>
                   <span>
                     {past.length
                       ? `${past.length} zapisane próby`
-                      : 'Czeka na Twoje pierwsze rozwiązanie'}
+                      : 'Z objaśnieniami i plikami do pobrania'}
                   </span>
-                  <Link
-                    className="button primary"
-                    to={`/praktyka/${task.id}${draft ? `?proba=${draft.id}` : ''}`}
-                  >
-                    {draft ? 'Kontynuuj próbę' : 'Otwórz arkusz'}
-                    <ArrowRight size={17} />
-                  </Link>
                 </div>
               </div>
+              {source && (
+                <details className="exam-source-details">
+                  <summary>
+                    Arkusz PDF, pliki i źródło
+                    <ChevronDown size={17} />
+                  </summary>
+                  <CatalogSource entry={source} />
+                </details>
+              )}
             </article>
           );
         })}
       </div>
-      <Notice>
-        Zadania pochodzą z arkuszy CKE. Podgląd pokazuje oryginalny PDF z jawnym źródłem. Dla
-        arkuszy bez adaptera sprawdzania dostępne są zapis plików, własna kontrola i zakończenie
-        próby bez punktacji.
-      </Notice>
-    </>
+      {!tasks.length && (
+        <EmptyState title="Nie znaleziono arkusza">Zmień nazwę lub wybraną technologię.</EmptyState>
+      )}
+      <p className="library-disclosure">
+        Wybrane materiały CKE, nie pełna baza egzaminów. Projekty zachowujesz w tej przeglądarce.
+        Arkusze bez automatycznej weryfikacji kończysz własnym sprawdzeniem wymagań.
+      </p>
+    </div>
   );
 }

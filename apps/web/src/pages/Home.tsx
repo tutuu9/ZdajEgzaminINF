@@ -1,241 +1,166 @@
 import {
   ArrowRight,
   BookOpen,
-  CheckCircle2,
+  Check,
   ChevronRight,
-  Clock3,
   Code2,
+  FileCode2,
   GraduationCap,
-  Lightbulb,
   Play,
-  Terminal,
+  Settings2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context';
-import { EmptyState, LevelPicker, Loading, Tags, TopicIcon, modeLabel } from '../components/common';
+import { resumeHref, resumeStep } from '../resume';
+import { EmptyState, LevelPicker, Loading, TopicIcon } from '../components/common';
 
 export function Home() {
   const { data, loading, level, setLevel, attempts, completed } = useApp();
   if (loading && !data) return <Loading />;
   if (!data)
     return (
-      <EmptyState title="Pracownia czeka na połączenie">
-        Połącz się z serwerem, aby wczytać lekcje. Zapisany postęp możesz wyeksportować w zakładce
-        Moje postępy.
+      <EmptyState
+        title="Nie udało się wczytać nauki"
+        to="/moje-prace"
+        label="Otwórz zapisane prace"
+      >
+        Sprawdź połączenie z serwerem. Twoje zapisane pliki nadal są w tej przeglądarce.
       </EmptyState>
     );
-  const recent = attempts.find((a) => !a.submittedAt),
-    nextLesson = data.lessons.find((l) => !completed.includes(l.id)) ?? data.lessons[0];
+  const recent = attempts.find((attempt) => !attempt.submittedAt);
+  const currentActivity = recent ? resumeStep(recent) : undefined;
   return (
-    <>
-      <div className="home-intro">
-        <span className="eyebrow">Dobrze, że jesteś. Zróbmy kolejny krok.</span>
-        <h1>
-          Od pierwszej linijki
-          <br />
-          do gotowego projektu.
-        </h1>
-        <p>
-          Przygotuj się do INF.03 we własnym tempie.
-          <br />
-          Zrozum, spróbuj samodzielnie i sprawdź rezultat.
-        </p>
-        <div className="intro-actions">
-          <Link
-            to={
-              recent
-                ? recent.kind === 'practice'
-                  ? `/praktyka/${recent.taskId}?proba=${recent.id}`
-                  : `/teoria?proba=${recent.id}`
-                : '/nauka'
-            }
-            className="button primary"
-          >
-            {recent ? 'Wróć do swojej pracy' : 'Rozpocznij naukę'}
-            <ArrowRight size={18} />
-          </Link>
-          <Link to="/praktyka" className="button quiet">
-            Zobacz zadania
-            <ChevronRight size={17} />
-          </Link>
+    <div className="learning-home">
+      <header className="learning-heading">
+        <div>
+          <p className="qualification-label">Przygotowanie do INF.03</p>
+          <h1>Ucz się. Po swojemu.</h1>
+          <p>Najpierw zrozum mały krok. Potem napisz go sam.</p>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="art-file">
-            <div className="art-tab">
-              <span />
-              <span />
-              <span />
-              <small>moja-strona.html</small>
-            </div>
-            <div className="art-code">
-              <span>
-                &lt;<b>main</b>&gt;
-              </span>
-              <span>
-                &nbsp; &lt;<b>h1</b>&gt;Cześć, świecie!&lt;/<b>h1</b>&gt;
-              </span>
-              <span>
-                &nbsp; &lt;<b>p</b>&gt;Umiem to zrobić.&lt;/<b>p</b>&gt;
-              </span>
-              <span>
-                &lt;/<b>main</b>&gt;
-              </span>
-            </div>
+        <details className="learning-preferences">
+          <summary aria-label="Ustawienia nauki">
+            <Settings2 size={20} />
+            <span>Poziom pomocy</span>
+          </summary>
+          <div className="preference-popover glass-panel">
+            <h2>Ile objaśnień potrzebujesz?</h2>
+            <LevelPicker value={level} onChange={setLevel} />
+            <p>Poziom zmienia ilość pomocy. Wymagania arkusza pozostają takie same.</p>
           </div>
-          <div className="art-result">
-            <span className="art-check">
-              <CheckCircle2 size={20} />
-            </span>
-            <div>
-              <strong>Mały krok. Realna umiejętność.</strong>
-              <small>Twoja pierwsza strona działa.</small>
-            </div>
+        </details>
+      </header>
+      {recent && (
+        <section className="continue-panel glass-panel">
+          <div className="continue-symbol">
+            <Play size={25} fill="currentColor" />
           </div>
-          <div className="art-grid" />
+          <div>
+            <span className="subtle-label">Wróć do ostatniej pracy</span>
+            <h2>{recent.title}</h2>
+            <p>
+              {currentActivity ??
+                (recent.kind === 'theory'
+                  ? 'Twoje odpowiedzi czekają w zapisanej serii.'
+                  : 'Otwórz zapisane pliki i miejsce, w którym skończyłeś.')}
+            </p>
+          </div>
+          <Link className="button primary" to={resumeHref(recent)}>
+            Kontynuuj
+            <ArrowRight size={17} />
+          </Link>
+        </section>
+      )}
+      <section className="learning-projects surface-panel">
+        <div className="section-heading">
+          <div>
+            <h2>{recent ? 'Nauka z arkuszami CKE' : 'Od którego arkusza zaczniemy?'}</h2>
+            <p>Oryginalny arkusz, małe kroki i Twój własny projekt.</p>
+          </div>
+          <Link className="text-link" to="/arkusze">
+            Wszystkie arkusze
+            <ChevronRight size={16} />
+          </Link>
         </div>
-      </div>
-      <section className="level-section">
-        <div className="section-label">
-          <h2>Od czego zaczynamy?</h2>
-          <p>Wybierz poziom pomocy. Możesz go zmienić w każdej chwili.</p>
+        <div className="learning-project-list">
+          {data.tasks.map((task, index) => (
+            <Link
+              className="learning-project-row"
+              key={task.id}
+              to={`/praktyka/${task.id}?tryb=nauka&widok=nauka`}
+            >
+              <span className={`exam-app-icon exam-color-${index % 3}`}>
+                <FileCode2 size={27} strokeWidth={1.6} />
+              </span>
+              <div>
+                <h3>{task.title}</h3>
+                <p>{task.technologies.join(' / ')}</p>
+                <span>
+                  {index === 0
+                    ? 'Zacznij tutaj, jeśli uczysz się od podstaw.'
+                    : 'Przejdź od wymagań do działającego rozwiązania.'}
+                </span>
+              </div>
+              <span className="learning-row-action">
+                Ucz się
+                <ChevronRight size={18} />
+              </span>
+            </Link>
+          ))}
         </div>
-        <LevelPicker value={level} onChange={setLevel} />
       </section>
-      <div className="home-columns">
-        <section className="learning-route">
+      <div className="learning-secondary">
+        <section className="foundation-section">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">Twoja ścieżka</span>
-              <h2>Sześć obszarów. Jeden cel.</h2>
+              <h2>Potrzebujesz podstaw?</h2>
+              <p>Wróć do jednego tematu, kiedy go potrzebujesz.</p>
             </div>
-            <Link to="/nauka" className="text-link">
-              Wszystkie lekcje
-              <ArrowRight size={16} />
+            <Link
+              className="icon-button"
+              aria-label="Wszystkie lekcje podstaw"
+              to="/nauka/podstawy"
+            >
+              <ArrowRight size={19} />
             </Link>
           </div>
-          <div className="topic-list">
-            {data.topics.map((topic, index) => {
-              const lessons = data.lessons.filter((l) => l.topicId === topic.id);
-              const done = lessons.filter((l) => completed.includes(l.id)).length;
+          <div className="foundation-list">
+            {data.topics.map((topic) => {
+              const lessons = data.lessons.filter((lesson) => lesson.topicId === topic.id);
+              const done =
+                lessons.length > 0 && lessons.every((lesson) => completed.includes(lesson.id));
               return (
-                <Link to={`/nauka?temat=${topic.id}`} className="topic-row" key={topic.id}>
-                  <span className={`topic-symbol topic-${topic.id}`}>
-                    <TopicIcon id={topic.id} />
+                <Link key={topic.id} to={`/nauka/podstawy?temat=${topic.id}`}>
+                  <span className="foundation-icon">
+                    <TopicIcon id={topic.id} size={19} />
                   </span>
-                  <div className="topic-row-body">
-                    <div>
-                      <span className="route-number">{String(index + 1).padStart(2, '0')}</span>
-                      <h3>{topic.title}</h3>
-                    </div>
-                    <p>{topic.description}</p>
-                  </div>
-                  <span className="topic-count">
-                    {done ? `${done}/${lessons.length} ukończono` : `${lessons.length} lekcje`}
-                  </span>
-                  <ChevronRight size={17} />
+                  <span>{topic.title}</span>
+                  {done ? <Check size={17} className="text-green" /> : <ChevronRight size={16} />}
                 </Link>
               );
             })}
           </div>
         </section>
-        <aside className="home-aside">
-          <div className="next-step">
-            <span className="pill">
-              <BookOpen size={14} />
-              Dobry kolejny krok
-            </span>
-            <h2>{recent ? recent.title : nextLesson?.title || 'Zacznij od podstaw'}</h2>
-            <p>
-              {recent
-                ? `Masz rozpoczętą próbę w trybie ${modeLabel(recent.mode).toLowerCase()}. Jej pliki i postęp są zapisane.`
-                : nextLesson?.summary}
-            </p>
-            <div className="meta-line">
-              <Clock3 size={15} />
-              {recent ? 'Kontynuuj we własnym tempie' : `${nextLesson?.minutes ?? 15} minut`}
-            </div>
-            <Link
-              className="button primary full"
-              to={
-                recent
-                  ? recent.kind === 'practice'
-                    ? `/praktyka/${recent.taskId}?proba=${recent.id}`
-                    : `/teoria?proba=${recent.id}`
-                  : `/nauka/${nextLesson?.id}`
-              }
-            >
-              <Play size={16} />
-              {recent ? 'Kontynuuj próbę' : 'Otwórz lekcję'}
-            </Link>
-          </div>
-          <div className="study-note">
-            <Lightbulb size={23} />
-            <h3>Nie musisz znać odpowiedzi.</h3>
-            <p>
-              Najpierw spróbuj. Przeczytaj oryginalny arkusz i porównaj wymagania ze swoim
-              rozwiązaniem. Zobacz, co warto powtórzyć.
-            </p>
-          </div>
-          <Link to="/teoria" className="theory-invite">
-            <GraduationCap size={24} />
-            <div>
-              <strong>Chwila na teorię?</strong>
-              <span>{data.questionCount} opublikowanych przykładów CKE</span>
-            </div>
-            <ArrowRight size={18} />
+        <aside className="theory-shortcut glass-panel">
+          <span className="shortcut-icon">
+            <GraduationCap size={32} strokeWidth={1.5} />
+          </span>
+          <h2>Chwila na teorię.</h2>
+          <p>Krótka seria pytań CKE. Po odpowiedzi zobaczysz, co warto powtórzyć.</p>
+          <Link className="button secondary" to="/teoria">
+            Otwórz teorię
+            <ArrowRight size={17} />
           </Link>
+          <small>{data.questionCount} opublikowanych przykładów CKE</small>
+          <div className="shortcut-foot">
+            <BookOpen size={16} />
+            <span>Spokojnie, we własnym tempie.</span>
+          </div>
         </aside>
       </div>
-      <section className="project-section">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">Sprawdź wiedzę w działaniu</span>
-            <h2>Zadania z arkuszy CKE</h2>
-          </div>
-          <Link to="/praktyka" className="text-link">
-            Otwórz pracownię
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-        <div className="project-grid">
-          {data.tasks.map((task, index) => (
-            <Link to={`/praktyka/${task.id}`} className="project-card" key={task.id}>
-              <div className="project-card-top">
-                <span className={`project-illustration project-${index}`}>
-                  <Terminal size={28} />
-                  <span>
-                    {(
-                      {
-                        'cke-wedkowanie': 'SELECT *',
-                        'inf03-01-25-01-sg': '<form>',
-                        'inf03-08-25-06-sg': 'mysqli()',
-                      } as Record<string, string>
-                    )[task.id] ?? task.technologies[0]}
-                  </span>
-                </span>
-                <span className="pill subtle">Arkusz CKE</span>
-              </div>
-              <h3>{task.title}</h3>
-              <p>{task.summary}</p>
-              <Tags items={task.technologies} />
-              <div className="project-card-bottom">
-                <span>
-                  <Clock3 size={14} />
-                  {task.durationMinutes} min w trybie egzaminu
-                </span>
-                <ArrowRight size={18} />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-      <div className="bottom-note">
-        <Code2 size={19} />
-        <p>
-          To miejsce do samodzielnej pracy. Kod piszesz Ty — pracownia pomaga zrozumieć wymagania i
-          sprawdzić wynik.
-        </p>
+      <div className="learning-footnote">
+        <Code2 size={18} />
+        <p>Omówienia pomagają w nauce. Oryginalne wymagania zawsze znajdziesz w arkuszu CKE.</p>
       </div>
-    </>
+    </div>
   );
 }

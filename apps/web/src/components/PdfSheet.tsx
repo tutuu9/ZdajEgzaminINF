@@ -19,7 +19,15 @@ export function taskSheetUrl(task: Pick<PublicTask, 'id' | 'version'>) {
   return `/api/v1/tasks/${encodeURIComponent(task.id)}/sheet.pdf?version=${task.version}`;
 }
 
-export function PdfSheet({ task }: { task: PublicTask }) {
+export function PdfSheet({
+  task,
+  requestedPage,
+  onPageChange,
+}: {
+  task: PublicTask;
+  requestedPage?: number;
+  onPageChange?: (page: number) => void;
+}) {
   return (
     <PdfReader
       url={taskSheetUrl(task)}
@@ -27,6 +35,8 @@ export function PdfSheet({ task }: { task: PublicTask }) {
       label={`Arkusz ćwiczeniowy · materiał autorski · ${task.qualification} · wersja ${task.version}`}
       downloadName={`${task.id}-v${task.version}.pdf`}
       task={task}
+      requestedPage={requestedPage}
+      onPageChange={onPageChange}
     />
   );
 }
@@ -39,6 +49,7 @@ export function PdfReader({
   sourceUrl,
   sourceLabel,
   requestedPage,
+  onPageChange,
   task,
   compact = false,
   crop,
@@ -50,6 +61,7 @@ export function PdfReader({
   sourceUrl?: string;
   sourceLabel?: string;
   requestedPage?: number;
+  onPageChange?: (page: number) => void;
   task?: PublicTask;
   compact?: boolean;
   crop?: { top: number; bottom: number };
@@ -65,6 +77,12 @@ export function PdfReader({
     [width, setWidth] = useState(700);
   const canvas = useRef<HTMLCanvasElement>(null),
     viewport = useRef<HTMLDivElement>(null);
+  const pageChange = useRef(onPageChange);
+  pageChange.current = onPageChange;
+  const changePage = (page: number) => {
+    setPageNumber(page);
+    pageChange.current?.(page);
+  };
   useEffect(() => {
     let cancelled = false;
     setPdf(null);
@@ -108,7 +126,11 @@ export function PdfReader({
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    if (pdf && requestedPage) setPageNumber(Math.max(1, Math.min(pdf.numPages, requestedPage)));
+    if (pdf && requestedPage) {
+      const page = Math.max(1, Math.min(pdf.numPages, requestedPage));
+      setPageNumber(page);
+      if (page !== requestedPage) pageChange.current?.(page);
+    }
   }, [pdf, requestedPage]);
   useEffect(() => {
     if (!pdf || !canvas.current) return;
@@ -221,7 +243,7 @@ export function PdfReader({
             className="icon-button"
             aria-label="Poprzednia strona arkusza"
             disabled={compact || !pdf || pageNumber === 1}
-            onClick={() => setPageNumber((value) => value - 1)}
+            onClick={() => changePage(pageNumber - 1)}
           >
             <ChevronLeft size={20} />
           </button>
@@ -232,7 +254,7 @@ export function PdfReader({
             className="icon-button"
             aria-label="Następna strona arkusza"
             disabled={compact || !pdf || pageNumber >= pdf.numPages}
-            onClick={() => setPageNumber((value) => value + 1)}
+            onClick={() => changePage(pageNumber + 1)}
           >
             <ChevronRight size={20} />
           </button>

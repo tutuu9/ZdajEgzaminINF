@@ -3,8 +3,16 @@ import { fileURLToPath } from 'node:url';
 import { rm, mkdir, readdir, stat, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { db } from '@zdaj/database';
-import { checkRuntime, command, readProject, runProject, type RunnerOptions } from '@zdaj/checker';
+import {
+  checkRuntime,
+  command,
+  readProject,
+  runProject,
+  runStudyProject,
+  type RunnerOptions,
+} from '@zdaj/checker';
 import { type TaskVersion } from '@zdaj/shared';
+import { allExamStudyGuides } from '@zdaj/content';
 import { Prisma } from '@prisma/client';
 import { claimJob } from './queue.js';
 
@@ -48,9 +56,17 @@ async function discard(inputPath: string) {
 }
 async function maintain() {
   const now = new Date();
-  const stale = await db.checkJob.findMany({
-    where: { status: 'running', leaseUntil: { lt: now } },
-  });
+  const staleWhere = { status: 'running', leaseUntil: { lt: now } };
+  const stale = [
+    ...(await db.checkJob.findMany({ where: staleWhere })).map((job) => ({
+      ...job,
+      kind: 'final' as const,
+    })),
+    ...(await db.studyCheckJob.findMany({ where: staleWhere })).map((job) => ({
+      ...job,
+      kind: 'study' as const,
+    })),
+  ];
   for (const job of stale) {
     const containers = await command(['ps', '-aq', '--filter', `label=zdaj.job=${job.id}`]).catch(
       () => null,
@@ -58,22 +74,33 @@ async function maintain() {
     for (const id of containers?.stdout.trim().split(/\s+/).filter(Boolean) ?? [])
       if (/^[a-f\d]{12,64}$/.test(id)) await command(['rm', '-f', id]).catch(() => undefined);
     await discard(job.inputPath);
-    await db.checkJob.update({
+    const update = {
       where: { id: job.id },
       data: {
         status: 'failed',
-        error: 'Sprawdzanie zostało przerwane. Utwórz kolejną próbę.',
+        error: 'Sprawdzanie zostało przerwane. Pliki pozostały lokalnie; ponów sprawdzenie.',
         finishedAt: now,
         leaseUntil: null,
       },
-    });
+    };
+    if (job.kind === 'study') await db.studyCheckJob.update(update);
+    else await db.checkJob.update(update);
   }
-  const expired = await db.checkJob.findMany({
-    where: { expiresAt: { lt: now }, status: { not: 'running' } },
-  });
+  const expiredWhere = { expiresAt: { lt: now }, status: { not: 'running' } };
+  const expired = [
+    ...(await db.checkJob.findMany({ where: expiredWhere })).map((job) => ({
+      ...job,
+      kind: 'final' as const,
+    })),
+    ...(await db.studyCheckJob.findMany({ where: expiredWhere })).map((job) => ({
+      ...job,
+      kind: 'study' as const,
+    })),
+  ];
   for (const job of expired) {
     await discard(job.inputPath);
-    await db.checkJob.delete({ where: { id: job.id } });
+    if (job.kind === 'study') await db.studyCheckJob.deleteMany({ where: { id: job.id } });
+    else await db.checkJob.deleteMany({ where: { id: job.id } });
   }
   const sandboxRoot = path.resolve(dataDir, 'sandbox');
   for (const entry of await readdir(sandboxRoot, { withFileTypes: true }).catch(() => [])) {
@@ -85,9 +112,10 @@ async function maintain() {
       .then((text) => JSON.parse(text) as { jobId?: string })
       .catch(() => null);
     if (marker?.jobId) {
-      const active = await db.checkJob.findFirst({
-        where: { id: marker.jobId, status: 'running', leaseUntil: { gt: new Date() } },
-      });
+      const activeWhere = { id: marker.jobId, status: 'running', leaseUntil: { gt: new Date() } };
+      const active =
+        (await db.checkJob.findFirst({ where: activeWhere })) ??
+        (await db.studyCheckJob.findFirst({ where: activeWhere }));
       if (active) continue;
     }
     // Names and paths were resolved and checked above; only this worker's expired scratch directory is removed.
@@ -131,14 +159,49 @@ while (!stopping) {
       continue;
     }
     try {
+      const source = path.resolve(job.inputPath);
+      if (!source.startsWith(`${path.resolve(dataDir, 'jobs')}${path.sep}`))
+        throw new Error('Invalid job source.');
+      if (job.kind === 'study') {
+        const guide = allExamStudyGuides.find(
+          (item) =>
+            item.id === job.guideId &&
+            item.version === job.guideVersion &&
+            item.taskId === job.taskId &&
+            item.taskVersion === job.taskVersion,
+        );
+        const [stepId, activityId] = job.activityId.split('/');
+        const activity = guide?.steps
+          .find((step) => step.id === stepId)
+          ?.activities?.find((item) => item.id === activityId);
+        const check = activity?.checks?.find(
+          (item) => item.kind === 'runtime' && item.adapter === job.adapterId,
+        );
+        if (!guide || !check) throw new Error('Study revision unavailable.');
+        const report = await runStudyProject(
+          { ...job, criterionId: check.id, criterionTitle: check.title },
+          await readProject(source),
+          { ...options, jobId: job.id },
+        );
+        await db.studyCheckJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'completed',
+            report: report as unknown as Prisma.InputJsonValue,
+            finishedAt: new Date(),
+            leaseUntil: null,
+          },
+        });
+        await metric('study.checks.completed');
+        await metric(`study.results.${report.status}`);
+        console.log('Educational check completed.');
+        continue;
+      }
       const revision = await db.contentRevision.findUnique({
         where: { kind_key_version: { kind: 'task', key: job.taskId, version: job.taskVersion } },
       });
       if (!revision || revision.status !== 'published')
         throw new Error('Task revision unavailable.');
-      const source = path.resolve(job.inputPath);
-      if (!source.startsWith(`${path.resolve(dataDir, 'jobs')}${path.sep}`))
-        throw new Error('Invalid job source.');
       const report = await runProject(
         revision.payload as unknown as TaskVersion,
         await readProject(source),
@@ -171,7 +234,7 @@ while (!stopping) {
         );
       console.log('Check completed.');
     } catch {
-      await db.checkJob.update({
+      const update = {
         where: { id: job.id },
         data: {
           status: 'failed',
@@ -179,8 +242,10 @@ while (!stopping) {
           finishedAt: new Date(),
           leaseUntil: null,
         },
-      });
-      await metric('checks.failed');
+      };
+      if (job.kind === 'study') await db.studyCheckJob.update(update);
+      else await db.checkJob.update(update);
+      await metric(job.kind === 'study' ? 'study.checks.failed' : 'checks.failed');
       await db.event
         .create({ data: { type: 'check.failed', detail: { taskId: job.taskId } } })
         .catch(() => undefined);

@@ -32,7 +32,11 @@ The API does not execute uploaded code or receive the Docker socket. The worker 
 | AI request token counts and accounting status                           | PostgreSQL                   | Budget accounting; no prompt or code content                 |
 | Operational events                                                      | PostgreSQL                   | Seven days; counters remain aggregated                       |
 
-No permanent student account or `StudentAttempt` history exists on the server. A local backup contains sensitive attempt tokens and the learner's own files; treat it as private. Restoring a backup preserves the local record but does not renew an expired server ticket. There is no automatic cross-device sync.
+No permanent student account or `StudentAttempt` history exists on the server. A local backup contains sensitive attempt tokens and the learner's own files; treat it as private. There is no automatic cross-device sync.
+
+`AttemptSnapshot.files` is the sole editable project. `ProjectStore` serializes functional changes using an IndexedDB transaction that compares the persisted revision before writing. A second tab cannot silently overwrite a newer revision. Failed writes keep the current in-memory files available for download and block completing a step until saving succeeds. Explicit reload is separate from retrying a save.
+
+The local project ID is independent of its server ticket. An unfinished Nauka/Trening project can replace an expired ticket when a protected operation requires it, preserving files, pinned guide, progress and accumulated hint usage. Egzamin and completed attempts never renew automatically. Server retention remains 24 hours. Backup v2 includes the guide, editor positions, learning checkpoints, recovery copies and legacy notebooks; v1 is still accepted. Conflicting imports keep both works.
 
 ## Content revisions
 
@@ -44,7 +48,7 @@ Original PDF requests use a code-reviewed exact-URL allowlist, bounded downloads
 
 ## Submission flow
 
-Current public original papers do not yet have checking adapters. Their manual-completion endpoint validates the attempt secret and closes the ticket without accepting source files, creating a checking job or generating a score. Projects remain in IndexedDB. The following automated flow applies only to supported adapters, including legacy regression coverage.
+Current public original papers do not have full final-grading adapters. Their manual-completion endpoint validates the attempt secret and closes the ticket without accepting source files, creating a final checking job or generating a score. Separate `StudyCheckJob` records support repeatable educational JavaScript checks without closing a project. They share queue capacity and the single worker slot with final checks. The following automated flow applies to supported adapters, including legacy regression coverage.
 
 1. The browser starts a ticket for a particular task version, level and mode.
 2. Edits remain local until an explicit check request uploads files.

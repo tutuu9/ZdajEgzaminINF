@@ -2,7 +2,7 @@
 
 ## What is evaluated
 
-Only tasks with a supported declarative adapter are executable. The existing adapters cover three legacy authored regression projects: Biblioteka szkolna, Kalkulator warsztatów and Klub planszówkowy. These are no longer offered as new learner assignments. All current public practical assignments are original CKE INF.03 papers with catalogue-only support; they allow local work and manual completion, but reject automatic checking until an adapter for that exact paper is prepared and verified.
+Only tasks with a supported declarative adapter are executable. The final-submission adapters cover three legacy authored regression projects: Biblioteka szkolna, Kalkulator warsztatów and Klub planszówkowy. These are no longer offered as new learner assignments. All current public practical assignments are original CKE INF.03 papers with catalogue-only support for final submission. Their cumulative learning guides can check individual supported steps as described below; that does not certify the completed exam paper.
 
 Checks inspect expected files, rendered DOM and computed CSS, fixed JavaScript behaviour, PHP output, MariaDB query results and selected image metadata. PHP/SQL run in the exam database environment, never in the platform PostgreSQL database. Correctness is based on requirements and behaviour, not byte-for-byte similarity with a model answer.
 
@@ -15,6 +15,29 @@ Structural checks have a limited meaning. In the workshop project, separate crit
 Each criterion is `passed`, `failed`, `manual`, `unchecked`, or `error`. The report includes evidence and a next step, plus confirmed points, checked points and total possible points. An overall percentage is emitted only when every criterion has a conclusive automatic result. The initial projects include manual review criteria, so a partial report deliberately has no overall percentage.
 
 An infrastructure failure is a failure to assess, not a failed learner criterion. Official criteria, additional educational checks and AI explanations are separate concepts. All current project criteria are original educational criteria, not official CKE scoring.
+
+## Cumulative learning checks
+
+Guide revision 3 works on the same local project files used by the editor and final submission. File presence and supported HTML requirements are checked locally. CSS checks use a script-disabled, isolated document to read selected computed properties. These checks confirm only their stated property; they do not establish visual equivalence with the original paper. PHP, SQL, graphics editing, source-archive contents and unsupported requirements retain an explicit manual checklist.
+
+Dynamic JavaScript uses two fixed server adapters: `kursy-calculator` for `calculator/calculator-check` in the computer-courses guide, and `smoki-tabs` for `tabs/tabs-check` in the dragons guide. The first exercises course combinations, prices, cities, installment counts and repeated clicks. The second exercises initial visibility, repeated navigation and active/inactive navigation colours. Alternative implementations are accepted through observable behaviour. These are educational tests, not official CKE criteria or a full-paper score.
+
+The dragons adapter extracts static HTML from `smoki.php` using the PHP parser, then serves a private HTML entry. Uploaded PHP is never executed in this JavaScript check. Generated PHP output is therefore outside its coverage; templates with more than one million characters require manual checking. Neither JavaScript adapter evaluates SQL. The adapters and commands are compiled into the platform: guide editors and students cannot supply executable checker code.
+
+The API uses these endpoints:
+
+- `POST /api/v1/attempts/:id/study` with `{token, guideVersion?}` retrieves an authorized guide revision. Omitting the version selects the latest revision for that task; a started local project pins an explicit version.
+- `POST /api/v1/attempts/:id/study/checks` accepts `{token, guideVersion, activityId, projectRevision, files}` and returns `{id, token, status}`. `activityId` combines the step and activity IDs with `/`.
+- `GET /api/v1/study/checks/:id` requires `X-Check-Token` and returns job status and, when ready, its report.
+- `POST /api/v1/study/checks/:id/ack` with `{token}` deletes a completed or failed temporary result after local receipt.
+
+Mutations retain the guest CSRF boundary. Every request verifies the attempt secret, expiry, task revision, guide revision and supported activity. An unfinished `Egzamin` attempt cannot retrieve teaching material or create an educational check. A check does not close the attempt or overwrite its files. Exact repeated submissions recover the existing job and secret, while an in-flight job prevents another runtime check for the same attempt.
+
+`StudyCheckJob` is separate from final `CheckJob`, because one project can undergo many educational checks before submission. Both tables share the same queue limit of 20 waiting jobs, one running worker slot, master checking switch, execution-profile heartbeat and sandbox limits. When the runtime is unavailable, the API returns an explicit unavailable response and the interface offers manual review; it does not silently run JavaScript with weaker isolation.
+
+Reports carry the guide/activity identity, submitted project revision and a SHA-256 hash of canonical project files. The browser must not apply a result to code edited after submission. Study results are `passed`, `failed`, `manual`, `unsupported` or `error`, with evidence and advice; they have no points or overall percentage. A worker timeout or infrastructure failure produces a failed job rather than an invented learner grade.
+
+Source files are deleted after processing, including failure paths. Temporary jobs/reports expire after 24 hours or are deleted on acknowledgment; API maintenance also cleans expired queued/completed jobs while the worker is offline. Worker restart recovery removes stale execution environments. Long-term files, checkpoints and reports remain in the learner's IndexedDB. A fresh temporary ticket for an expired unfinished learning/training session does not change that local project or extend an exam deadline.
 
 ## Upload boundary
 
@@ -29,6 +52,8 @@ The trusted worker claims at most one job at a time using PostgreSQL locking. It
 The sandbox image contains PHP 8.4, MariaDB 11.4, Chromium and the trusted check controller. PHP, MariaDB and Chromium use distinct unprivileged users; the small controller has the container-local capabilities required to start those processes. The source mount and root filesystem are read-only. Writable scratch areas are bounded tmpfs. There is no platform secret or Docker socket inside the sandbox.
 
 The sandbox has no external network; services needed by the check communicate inside its own environment. Initial limits are one CPU, 2 GiB memory including swap ceiling, 256 processes, a 120-second host deadline, a shorter in-container deadline and a 1 MiB host output limit. These are bounds, not a VPS sizing recommendation.
+
+The 120-second deadline limits the command executing user code. Before it starts, each trusted Docker `info` and image-inspection probe has its own 30-second timeout, allowing Docker Desktop to respond under host load. Cleanup has a separate 10-second control-command timeout. The global worker lease is 240 seconds so preflight, execution and cleanup remain within the same occupied slot; this does not grant user code 240 seconds of runtime.
 
 The worker removes the container and temporary source tree in cleanup paths. It also handles expired job leases after a restart. Source files are removed after processing; reports expire or are acknowledged separately.
 

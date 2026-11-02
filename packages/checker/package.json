@@ -1,10 +1,11 @@
 {
   "name": "@zdaj/checker",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
+    "@lezer/php": "1.0.6",
     "@zdaj/shared": "*",
     "yauzl": "^3.2.0",
     "cheerio": "^1.1.2",

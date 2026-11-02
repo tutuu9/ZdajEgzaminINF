@@ -2,6 +2,14 @@
 
 Keep changes small and tied to an observable learning or reliability improvement. Work on a short-lived branch from `main`, use meaningful commits, and describe the resulting behaviour and relevant validation in the pull request.
 
+## GitHub checkpoints and releases
+
+Use `codex/` for new working branches. During the authorized release and course expansion, commit and push every verified milestone: the existing redesign, navigation, FAQ, each complete course, and final verification. Open a pull request so the full CI workflow runs; feature-branch pushes alone do not trigger it. Fix failures in separate commits. Merge with commit history retained only after every required job passes, including the complete Playwright suite.
+
+Keep the v1.0.0 baseline separate from subsequent features. Align workspace versions and the lockfile before a release, publish English and Polish notes, and create an immutable annotated tag on the verified commit. Never move a published tag or force-push shared history. Do not attach secrets, local databases, learner work or downloaded third-party examination archives to releases.
+
+For rollback, inspect the release tag or create a reviewed revert on a new branch. Back up PostgreSQL and browser-local work first and confirm compatibility with the installed migrations and IndexedDB format. Reverting code does not automatically reverse migrations, restore older data formats or remove learner progress. Never remove Docker volumes as part of a code rollback.
+
 ## Development
 
 Follow [local development](docs/local-development.md). Use the lockfile and Node 24.x. Run `npm run check` and `npm run build`; run the integration or browser tests when the affected behaviour requires them. Include verification limits rather than describing an unrun check as passed.

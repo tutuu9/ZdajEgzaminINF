@@ -1,8 +1,24 @@
 import type { ProjectFile } from '@zdaj/shared';
 import { parse, serialize, type DefaultTreeAdapterMap } from 'parse5';
+import { phpLanguage } from '@codemirror/lang-php';
+
+/** Retain only literal HTML outside PHP blocks. PHP is never evaluated in a preview. */
+export function staticPhpMarkup(source: string) {
+  if (source.length > 1_000_000) return '';
+  const fragments: string[] = [];
+  phpLanguage.parser
+    .configure({ top: 'Template' })
+    .parse(source)
+    .iterate({
+      enter(node) {
+        if (node.name === 'Text') fragments.push(source.slice(node.from, node.to));
+      },
+    });
+  return fragments.join('');
+}
 
 /** Parse in JavaScript, then keep browser nodes in a template's inert document. */
-function inertDocument(markup: string) {
+export function inertDocument(markup: string) {
   type Element = DefaultTreeAdapterMap['element'];
   const parsed = parse(markup);
   const htmlNode = parsed.childNodes.find(
@@ -73,10 +89,12 @@ function resolvePath(from: string, to: string): string | null {
 export function createPreview(
   files: ProjectFile[],
   entry: string,
+  options: { scripts?: boolean } = {},
 ): { html: string; dispose: () => void } {
   const map = new Map(files.map((file) => [file.path, file]));
   const source = map.get(entry);
-  if (!source || !/\.html?$/i.test(entry)) return { html: '', dispose: () => undefined };
+  if (!source || source.encoding === 'base64' || !/\.(?:html?|php)$/i.test(entry))
+    return { html: '', dispose: () => undefined };
   const nonce = previewNonce();
   const asset = (from: string, value: string) => {
     const path = resolvePath(from, value),
@@ -91,7 +109,9 @@ export function createPreview(
         /url\(\s*['"]?([^)'"\s]+)['"]?\s*\)/gi,
         (_all: string, url: string) => `url("${asset(path, url)}")`,
       );
-  const { doc, root, head, body } = inertDocument(source.content);
+  const { doc, root, head, body } = inertDocument(
+    /\.php$/i.test(entry) ? staticPhpMarkup(source.content) : source.content,
+  );
   root
     .querySelectorAll(
       'base,iframe,object,embed,meta[http-equiv],link[rel="preload"],link[rel="prefetch"]',
@@ -114,6 +134,10 @@ export function createPreview(
     );
   const deferredScripts: HTMLScriptElement[] = [];
   root.querySelectorAll<HTMLScriptElement>('script').forEach((script) => {
+    if (options.scripts === false) {
+      script.remove();
+      return;
+    }
     if (
       script.type &&
       !['text/javascript', 'application/javascript', 'module'].includes(script.type)
@@ -152,6 +176,10 @@ export function createPreview(
     element.removeAttribute('data-preview-event');
     for (const attribute of [...element.attributes]) {
       if (!/^on[a-z]+$/i.test(attribute.name)) continue;
+      if (options.scripts === false) {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
       element.setAttribute('data-preview-event', id);
       const eventName = attribute.name.slice(2).toLowerCase();
       handlers.push(
@@ -168,7 +196,7 @@ export function createPreview(
   root.querySelectorAll('a[href]').forEach((link) => {
     const path = resolvePath(entry, link.getAttribute('href') || '');
     link.setAttribute('href', '#');
-    if (path && map.has(path) && /\.html?$/i.test(path))
+    if (path && map.has(path) && /\.(?:html?|php)$/i.test(path))
       link.setAttribute('data-preview-path', path);
     link.removeAttribute('target');
     link.removeAttribute('download');
@@ -182,6 +210,6 @@ export function createPreview(
   bridge.textContent = scriptText(
     `${handlers.join('\n')}\ndocument.addEventListener('click',function(event){var link=event.target instanceof Element?event.target.closest('a'):null;if(link){event.preventDefault();var path=link.getAttribute('data-preview-path');if(path)parent.postMessage({type:'zdaj-preview-navigate',path:path},'*');}},true);document.addEventListener('submit',function(event){event.preventDefault();},true);`,
   );
-  body.append(bridge);
+  if (options.scripts !== false) body.append(bridge);
   return { html: '<!doctype html>' + root.outerHTML, dispose: () => undefined };
 }
