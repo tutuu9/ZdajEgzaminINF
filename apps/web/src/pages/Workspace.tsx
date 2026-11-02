@@ -158,7 +158,7 @@ export function Workspace() {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [saved]);
-  const remember = (patch: Partial<NonNullable<AttemptSnapshot['workspace']>>) => {
+  const remember = useCallback((patch: Partial<NonNullable<AttemptSnapshot['workspace']>>) => {
     const controller = storeRef.current;
     if (!controller) return;
     void controller
@@ -174,23 +174,26 @@ export function Workspace() {
         },
       }))
       .catch((cause) => setError(errorMessage(cause)));
-  };
+  }, []);
   const setSelected = (path: string) => {
     setSelectedState(path);
     remember({ activeFile: path });
   };
-  const setTab = (view: NonNullable<AttemptSnapshot['workspace']>['view']) => {
-    setTabState(view);
-    remember({ view });
-    setParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        next.set('widok', view === 'study' ? 'nauka' : view);
-        return next;
-      },
-      { replace: true },
-    );
-  };
+  const setTab = useCallback(
+    (view: NonNullable<AttemptSnapshot['workspace']>['view']) => {
+      setTabState(view);
+      remember({ view });
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set('widok', view === 'study' ? 'nauka' : view);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [remember, setParams],
+  );
   const setPreviewEntry = (path: string) => {
     setPreviewEntryState(path);
     remember({ previewEntry: path });
@@ -392,7 +395,7 @@ export function Workspace() {
     } finally {
       if (storeRef.current === controller) setBusy(false);
     }
-  }, [update, task, refreshProgress]);
+  }, [task, refreshProgress, setTab]);
   const expire = useCallback(() => {
     const current = attemptRef.current;
     if (current && !current.submittedAt && autoSubmitted.current !== current.id) {

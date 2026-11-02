@@ -82,7 +82,7 @@ test('project files persist and the isolated preview runs local JavaScript witho
   ]);
   await expect(page.locator('.save-state')).toHaveText('Zapisano lokalnie');
   await page.getByRole('tab', { name: 'Projekt', exact: true }).click();
-  await page.getByLabel('Strona', { exact: true }).selectOption('index.html');
+  await page.getByRole('combobox', { name: 'Strona', exact: true }).selectOption('index.html');
   await page.getByRole('button', { name: 'Uruchom JS', exact: true }).click();
   await expect(
     page
@@ -196,9 +196,12 @@ test('official task completion preserves files and never claims an automatic sco
     buffer: Buffer.from('<h1>Moja zachowana praca</h1>'),
   });
   await expect(page.locator('.save-state')).toHaveText('Zapisano lokalnie');
+  const localId = new URL(page.url()).searchParams.get('proba');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Zakończ próbę', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Próba zakończona', exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('proba')).toBe(localId);
+  expect((await savedProject(page)).submittedAt).toBeTruthy();
   await expect(page.locator('.manual-completion')).toContainText(
     'nie przypisujemy punktów ani procentu',
   );
@@ -261,7 +264,7 @@ test('cumulative course keeps shared files, step position, undo and legacy notes
   );
   await expect(
     page.locator(`.course-step-select option[value="${first.id}/${second.id}"]`),
-  ).toBeDisabled();
+  ).toHaveJSProperty('disabled', true);
   await expect(
     page.getByRole('button', { name: 'Zapisz i przejdź dalej', exact: true }),
   ).toBeDisabled();
@@ -502,6 +505,8 @@ test('exam keeps cumulative guidance locked until the attempt is closed', async 
   await expect(page.locator('.cumulative-course')).toHaveCount(0);
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Zakończ próbę', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Próba zakończona', exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('proba')).toBe((await savedProject(page)).id);
   await page.getByRole('tab', { name: 'Nauka', exact: true }).click();
   await expect(page.locator('.course-step-select select')).toBeVisible();
 });
