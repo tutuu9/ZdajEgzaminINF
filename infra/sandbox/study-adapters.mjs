@@ -247,6 +247,9 @@ async function inspectMessage(chat, expectedText, author, previous) {
         }
       });
       const style = getComputedStyle(block);
+      const bounds = block.getBoundingClientRect();
+      const viewport = container.getBoundingClientRect();
+      const visibleTop = viewport.top + container.clientTop;
       return {
         texts,
         block: true,
@@ -256,6 +259,8 @@ async function inspectMessage(chat, expectedText, author, previous) {
         float: image ? getComputedStyle(image).float : '',
         overflow: container.scrollHeight > container.clientHeight + 2,
         atBottom: container.scrollHeight - container.clientHeight - container.scrollTop <= 3,
+        messageVisible:
+          bounds.top >= visibleTop - 3 && bounds.bottom <= visibleTop + container.clientHeight + 3,
       };
     },
     { image: author === 'jolanta' ? 'Jolka.jpg' : 'Krzysiek.jpg' },
@@ -275,7 +280,7 @@ async function inspectMessage(chat, expectedText, author, previous) {
     (author === 'krzysztof' && state.align !== 'right')
   )
     return `Nowa wypowiedź powinna zachować tło, stronę obrazu i wyrównanie właściwe dla ${author === 'jolanta' ? 'Jolanty' : 'Krzysztofa'}. Sprawdź CSS dodawanego bloku.`;
-  if (state.overflow && !state.atBottom)
+  if (state.overflow && !state.atBottom && !state.messageVisible)
     return 'Po dopisaniu wiadomości przewiń wypełniony blok chatu do nowej wypowiedzi.';
   return null;
 }

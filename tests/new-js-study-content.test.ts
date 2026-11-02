@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { load } from 'cheerio';
+import { Script } from 'node:vm';
 import type { StudyCheckSpec } from '@zdaj/shared';
 import { firmaGuide } from '../packages/content/src/study-project-firma.js';
 import { firmaFixtures, firmaHtmlMistakes } from '../fixtures/study/firma.js';
 import { salonGuide } from '../packages/content/src/study-project-salon.js';
 import { salonFixtures, salonHtmlMistakes } from '../fixtures/study/salon.js';
+import { chatGuide } from '../packages/content/src/study-project-chat.js';
+import { chatFixtures, chatHtmlMistakes } from '../fixtures/study/chat.js';
 
 const courses = [
   { guide: firmaGuide, fixtures: firmaFixtures, mistakes: firmaHtmlMistakes },
   { guide: salonGuide, fixtures: salonFixtures, mistakes: salonHtmlMistakes },
+  { guide: chatGuide, fixtures: chatFixtures, mistakes: chatHtmlMistakes },
 ];
 function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>) {
   const $ = load(source);
@@ -71,6 +75,10 @@ describe('new CKE JavaScript cumulative routes', () => {
       it('accepts independently implemented complete HTML and rejects focused defects', () => {
         expect(fixtures.length).toBeGreaterThanOrEqual(2);
         for (const fixture of fixtures) {
+          for (const file of fixture.files.filter((file) => file.path.endsWith('.js'))) {
+            // Parse trusted test fixtures only; never run learner JavaScript in the test/API process.
+            expect(() => new Script(file.content), `${fixture.variant}:${file.path}`).not.toThrow();
+          }
           for (const section of guide.steps)
             for (const activity of section.activities!)
               for (const check of activity.checks!) {

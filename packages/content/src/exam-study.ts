@@ -1,3 +1,4 @@
+import { chatGuide } from './study-project-chat.js';
 import { salonGuide } from './study-project-salon.js';
 import { firmaGuide } from './study-project-firma.js';
 import { rzekiGuide } from './study-project-rzeki.js';
@@ -616,6 +617,8 @@ examStudyGuides.push(rzekiGuide);
 examStudyGuides.push(firmaGuide);
 
 examStudyGuides.push(salonGuide);
+
+examStudyGuides.push(chatGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,

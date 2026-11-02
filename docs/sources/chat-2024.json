@@ -1,0 +1,194 @@
+{
+  "slug": "chat",
+  "title": "Chat",
+  "code": "INF.03-02-24.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/16",
+  "verifiedAt": "2026-11-02T17:36:03.366225+00:00",
+  "inputInspection": {
+    "slug": "chat",
+    "code": "INF.03-02-24.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "textCharacters": 19441,
+        "coverCodeVerified": true,
+        "sha256": "3e9839d4a9087cbb4510624e7795692e363d03c2cf4115b8796040196feb8301"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 0,
+        "coverCodeVerified": true,
+        "sha256": "268344cbccec3c92a3dec6134951998c8a5fb58bb5218aee40d55b72228162b6",
+        "coverVerificationMethod": "manual review of rendered identifier in criteria-headers.png"
+      }
+    ],
+    "archive": "pliki2.zip",
+    "archivePassword": "ChaT_Ch@t",
+    "memberCount": 5,
+    "fileCount": 4,
+    "totalExtractedBytes": 70779,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki2/baza.sql",
+        "bytes": 2645,
+        "sha256": "4fc87135ae3b865954c0b824b040df7c94978a7613410cf85c03568b7d3d04de"
+      },
+      {
+        "path": "pliki2/Jolka.jpg",
+        "bytes": 49606,
+        "sha256": "0b04be6816bf6b74aac92373c0b2772653f493069261ba0623bcd89fc22453b5",
+        "width": 640,
+        "height": 427,
+        "format": "JPEG",
+        "mode": "RGB"
+      },
+      {
+        "path": "pliki2/Krzysiek.jpg",
+        "bytes": 18270,
+        "sha256": "641cdc72103fd57b170156e8abaf1e87218d2a64ec41fcfad54ea3d6a15ef017",
+        "width": 70,
+        "height": 70,
+        "format": "JPEG",
+        "mode": "RGB"
+      },
+      {
+        "path": "pliki2/tekstyDoChatu.txt",
+        "bytes": 258,
+        "sha256": "7a989f011e01b5dc221980adc85b59f4676c8efc6c0416294d382becfbbff51c"
+      }
+    ]
+  },
+  "deliverables": [
+    "chat.html",
+    "import.png",
+    "Jolka.jpg",
+    "Krzysiek.jpg",
+    "kw1.jpg",
+    "kw2.jpg",
+    "kw3.jpg",
+    "kw4.jpg",
+    "kw5.jpg",
+    "kwerendy.txt",
+    "przeglądarka.txt",
+    "styl.css"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Archive wrapper is pliki2/; move its CONTENTS to working folder explicitly. Import baza.sql into chat with Polish collation; full-screen import.png and kw1..kw5.jpg; accumulate queries."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "INSERT Jeremi/Jer123 correct foreign-related id3; FLOOR AVG rokUr alias Średni rok urodzenia; JOIN names startingJ; create uczestnik@localhost password Ucz123&; SELECT/UPDATE only chat.uczestnicy."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Cechy grafiki",
+      "coverage": "Crop Jolka.jpg640x427 to a square retaining the full face, then resize70x70; preserve original70x70 Krzysiek.jpg."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "chat.html/styl.css/Polish HTML5/title; semantic banner/main/sidebar/footer; nested chat category list, participant images/alt text, two initial messages, text input and2buttons."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Tomato/Coral design, Garamond, dimensions, image tag selector, message participant colors/alignment, always-visible chat scrollbars; exact values in paper.txt."
+    },
+    {
+      "id": "runtime-send",
+      "pages": [4, 5],
+      "heading": "Skrypt",
+      "adapter": "chat-messages",
+      "coverage": "Append entered message as final Jolanta block with Jolka.jpg and p; scroll to it on overflow; keep prior messages."
+    },
+    {
+      "id": "runtime-random",
+      "page": 5,
+      "heading": "Skrypt",
+      "adapter": "chat-messages",
+      "coverage": "Declared nine-entry array copied exactly from provided tekstyDoChatu.txt, index0..8; append chosen Krzysztof block with Krzysiek.jpg and p, scroll on overflow; meaningful identifiers."
+    },
+    {
+      "id": "handover",
+      "page": 7,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "Browser record, all screenshots and final file checklist. Original helper text is an input, not explicitly mandated in output inventory."
+    }
+  ],
+  "paperTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\chat\\paper.txt",
+  "criteriaTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\chat\\criteria-ocr.txt",
+  "criteriaTextWarning": "OCR is an aid only: punctuation, identifiers and row numbers must be compared with criteria-pages PNGs before authoring any scoring rule.",
+  "files": {
+    "criteria": {
+      "slug": "chat",
+      "code": "INF.03-02-24.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758023201_inf_03_2024_06_02_SG_zo.pdf",
+      "checkedAt": "2026-11-02T17:29:45.281099+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758023201_inf_03_2024_06_02_SG_zo.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Tue, 16 Sep 2025 23:34:20 GMT",
+      "status": "downloaded",
+      "bytes": 1098441,
+      "sha256": "268344cbccec3c92a3dec6134951998c8a5fb58bb5218aee40d55b72228162b6",
+      "exactCodeVerified": true,
+      "verificationMethod": "Rendered first-page identifier visually checked"
+    },
+    "paper": {
+      "slug": "chat",
+      "code": "INF.03-02-24.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525305768_sheet.pdf",
+      "checkedAt": "2026-11-02T17:30:34.395335+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525305768_sheet.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Sat, 26 Jul 2025 10:21:47 GMT",
+      "status": "downloaded",
+      "bytes": 670591,
+      "sha256": "3e9839d4a9087cbb4510624e7795692e363d03c2cf4115b8796040196feb8301",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction and cover review"
+    },
+    "input": {
+      "slug": "chat",
+      "code": "INF.03-02-24.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525306572_files.zip",
+      "checkedAt": "2026-11-02T17:30:34.545318+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525306572_files.zip",
+      "contentType": "application/x-zip-compressed",
+      "lastModified": "Sat, 26 Jul 2025 10:21:47 GMT",
+      "status": "downloaded",
+      "bytes": 66448,
+      "sha256": "b51121f08885d56df273ca1c89007928c7b39c0f414c874793e7a675ed6292f6"
+    }
+  },
+  "watermarks": "Third-party copies: assessment scans may contain archive watermarks. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

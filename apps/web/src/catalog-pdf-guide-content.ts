@@ -325,4 +325,50 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-02-24-06-sg': {
+    title: 'Chat — INF.03-02-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525305768_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i pięć zapytań',
+        focus: [
+          'Sprawdź powiązanie Jeremiego, średnią roku z częścią całkowitą, złączenie oraz konto i uprawnienia.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Awatary i układ',
+        focus: [
+          'Najpierw wykadruj twarz Jolanty do kwadratu, potem skaluj do 70 × 70. Zachowaj dwa początkowe komunikaty.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Style i wysyłanie',
+        focus: [
+          'Rozróżnij kolory i wyrównanie rozmówców; nowa wiadomość ma dochodzić na końcu historii.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Losowe odpowiedzi',
+        focus: [
+          'Użyj dziewięciu tekstów danych wejściowych, indeksów 0–8 i przewijania do dopisanego komunikatu.',
+        ],
+      },
+      {
+        page: 7,
+        title: 'Komplet rezultatów',
+        focus: ['Arkusz wymaga pięciu zrzutów kw1.jpg–kw5.jpg. Porównaj pisownię nazw awatarów.'],
+      },
+    ],
+  },
 };
