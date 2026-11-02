@@ -3,8 +3,13 @@ import { load } from 'cheerio';
 import type { StudyCheckSpec } from '@zdaj/shared';
 import { firmaGuide } from '../packages/content/src/study-project-firma.js';
 import { firmaFixtures, firmaHtmlMistakes } from '../fixtures/study/firma.js';
+import { salonGuide } from '../packages/content/src/study-project-salon.js';
+import { salonFixtures, salonHtmlMistakes } from '../fixtures/study/salon.js';
 
-const courses = [{ guide: firmaGuide, fixtures: firmaFixtures, mistakes: firmaHtmlMistakes }];
+const courses = [
+  { guide: firmaGuide, fixtures: firmaFixtures, mistakes: firmaHtmlMistakes },
+  { guide: salonGuide, fixtures: salonFixtures, mistakes: salonHtmlMistakes },
+];
 function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>) {
   const $ = load(source);
   return (

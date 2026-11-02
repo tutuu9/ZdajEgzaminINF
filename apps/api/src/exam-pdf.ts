@@ -54,6 +54,12 @@ export const REVIEWED_EXAM_PDFS: Readonly<Record<string, ReviewedExamSource>> = 
     provenance: 'archive-copy',
     sha256: '875fd2ae7d10aafcaaa9679d86be3e9c684c875189eb4cf9d2d96156cb7de939',
   },
+  'inf03-05-24-01-sg': {
+    url: 'https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-05-24.01-SG',
+    provenance: 'archive-copy',
+    sha256: 'bdb5e3db8975e1faf127b8a15eaa870fede97b06a5af28479d7e807a7e98eaa5',
+  },
 });
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 25_000;

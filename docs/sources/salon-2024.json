@@ -1,0 +1,188 @@
+{
+  "slug": "salon",
+  "title": "Salon kosmetyczny",
+  "code": "INF.03-05-24.01-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/30",
+  "verifiedAt": "2026-11-02T17:36:03.366225+00:00",
+  "inputInspection": {
+    "slug": "salon",
+    "code": "INF.03-05-24.01-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "textCharacters": 15943,
+        "coverCodeVerified": true,
+        "sha256": "bdb5e3db8975e1faf127b8a15eaa870fede97b06a5af28479d7e807a7e98eaa5"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 0,
+        "coverCodeVerified": true,
+        "sha256": "c2d6c715383a3e355a0f11f23e9888df54f91d1b93ddaea1c4c33f15ee3e386b",
+        "coverVerificationMethod": "manual review of rendered identifier in criteria-headers.png"
+      }
+    ],
+    "archive": "materialy5.7z",
+    "archivePassword": "Do!!@rozp@#",
+    "memberCount": 3,
+    "fileCount": 3,
+    "totalExtractedBytes": 113656,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "egzamin.sql",
+        "bytes": 5695,
+        "sha256": "3ae581ee183cf4b589211e62f81a221e7933d6e3e4cb6f56b552cc9cac706fbc"
+      },
+      {
+        "path": "obraz1.jpg",
+        "bytes": 33885,
+        "sha256": "875d7dcbee06e09df91f3b6d74fd18f3f867a8125af62e944891af23016af395",
+        "width": 352,
+        "height": 440,
+        "format": "JPEG",
+        "mode": "RGB"
+      },
+      {
+        "path": "obraz2.jpg",
+        "bytes": 74076,
+        "sha256": "e1f35b088c57ae7b456297bca8e5c2b1555f825aeb53eb18d9e6ffd8699f621a",
+        "width": 900,
+        "height": 381,
+        "format": "JPEG",
+        "mode": "RGB"
+      }
+    ]
+  },
+  "deliverables": [
+    "import.png",
+    "index.html",
+    "kw1.jpg",
+    "kw2.jpg",
+    "kw3.jpg",
+    "kw4.jpg",
+    "kwerendy.txt",
+    "obraz1.jpg",
+    "obraz2.jpg",
+    "przeglądarka.txt",
+    "styl7.css",
+    "twarz.html"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Import egzamin.sql into salon, full-screen import.png; preserve output query text and kw1..kw4.jpg."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Select nazwa/cena at price >=50; cosmetic-only AVG price and COUNT; create kosmetyczka@localhost password Kosmet34; grant SELECT and UPDATE only uslugi table."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Przygotowanie grafiki",
+      "coverage": "Proportional resize obraz1.jpg from 352x440 to width240 (height300); obraz2.jpg from900x381 to width700 (about296px)."
+    },
+    {
+      "id": "documents-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "index.html/twarz.html share layout except lower-right block; Polish HTML5/title/encoding/external styl7.css; 2 left+2 right+footer; offer nested list, links, personnel image, contact text and second image; full content in paper.txt."
+    },
+    {
+      "id": "calculator-controls",
+      "page": 4,
+      "heading": "Zawartość ... twarz.html",
+      "coverage": "Four labelled checkbox services, price button, resulting paragraph below button."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "All colors/sizes/margins/hover requirements; mandatory h2/ul/img tag selectors; exact values in paper.txt."
+    },
+    {
+      "id": "runtime",
+      "page": 5,
+      "heading": "Skrypt",
+      "adapter": "salon-calculator",
+      "coverage": "45+30+20+50 checkbox prices; total output in paragraph; calculate selected services anew on click; meaningful identifiers."
+    },
+    {
+      "id": "handover",
+      "page": 6,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "Browser record, all screenshots/files and final verification."
+    }
+  ],
+  "paperTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\salon\\paper.txt",
+  "criteriaTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\salon\\criteria-ocr.txt",
+  "criteriaTextWarning": "OCR is an aid only: punctuation, identifiers and row numbers must be compared with criteria-pages PNGs before authoring any scoring rule.",
+  "files": {
+    "paper": {
+      "slug": "salon",
+      "code": "INF.03-05-24.01-SG",
+      "kind": "paper",
+      "requestedUrl": "https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf",
+      "checkedAt": "2026-11-02T17:29:44.870121+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Wed, 22 Oct 2025 20:30:44 GMT",
+      "status": "downloaded",
+      "bytes": 455436,
+      "sha256": "bdb5e3db8975e1faf127b8a15eaa870fede97b06a5af28479d7e807a7e98eaa5",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction and cover review"
+    },
+    "input": {
+      "slug": "salon",
+      "code": "INF.03-05-24.01-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753705466819_files.7z",
+      "checkedAt": "2026-11-02T17:30:34.075734+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753705466819_files.7z",
+      "contentType": "application/x-compressed",
+      "lastModified": "Mon, 28 Jul 2025 12:24:28 GMT",
+      "status": "downloaded",
+      "bytes": 106912,
+      "sha256": "404e21a11276614bad01f5b08f2524d57aad35b2930e86cfed011b4b97471c65"
+    },
+    "criteria": {
+      "slug": "salon",
+      "code": "INF.03-05-24.01-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758022795_inf_03_2024_01_05_SG_zo.pdf",
+      "checkedAt": "2026-11-02T17:30:34.138930+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758022795_inf_03_2024_01_05_SG_zo.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Tue, 16 Sep 2025 23:34:06 GMT",
+      "status": "downloaded",
+      "bytes": 951080,
+      "sha256": "c2d6c715383a3e355a0f11f23e9888df54f91d1b93ddaea1c4c33f15ee3e386b",
+      "exactCodeVerified": true,
+      "verificationMethod": "Rendered first-page identifier visually checked"
+    }
+  },
+  "watermarks": "Third-party copies: assessment scans may contain archive watermarks. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

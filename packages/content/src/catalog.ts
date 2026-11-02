@@ -246,4 +246,45 @@ export const catalog: CatalogEntry[] = [
     notes:
       'Sprawdzono kod PDF i kryteriów INF.03-01-24.01-SG, zawartość archiwum (1 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
   },
+  {
+    id: 'inf03-05-24-01-sg',
+    title: 'Salon kosmetyczny',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2024,
+    session: 'Styczeń',
+    identifier: 'INF.03-05-24.01-SG',
+    variant: '05',
+    topics: ['html-css', 'javascript', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'JavaScript', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/30',
+    sourceName: 'Archiwum zewnętrzne — kopia CKE',
+    attachments: [
+      {
+        title: 'Arkusz CKE — zweryfikowana kopia archiwalna',
+        url: 'https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf',
+        type: 'pdf',
+        sha256: 'bdb5e3db8975e1faf127b8a15eaa870fede97b06a5af28479d7e807a7e98eaa5',
+      },
+      {
+        title: 'Dane wejściowe — materialy5.7z',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753705466819_files.7z',
+        type: '7z',
+        sha256: '404e21a11276614bad01f5b08f2524d57aad35b2930e86cfed011b4b97471c65',
+      },
+      {
+        title: 'Zasady oceniania CKE — kopia archiwalna',
+        url: 'https://technikinformatyk.pl/practical_exam_attachments/1758022795_inf_03_2024_01_05_SG_zo.pdf',
+        type: 'pdf',
+        sha256: 'c2d6c715383a3e355a0f11f23e9888df54f91d1b93ddaea1c4c33f15ee3e386b',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T17:36:03.366225+00:00',
+    notes:
+      'Sprawdzono kod PDF i kryteriów INF.03-05-24.01-SG, zawartość archiwum (3 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
+  },
 ];

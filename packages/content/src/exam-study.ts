@@ -1,3 +1,4 @@
+import { salonGuide } from './study-project-salon.js';
 import { firmaGuide } from './study-project-firma.js';
 import { rzekiGuide } from './study-project-rzeki.js';
 import { motocykleGuide } from './study-project-motocykle.js';
@@ -613,6 +614,8 @@ examStudyGuides.push(motocykleGuide);
 examStudyGuides.push(rzekiGuide);
 
 examStudyGuides.push(firmaGuide);
+
+examStudyGuides.push(salonGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,

@@ -280,4 +280,49 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-05-24-01-sg': {
+    title: 'Salon kosmetyczny — INF.03-05-24.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl: 'https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Odróżnij import, odczyt danych, agregację oraz konto i uprawnienia. Zachowaj pełne zrzuty.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i układ',
+        focus: [
+          'Skaluj obrazy proporcjonalnie do podanych szerokości. Porównaj wspólne bloki dwóch stron.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Treść stron i CSS',
+        focus: [
+          'Sprawdź podlistę oferty, pola usług i wymagane selektory znaczników h2, ul oraz img.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Cena usług',
+        focus: [
+          'Zaznaczenia są niezależne. Sprawdź wszystkie kombinacje cen 45, 30, 20 i 50 oraz brak zaznaczeń.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Komplet rezultatów',
+        focus: ['Zwróć uwagę na styl7.css, twarz.html, import.png i kw1.jpg–kw4.jpg.'],
+      },
+    ],
+  },
 };
