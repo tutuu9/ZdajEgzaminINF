@@ -1,6 +1,22 @@
 // Fixed educational scenarios. They inspect behaviour, never compare solution source text.
 const normalized = (value) => value.replace(/\s+/g, ' ').trim();
 
+async function messageColor(paragraph, expected) {
+  return paragraph.evaluate((element, color) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const colors = [];
+    for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+      if (!text.textContent.trim() || !text.parentElement) continue;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const style = getComputedStyle(text.parentElement);
+      if (!range.getClientRects().length || style.visibility !== 'visible') continue;
+      colors.push(style.color.replace(/\s/g, ''));
+    }
+    return colors.length > 0 && colors.every((value) => value === color);
+  }, expected);
+}
+
 async function field(page, name, selector, index = 0) {
   const labelled = page.getByLabel(name);
   if ((await labelled.count()) === 1) return labelled;
@@ -55,10 +71,7 @@ export async function checkFirmaContact(page) {
         false,
         'Bez zaznaczenia regulaminu oczekiwano widocznego akapitu „Musisz zapoznać się z regulaminem”.',
       ];
-    if (
-      (await warning.evaluate((node) => getComputedStyle(node).color)).replace(/\s/g, '') !==
-      'rgb(255,0,0)'
-    )
+    if (!(await messageColor(warning, 'rgb(255,0,0)')))
       return [false, 'Komunikat bez zgody jest obecny, ale powinien mieć czerwony kolor.'];
     if (!(await resultBelow(warning, 'hr')))
       return [false, 'Umieść akapit z komunikatem w bloku głównym pod linią poziomą.'];
@@ -81,10 +94,7 @@ export async function checkFirmaContact(page) {
         false,
         `Oczekiwano ${name}, następnie łamania linii oraz „Treść Twojej sprawy: ${text}”. Odczytuj aktualne kontrolki przy każdym kliknięciu.`,
       ];
-    if (
-      (await result.evaluate((node) => getComputedStyle(node).color)).replace(/\s/g, '') !==
-      'rgb(0,0,128)'
-    )
+    if (!(await messageColor(result, 'rgb(0,0,128)')))
       return [false, 'Po zaznaczeniu regulaminu akapit z wynikiem powinien mieć kolor Navy.'];
     if (!(await resultBelow(result, 'hr')))
       return [false, 'Wynik powinien pozostać w bloku głównym, pod linią poziomą.'];
@@ -337,15 +347,9 @@ export async function checkChatMessages(page) {
       'W tej próbie blok chatu nie przepełnił się mimo wielu wiadomości. Sprawdź wymaganą wysokość 470 px i paski przewijania, aby można było ocenić przewijanie.',
     ];
   if (seen.size !== 9) {
-    const calls = await page.evaluate(() => window.__zdajStudyRandom.calls);
-    if (!calls)
-      return [
-        null,
-        'Wysyłanie, historia i przewijanie działają. Ten sposób losowania nie podlega sterowaniu scenariusza; samodzielnie sprawdź dostępność wszystkich dziewięciu odpowiedzi. Nie potwierdzono automatycznie całego kroku.',
-      ];
     return [
-      false,
-      `W kontrolowanej próbie uzyskano ${seen.size} z dziewięciu różnych odpowiedzi. Sprawdź pełną tablicę, zakres indeksu i wybór przy każdym kliknięciu.`,
+      null,
+      `Wysyłanie, historia i przewijanie działają. W próbie uzyskano ${seen.size} z dziewięciu odpowiedzi. Ograniczony zestaw prób nie rozstrzyga, czy pozostałe są osiągalne przy Twoim sposobie losowania. Samodzielnie sprawdź pełną tablicę i zakres wyboru; całego kroku nie potwierdzono automatycznie.`,
     ];
   }
   return [

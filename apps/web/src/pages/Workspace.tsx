@@ -609,8 +609,8 @@ export function Workspace() {
         <Tags items={task.technologies} />
         {requestedStudy && (
           <Notice>
-            Rozpocznij próbę w trybie Nauka. W zakładce „Nauka i rozwiązania” przejdziesz przez
-            wymagania, napiszesz własny fragment i porównasz go z przykładem.
+            Rozpocznij próbę w trybie Nauka. W zakładce „Nauka” rozwiniesz jeden projekt małymi
+            krokami. Przejście do kolejnej instrukcji zachowa Twój kod.
           </Notice>
         )}
         <p className="authored-sheet-note" hidden>
@@ -625,8 +625,8 @@ export function Workspace() {
           <div>
             <strong>Oryginalny arkusz CKE.</strong>
             <p>
-              Przeczytaj oryginalne warunki. Pliki zapiszesz lokalnie; ten arkusz nie ma jeszcze
-              automatycznego sprawdzania.
+              Przeczytaj oryginalne warunki. Pliki zapiszesz lokalnie; cały arkusz wymaga kontroli
+              ręcznej. Sprawdzanie wybranych kroków kursu nie jest oceną CKE.
             </p>
           </div>
           <button
