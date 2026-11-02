@@ -70,7 +70,7 @@ Every newly offered assignment and theory question refers to a verified publishe
 
 The 25 theory examples are a small published sample, not full syllabus coverage. The video-based example is excluded. One CSS example contains a typographic ambiguity, explained after submission while preserving CKE's original text and key. Cumulative guides map to the original requirements; neither their examples nor downloaded third-party solutions are certified submissions. PHP/SQL and final project completeness require the learner's local environment and manual review. Supported educational checks do not produce an official CKE score.
 
-The Windows development profile is **not a certification for public anonymous code execution**. Public checking requires the Linux/gVisor profile and separate isolation and resource verification. The target VPS specifications and its suitability remain unverified. No deployment or GitHub publishing is configured automatically.
+The Windows development profile is **not a certification for public anonymous code execution**. Public checking requires the Linux/gVisor profile and separate isolation and resource verification. The separate [site-only deployment](docs/site-deployment.md) serves courses, PDF, theory, the editor and browser HTML/CSS checks without a worker or AI. Its standalone Compose profile uses a prebuilt image; deployment remains a manual, authorized operation.
 
 ## Repository guide
 

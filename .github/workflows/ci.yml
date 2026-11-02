@@ -32,6 +32,8 @@ jobs:
       - run: npm ci
       - run: npm run db:generate
       - run: npm run check
+      - name: Backup failure and retention boundaries
+        run: python3 -m unittest discover -s infra/site -p test_backup.py -v
       - run: npm run build
 
   integration:

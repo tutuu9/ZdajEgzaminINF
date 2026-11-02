@@ -22,3 +22,7 @@ Thumbs.db
 tmp/
 artifacts/
 output/
+__pycache__/
+*.pyc
+*.dump
+*.dump.sha256
