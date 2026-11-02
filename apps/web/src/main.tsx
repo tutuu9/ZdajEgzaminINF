@@ -24,6 +24,7 @@ const Progress = lazy(() =>
   import('./pages/Progress').then((module) => ({ default: module.Progress })),
 );
 const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })));
+const Faq = lazy(() => import('./pages/Faq').then((module) => ({ default: module.Faq })));
 
 function RouteAlias({ to, task = false }: { to: string; task?: boolean }) {
   const location = useLocation();
@@ -63,6 +64,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="postepy" element={<RouteAlias to="/moje-prace" />} />
             <Route path="moje-prace" element={<Progress />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="faq" element={<Faq />} />
             <Route
               path="*"
               element={

@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { admin, clearAdminSession, ensureGuest, protectMutation } from './security.js';
 import { parse } from './validation.js';
 import { bootstrap, isCkeTask, taskVersion } from './content.js';
+import { publicFaq } from './faq.js';
 import {
   acknowledgeCheck,
   createAttempt,
@@ -70,6 +71,9 @@ export class ApiController {
   }
   @Get('bootstrap') bootstrap() {
     return bootstrap();
+  }
+  @Get('faq') faq() {
+    return publicFaq();
   }
   @Get('tasks/:id') async task(@Param('id') id: string, @Query('version') version?: string) {
     const task = await taskVersion(

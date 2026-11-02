@@ -22,7 +22,7 @@ const testEnvironment = {
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: 'web.spec.ts',
+  testMatch: '*.spec.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

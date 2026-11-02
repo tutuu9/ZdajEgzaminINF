@@ -430,3 +430,4 @@ export const toPublicTask = ({ criteria, hints: _hints, ...task }: TaskVersion):
   ...task,
   criteria: criteria.map(({ check: _check, ...criterion }) => criterion),
 });
+export * from './faq.js';

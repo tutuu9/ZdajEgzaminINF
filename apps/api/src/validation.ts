@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validateProjectFiles, validateTaskChecks } from '@zdaj/checker';
 import type { TaskVersion } from '@zdaj/shared';
 import { topics, exercises } from '@zdaj/content';
+import { faqSchema } from './faq-validation.js';
 
 export const modeSchema = z.enum(['nauka', 'trening', 'egzamin']);
 export const levelSchema = z.enum(['beginner', 'intermediate', 'advanced']);
@@ -146,7 +147,7 @@ export const catalogSchema = z
     notes: z.string().max(10_000),
   })
   .strict();
-const schemas = { task, lesson, question, catalog: catalogSchema };
+const schemas = { task, lesson, question, catalog: catalogSchema, faq: faqSchema };
 export function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (!result.success)

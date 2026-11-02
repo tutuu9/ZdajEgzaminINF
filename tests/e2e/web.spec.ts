@@ -127,7 +127,15 @@ test('exam mode hides guidance and resumes the existing deadline', async ({ page
 
 test('small-screen navigation and primary pages fit the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of ['/', '/nauka/podstawy', '/arkusze', '/teoria', '/moje-prace', '/admin']) {
+  for (const path of [
+    '/',
+    '/nauka/podstawy',
+    '/arkusze',
+    '/teoria',
+    '/moje-prace',
+    '/faq',
+    '/admin',
+  ]) {
     await page.goto(path);
     await expect(page.locator('h1').first()).toBeVisible();
     const dimensions = await page.evaluate(() => ({
@@ -141,7 +149,7 @@ test('small-screen navigation and primary pages fit the viewport', async ({ page
   await expect(page.getByRole('navigation', { name: 'Nawigacja główna' })).toBeVisible();
   await expect(
     page.getByRole('navigation', { name: 'Nawigacja główna' }).getByRole('link'),
-  ).toHaveCount(4);
+  ).toHaveCount(5);
   await page
     .getByRole('navigation', { name: 'Nawigacja główna' })
     .getByRole('link', { name: 'Nauka', exact: true })

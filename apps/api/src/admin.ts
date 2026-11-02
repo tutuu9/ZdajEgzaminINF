@@ -124,7 +124,7 @@ export async function createDraft(body: unknown) {
   const value = parse(
     z
       .object({
-        kind: z.enum(['task', 'lesson', 'question', 'catalog']),
+        kind: z.enum(['task', 'lesson', 'question', 'catalog', 'faq']),
         key: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,100}$/i),
         payload: z.unknown(),
       })
