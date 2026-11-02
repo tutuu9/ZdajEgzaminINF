@@ -4,7 +4,7 @@ New practical assignments use original CKE papers. The application displays thei
 
 ## Practical sheets
 
-`packages/content/src/official-tasks.ts` supplies navigation metadata for the three papers. Its requirements point to document sections; the PDF remains the complete assignment. These records use `origin: exam`, a source catalogue ID and `supportStatus: catalog-only`. They have no invented starter files, generated substitute images or automatic criteria. A local completion record is not an examination score.
+`packages/content/src/official-tasks.ts` supplies navigation metadata for eight papers. Its requirements point to document sections; the PDF remains the complete assignment. These records use `origin: exam`, a source catalogue ID and `supportStatus: catalog-only`. They have no invented starter files, generated substitute images or automatic final criteria. A local completion record is not an examination score. The five 2024 additions have verified archive inventories, hashes and requirement maps in [the expansion source register](courses-2024.md).
 
 The reviewed-source endpoint is `/api/v1/catalog/:id/sheet.pdf`. It accepts only identifiers from a code-reviewed allowlist, not arbitrary admin-entered URLs. Fetching has size, time and concurrency bounds; redirects are rejected. The server returns the original PDF bytes without a permanent stored copy. The source link remains available if the upstream download fails. An archive copy is never labelled as hosted by CKE.
 
@@ -12,7 +12,7 @@ The viewer permits page navigation and zoom. Platform guidance is outside the PD
 
 ## Reading guide
 
-The original-paper navigation copy lives in `apps/web/src/catalog-pdf-guide-content.ts`. Page numbers are one-based PDF pages; a booklet's printed task-page count can differ because blank pages and final forms are included in the file. The notes have been checked against the three reviewed documents.
+The original-paper navigation copy lives in `apps/web/src/catalog-pdf-guide-content.ts`. Page numbers are one-based PDF pages; a booklet's printed task-page count can differ because blank pages and final forms are included in the file. The notes have been checked against each reviewed document.
 
 Use six scans when explaining how to read a paper:
 

@@ -1,9 +1,10 @@
 import {
   BookOpen,
+  CircleHelp,
   FolderOpen,
   GraduationCap,
   Layers3,
-  LockKeyhole,
+  Send,
   ShieldCheck,
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -17,6 +18,7 @@ const navigation = [
   { to: '/arkusze', label: 'Arkusze', icon: Layers3 },
   { to: '/teoria', label: 'Teoria', icon: GraduationCap },
   { to: '/moje-prace', label: 'Moje prace', icon: FolderOpen },
+  { to: '/faq', label: 'Pytania i odpowiedzi', shortLabel: 'FAQ', icon: CircleHelp },
 ];
 export function Shell() {
   const { error, reload } = useApp();
@@ -38,14 +40,16 @@ export function Shell() {
             </span>
           </NavLink>
           <nav className="main-navigation" aria-label="Nawigacja główna">
-            {navigation.map(({ to, label, icon: Icon }) => (
+            {navigation.map(({ to, label, shortLabel, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
+                aria-label={label}
                 className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
               >
-                <Icon size={19} strokeWidth={1.8} />
-                <span>{label}</span>
+                <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span className={shortLabel ? 'nav-label-long' : undefined}>{label}</span>
+                {shortLabel && <span className="nav-label-short">{shortLabel}</span>}
               </NavLink>
             ))}
           </nav>
@@ -72,10 +76,10 @@ export function Shell() {
             </span>
             <div>
               <span>Niezależny projekt edukacyjny</span>
-              <NavLink to="/admin">
-                <LockKeyhole size={13} />
-                Administracja
-              </NavLink>
+              <a href="https://t.me/tutuu9" target="_blank" rel="noopener noreferrer">
+                <Send size={13} aria-hidden="true" />
+                Właściciel
+              </a>
             </div>
           </footer>
         )}

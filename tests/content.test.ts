@@ -60,7 +60,7 @@ describe('legacy authored fixtures and lesson integrity', () => {
   });
 
   it('keeps unsupported original examinations clearly separate from original projects', () => {
-    expect(catalog).toHaveLength(3);
+    expect(catalog).toHaveLength(officialTasks.length);
     expect(catalog.every((entry) => entry.supportStatus === 'catalog-only')).toBe(true);
     expect(catalog.every((entry) => entry.rightsStatus === 'unknown')).toBe(true);
     expect(tasks.every((task) => task.origin === 'original')).toBe(true);
@@ -87,7 +87,7 @@ describe('legacy authored fixtures and lesson integrity', () => {
 
 describe('published CKE INF.03 learning set', () => {
   it('offers only original papers with explicit manual-check boundaries', () => {
-    expect(officialTasks).toHaveLength(3);
+    expect(officialTasks).toHaveLength(8);
     for (const task of officialTasks) {
       expect(task.origin).toBe('exam');
       expect(task.qualification).toBe('INF.03');

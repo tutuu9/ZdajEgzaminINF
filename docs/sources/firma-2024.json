@@ -1,0 +1,172 @@
+{
+  "slug": "firma-it",
+  "title": "Firma IT",
+  "code": "INF.03-01-24.01-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/27",
+  "verifiedAt": "2026-11-02T17:36:03.366225+00:00",
+  "inputInspection": {
+    "slug": "firma-it",
+    "code": "INF.03-01-24.01-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "textCharacters": 16009,
+        "coverCodeVerified": true,
+        "sha256": "875fd2ae7d10aafcaaa9679d86be3e9c684c875189eb4cf9d2d96156cb7de939"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 0,
+        "coverCodeVerified": true,
+        "sha256": "f517b0bf6e221ed479733d72144a19484c7341ffa0f14acbdc9fcc604662325d",
+        "coverVerificationMethod": "manual review of rendered identifier in criteria-headers.png"
+      }
+    ],
+    "archive": "materialy1.7z",
+    "archivePassword": "m@t3rialyX",
+    "memberCount": 1,
+    "fileCount": 1,
+    "totalExtractedBytes": 46556,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "grafika.jpg",
+        "bytes": 46556,
+        "sha256": "963300f9cbc46bf6acee1442bc5c281a262fcae0b7b15177467bf58f7c2bec7b",
+        "width": 655,
+        "height": 411,
+        "format": "JPEG",
+        "mode": "RGB"
+      }
+    ]
+  },
+  "deliverables": [
+    "animacja.gif",
+    "baner1 (transparent image format)",
+    "baner2 (transparent image format)",
+    "index.html",
+    "klatki.jpg",
+    "kontakt.html",
+    "logo (transparent image format)",
+    "przeglądarka.txt",
+    "styl.css",
+    "uslugi.html"
+  ],
+  "requirements": [
+    {
+      "id": "setup",
+      "page": 2,
+      "heading": "Zadanie egzaminacyjne",
+      "coverage": "Prepare candidate folder; unpack materialy1.7z using password from paper; preserve grafika.jpg."
+    },
+    {
+      "id": "graphics",
+      "page": 2,
+      "heading": "Grafika",
+      "coverage": "Transparent 100x100 logo with blue IT; two transparent 1000x200 banners; source photo proportional height 200 aligned left, both mice visible; blue italic serif text; banner2 text occupies three lines (see original figure)."
+    },
+    {
+      "id": "animation",
+      "page": 3,
+      "heading": "Animacja",
+      "coverage": "Build animacja.gif alternating both banners every 3000ms; full-screen klatki.jpg proves delay setting."
+    },
+    {
+      "id": "document-and-layout",
+      "pages": [3, 4],
+      "heading": "Witryna internetowa",
+      "coverage": "Three documents index/uslugi/kontakt; lang pl, explicit Polish-compatible encoding, title Firma IT, external styl.css, logo favicon; container/logo/menu/banner/main/footer, semantic strong for candidate number."
+    },
+    {
+      "id": "page-content",
+      "page": 4,
+      "heading": "Zawartość bloku głównego / Tabela 1",
+      "coverage": "Home heading/intro/hr; service ordered list/hr; contact h2/2-column 6-row table/hr; name, surname, email, 10x40 textarea, agreement checkbox, reset and submit; all navigation destinations and alt text from paper."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "All page/block/link/button style requirements; button tag selector mandatory; menu hover border; exact values in paper.txt."
+    },
+    {
+      "id": "runtime",
+      "page": 5,
+      "heading": "Skrypt",
+      "adapter": "firma-contact",
+      "coverage": "Checkbox validation, red or Navy paragraph below hr; uppercase first and last names and newline before submitted issue; reset clears controls; meaningful identifiers."
+    },
+    {
+      "id": "handover",
+      "page": 6,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "Browser record, complete output file inventory, final browser verification and archival handover instructions."
+    }
+  ],
+  "paperTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\firma-it\\paper.txt",
+  "criteriaTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\firma-it\\criteria-ocr.txt",
+  "criteriaTextWarning": "OCR is an aid only: punctuation, identifiers and row numbers must be compared with criteria-pages PNGs before authoring any scoring rule.",
+  "files": {
+    "paper": {
+      "slug": "firma-it",
+      "code": "INF.03-01-24.01-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf",
+      "checkedAt": "2026-11-02T17:30:33.849261+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Mon, 28 Jul 2025 12:13:50 GMT",
+      "status": "downloaded",
+      "bytes": 798611,
+      "sha256": "875fd2ae7d10aafcaaa9679d86be3e9c684c875189eb4cf9d2d96156cb7de939",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction and cover review"
+    },
+    "input": {
+      "slug": "firma-it",
+      "code": "INF.03-01-24.01-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704829386_files.7z",
+      "checkedAt": "2026-11-02T17:30:33.849261+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704829386_files.7z",
+      "contentType": "application/x-compressed",
+      "lastModified": "Mon, 28 Jul 2025 12:13:50 GMT",
+      "status": "downloaded",
+      "bytes": 46786,
+      "sha256": "14f6ae4bf8f040b74d9f1fef4c1fd7b277016b9a49c09f0eb6f479a1186dbc8d"
+    },
+    "criteria": {
+      "slug": "firma-it",
+      "code": "INF.03-01-24.01-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758022660_inf_03_2024_01_01_SG_zo.pdf",
+      "checkedAt": "2026-11-02T17:30:33.850260+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758022660_inf_03_2024_01_01_SG_zo.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Tue, 16 Sep 2025 23:34:04 GMT",
+      "status": "downloaded",
+      "bytes": 930327,
+      "sha256": "f517b0bf6e221ed479733d72144a19484c7341ffa0f14acbdc9fcc604662325d",
+      "exactCodeVerified": true,
+      "verificationMethod": "Rendered first-page identifier visually checked"
+    }
+  },
+  "watermarks": "Third-party copies: assessment scans may contain archive watermarks. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

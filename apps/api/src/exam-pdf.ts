@@ -36,6 +36,36 @@ export const REVIEWED_EXAM_PDFS: Readonly<Record<string, ReviewedExamSource>> = 
     sourceLabel: 'KURSINF — kopia arkusza INF.03-08-25.06-SG',
     provenance: 'archive-copy',
   },
+  'inf03-01-24-06-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753444633550_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-01-24.06-SG',
+    provenance: 'archive-copy',
+    sha256: '87a33c12040b7a958ae97dbbd71a99472bdb83019dcc34731e0fe7d467a32b67',
+  },
+  'inf03-03-24-06-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-03-24.06-SG',
+    provenance: 'archive-copy',
+    sha256: '66d22d97430a9d33d5af2a34684a92aa5f41890fcd5a26bb08cc838e9a89375f',
+  },
+  'inf03-01-24-01-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-01-24.01-SG',
+    provenance: 'archive-copy',
+    sha256: '875fd2ae7d10aafcaaa9679d86be3e9c684c875189eb4cf9d2d96156cb7de939',
+  },
+  'inf03-05-24-01-sg': {
+    url: 'https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-05-24.01-SG',
+    provenance: 'archive-copy',
+    sha256: 'bdb5e3db8975e1faf127b8a15eaa870fede97b06a5af28479d7e807a7e98eaa5',
+  },
+  'inf03-02-24-06-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525305768_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-02-24.06-SG',
+    provenance: 'archive-copy',
+    sha256: '3e9839d4a9087cbb4510624e7795692e363d03c2cf4115b8796040196feb8301',
+  },
 });
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 25_000;
@@ -93,7 +123,7 @@ export async function originalExamSheet(id: string) {
       throw new BadGatewayException('Odpowiedź źródła nie jest plikiem PDF.');
     if (source.sha256 && createHash('sha256').update(bytes).digest('hex') !== source.sha256)
       throw new BadGatewayException(
-        'Dokument źródłowy zmienił się. Pytania wymagają ponownej weryfikacji przed udostępnieniem podglądu.',
+        'Dokument źródłowy zmienił się. Wymaga ponownej weryfikacji przed udostępnieniem podglądu.',
       );
     return { bytes, source };
   } catch (error) {

@@ -524,7 +524,7 @@ describe('real Nest API and PostgreSQL boundaries', () => {
   it('offers only reviewed CKE practice and theory while withholding authored exercises and private checks', async () => {
     const { status, data } = await learner.request<Bootstrap>('/bootstrap');
     expect(status).toBe(200);
-    expect(data.tasks).toHaveLength(3);
+    expect(data.tasks).toHaveLength(8);
     expect(data.questionCount).toBe(seed.officialQuestions.length);
     expect(data.questionCount).toBeLessThan(40);
     expect(data.exercises).toEqual([]);
@@ -622,7 +622,7 @@ describe('real Nest API and PostgreSQL boundaries', () => {
   });
 
   it('reveals source-specific study guides only through a valid matching attempt secret', async () => {
-    expect(seed.examStudyGuides).toHaveLength(3);
+    expect(seed.examStudyGuides).toHaveLength(seed.officialTasks.length);
     const publicData = (await learner.request<Bootstrap>('/bootstrap')).data;
     const publicJson = JSON.stringify(publicData);
     expect(publicData).not.toHaveProperty('examStudyGuides');
@@ -1419,6 +1419,12 @@ describe('real Nest API and PostgreSQL boundaries', () => {
         const response = await actualFetch(
           `${baseUrl}/tasks/${task.id}/sheet.pdf?version=${task.version}`,
         );
+        if (REVIEWED_EXAM_PDFS[task.sourceCatalogId!]!.sha256) {
+          // The task alias must enforce the same reviewed-byte pin as the catalogue route.
+          expect(response.status).toBe(502);
+          expect(((await response.json()) as { message: string }).message).toContain('zmienił się');
+          continue;
+        }
         expect(response.status).toBe(200);
         expect(response.headers.get('content-disposition')).toBe(
           `inline; filename="${task.sourceCatalogId}-original.pdf"`,

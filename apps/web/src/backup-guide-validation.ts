@@ -110,7 +110,13 @@ function validateCheck(value: unknown): void {
       break;
     case 'runtime':
       fields(check, ['id', 'title', 'kind', 'adapter', 'entry']);
-      member(check.adapter, ['kursy-calculator', 'smoki-tabs']);
+      member(check.adapter, [
+        'kursy-calculator',
+        'smoki-tabs',
+        'firma-contact',
+        'salon-calculator',
+        'chat-messages',
+      ]);
       path(check.entry);
       break;
     case 'manual':

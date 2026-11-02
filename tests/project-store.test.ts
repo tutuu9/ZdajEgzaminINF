@@ -229,6 +229,29 @@ describe('one durable cumulative project', () => {
     expect(resumeHref(project)).toBe('/praktyka/inf03-01-25-01-sg?proba=local-project&widok=nauka');
     expect(project.files).toEqual(initial().files);
   });
+
+  it('resolves and pins the latest available guide without assuming revision three', async () => {
+    const project = initial();
+    const guide = {
+      id: 'new-paper-guide',
+      version: 1,
+      taskId: project.taskId,
+      taskVersion: 1,
+      steps: [{ id: 'html', activities: [{ id: 'document' }] }],
+      project: { starterFiles: [], requiredFiles: [], coverage: [] },
+    } as unknown as ExamStudyGuide;
+    mocks.api.mockResolvedValue({ guide, hintCount: 1 });
+    const store = new ProjectStore(project);
+    expect(await store.loadGuide()).toEqual(guide);
+    expect(mocks.api).toHaveBeenCalledWith('/attempts/old-ticket/study', {
+      method: 'POST',
+      body: { token: project.ticket.token },
+    });
+    expect(store.get().project.files).toEqual(project.files);
+    expect(store.get().project.study?.guide.version).toBe(1);
+    await store.loadGuide();
+    expect(mocks.api).toHaveBeenCalledTimes(1);
+  });
   it('keeps edits made during a save failure available for emergency export and retry', async () => {
     const store = new ProjectStore(initial());
     mocks.save.mockRejectedValueOnce(new Error('quota'));

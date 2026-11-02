@@ -21,7 +21,9 @@ CKE's written-examination page states that examination papers, the question bank
 
 The reviewed archive PDF targets are recorded in `packages/content/src/catalog.ts` and the API's fixed allowlist. They were opened and checked against the catalogue links; no answer-key PDF is substituted for the task sheet. Catalogue revision 3 adds verified input archives and criteria links with recorded hashes, while preserving previous publications. A record's availability of external scoring criteria does not imply a working automatic adapter. See [solution sources](solution-sources.md) for the exact review boundaries and separately identified worked examples; full solution links are kept out of the public catalogue payload.
 
-KURSINF and zawodowe.edu.pl are additional archives, not CKE/OKE. A licence on a solved example must not be assumed to cover the original examination paper, scoring criteria or images. All three practical records retain an unknown redistribution-rights status. Official hosting and permission to redistribute are separate facts.
+KURSINF and zawodowe.edu.pl are additional archives, not CKE/OKE. A licence on a solved example must not be assumed to cover the original examination paper, scoring criteria or images. All eight practical records retain an unknown redistribution-rights status. Official hosting and permission to redistribute are separate facts.
+
+The five 2024 additions—Firma IT, Salon kosmetyczny, Motocykle, Chat and Poziomy rzek—are documented in the [expanded source register](courses-2024.md), with separate machine-readable inventories and hashes. Matching papers, input archives and criteria were reviewed; no archive is considered verified solely from its filename. Some criteria copies contain third-party watermarks. Their hashes identify the reviewed copy and do not imply CKE byte identity or permission to republish.
 
 ## Published theory examples
 

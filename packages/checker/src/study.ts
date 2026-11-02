@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto';
 import { parser as phpParser } from '@lezer/php';
-import type { ProjectFile, StudyCheckReport, StudyCheckResult, TaskVersion } from '@zdaj/shared';
+import type {
+  ProjectFile,
+  StudyCheckReport,
+  StudyCheckResult,
+  StudyCheckSpec,
+  TaskVersion,
+} from '@zdaj/shared';
 import { runProject, type RunnerOptions } from './runner.js';
 import { fileBuffer } from './archive.js';
 
 export interface StudyRuntimeAdapter {
-  id: 'kursy-calculator' | 'smoki-tabs';
+  id: Extract<StudyCheckSpec, { kind: 'runtime' }>['adapter'];
   taskId: string;
   guideVersion: number;
   activityId: string;
@@ -28,6 +34,30 @@ const adapters: readonly StudyRuntimeAdapter[] = [
     activityId: 'tabs/tabs-check',
     entry: 'smoki.php',
     title: 'Przełączanie trzech widoków',
+  },
+  {
+    id: 'firma-contact',
+    taskId: 'inf03-01-24-01-sg',
+    guideVersion: 1,
+    activityId: 'runtime/runtime-check',
+    entry: 'kontakt.html',
+    title: 'Obsługa formularza firmy IT',
+  },
+  {
+    id: 'salon-calculator',
+    taskId: 'inf03-05-24-01-sg',
+    guideVersion: 1,
+    activityId: 'runtime/runtime-check',
+    entry: 'twarz.html',
+    title: 'Szesnaście zestawów usług salonu',
+  },
+  {
+    id: 'chat-messages',
+    taskId: 'inf03-02-24-06-sg',
+    guideVersion: 1,
+    activityId: 'runtime/runtime-check',
+    entry: 'chat.html',
+    title: 'Wiadomości, odpowiedzi i przewijanie chatu',
   },
 ];
 

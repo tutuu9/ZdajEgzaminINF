@@ -21,6 +21,7 @@ import type { AdminDashboard, CatalogEntry, ContentDraft, SiteSettings } from '@
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { ErrorNotice, Loading, Notice, PageHeading, dateLabel } from '../components/common';
+import { FaqManager } from '../components/FaqManager';
 
 const usd = (value: number) =>
   new Intl.NumberFormat('pl-PL', {
@@ -954,6 +955,7 @@ export function Admin() {
         {[
           { id: 'overview', label: 'Przegląd i ustawienia', icon: Settings2 },
           { id: 'content', label: 'Materiały', icon: FilePlus2 },
+          { id: 'faq', label: 'Pytania i odpowiedzi', icon: FilePlus2 },
           { id: 'sources', label: 'Źródła i import', icon: Globe },
         ].map(({ id, label, icon: Icon }) => (
           <button role="tab" aria-selected={tab === id} key={id} onClick={() => setTab(id)}>
@@ -966,6 +968,8 @@ export function Admin() {
         <Overview />
       ) : tab === 'content' ? (
         <ContentManager />
+      ) : tab === 'faq' ? (
+        <FaqManager />
       ) : (
         <SourcesManager />
       )}

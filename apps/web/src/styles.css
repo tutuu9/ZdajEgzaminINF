@@ -596,6 +596,9 @@ input[type='radio'] {
     0 2px 9px rgba(55, 75, 110, 0.12);
   color: var(--blue);
 }
+.nav-label-short {
+  display: none;
+}
 .nav-link:hover:not(.active) {
   background: rgba(255, 255, 255, 0.45);
   color: var(--blue);
@@ -1538,7 +1541,8 @@ input[type='radio'] {
     display: none;
   }
   .nav-link {
-    padding: 12px 13px;
+    padding: 12px 9px;
+    gap: 6px;
   }
   .main-content {
     padding-top: 40px;
@@ -1634,6 +1638,12 @@ input[type='radio'] {
   .nav-link svg {
     width: 21px;
     height: 21px;
+  }
+  .nav-label-long {
+    display: none;
+  }
+  .nav-label-short {
+    display: inline;
   }
   .nav-link.active {
     background: rgba(222, 237, 255, 0.77);

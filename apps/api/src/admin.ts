@@ -124,7 +124,7 @@ export async function createDraft(body: unknown) {
   const value = parse(
     z
       .object({
-        kind: z.enum(['task', 'lesson', 'question', 'catalog']),
+        kind: z.enum(['task', 'lesson', 'question', 'catalog', 'faq']),
         key: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,100}$/i),
         payload: z.unknown(),
       })
@@ -157,22 +157,38 @@ export async function createDraft(body: unknown) {
   });
 }
 export async function publishDraft(id: string) {
-  const row = await db.contentRevision.findUnique({ where: { id } });
-  if (!row || row.status !== 'draft')
-    throw new ConflictException('Można opublikować tylko istniejący szkic.');
-  validateContent(row.kind, row.payload);
-  const published = await db.contentRevision.updateMany({
-    where: { id, status: 'draft' },
-    data: { status: 'published', publishedAt: new Date() },
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(74620403)::text`;
+    const row = await tx.contentRevision.findUnique({ where: { id } });
+    if (!row || row.status !== 'draft')
+      throw new ConflictException('Można opublikować tylko istniejący szkic.');
+    const newer = await tx.contentRevision.findFirst({
+      where: {
+        kind: row.kind,
+        key: row.key,
+        status: 'published',
+        version: { gt: row.version },
+      },
+      select: { version: true },
+    });
+    if (newer)
+      throw new ConflictException(
+        'Opublikowano już nowszą wersję tej treści. Zapisz zmiany jako nowy szkic i opublikuj go po sprawdzeniu.',
+      );
+    validateContent(row.kind, row.payload);
+    const published = await tx.contentRevision.updateMany({
+      where: { id, status: 'draft' },
+      data: { status: 'published', publishedAt: new Date() },
+    });
+    if (!published.count) throw new ConflictException('Ten szkic został już opublikowany.');
+    await tx.event.create({
+      data: {
+        type: 'content.published',
+        detail: { kind: row.kind, key: row.key, version: row.version },
+      },
+    });
+    return tx.contentRevision.findUniqueOrThrow({ where: { id } });
   });
-  if (!published.count) throw new ConflictException('Ten szkic został już opublikowany.');
-  await db.event.create({
-    data: {
-      type: 'content.published',
-      detail: { kind: row.kind, key: row.key, version: row.version },
-    },
-  });
-  return db.contentRevision.findUniqueOrThrow({ where: { id } });
 }
 export function duplicateSources(entries: CatalogEntry[], existing: CatalogEntry[]): string[] {
   const seen = [...existing];

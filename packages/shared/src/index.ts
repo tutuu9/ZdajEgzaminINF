@@ -151,7 +151,12 @@ export type StudyCheckSpec = { id: string; title: string } & (
       property: string;
       expected: string[];
     }
-  | { kind: 'runtime'; adapter: 'kursy-calculator' | 'smoki-tabs'; entry: string }
+  | {
+      kind: 'runtime';
+      adapter:
+        'kursy-calculator' | 'smoki-tabs' | 'firma-contact' | 'salon-calculator' | 'chat-messages';
+      entry: string;
+    }
   | { kind: 'manual'; prompt: string }
 );
 export interface StudyCheckRequest {
@@ -430,3 +435,4 @@ export const toPublicTask = ({ criteria, hints: _hints, ...task }: TaskVersion):
   ...task,
   criteria: criteria.map(({ check: _check, ...criterion }) => criterion),
 });
+export * from './faq.js';

@@ -1,3 +1,8 @@
+import { chatGuide } from './study-project-chat.js';
+import { salonGuide } from './study-project-salon.js';
+import { firmaGuide } from './study-project-firma.js';
+import { rzekiGuide } from './study-project-rzeki.js';
+import { motocykleGuide } from './study-project-motocykle.js';
 import type { ExamStudyGuide } from '@zdaj/shared';
 import { wedkowanieStudy } from './study-wedkowanie.js';
 import { studyActivities } from './study-activities.js';
@@ -604,6 +609,16 @@ export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guid
     ...cumulative,
   };
 });
+
+examStudyGuides.push(motocykleGuide);
+
+examStudyGuides.push(rzekiGuide);
+
+examStudyGuides.push(firmaGuide);
+
+examStudyGuides.push(salonGuide);
+
+examStudyGuides.push(chatGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,

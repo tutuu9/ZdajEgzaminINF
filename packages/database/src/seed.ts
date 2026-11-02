@@ -3,12 +3,13 @@ import {
   lessons,
   officialQuestions as questions,
   catalog,
+  faq,
 } from '@zdaj/content';
 import { DEFAULT_SETTINGS } from '@zdaj/shared';
 import { db, Prisma } from './index.js';
 
 async function seed() {
-  const groups = { task: tasks, lesson: lessons, question: questions, catalog };
+  const groups = { task: tasks, lesson: lessons, question: questions, catalog, faq };
   for (const [kind, records] of Object.entries(groups)) {
     for (const record of records) {
       const version = 'version' in record ? record.version : kind === 'catalog' ? 3 : 1;
@@ -37,7 +38,7 @@ async function seed() {
     update: {},
   });
   console.log(
-    `Seeded ${tasks.length} projects, ${lessons.length} lessons, ${questions.length} questions and ${catalog.length} sources. Existing published content was preserved.`,
+    `Seeded ${tasks.length} projects, ${lessons.length} lessons, ${questions.length} questions, ${catalog.length} sources and ${faq.length} FAQ answers. Existing published content was preserved.`,
   );
 }
 seed().finally(() => db.$disconnect());

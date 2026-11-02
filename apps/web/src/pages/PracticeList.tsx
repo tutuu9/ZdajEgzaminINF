@@ -54,7 +54,7 @@ export function PracticeList() {
             ))}
           </select>
         </label>
-        <span className="library-count">{tasks.length} arkusze</span>
+        <span className="library-count">Liczba arkuszy: {tasks.length}</span>
       </div>
       <div className="exam-library-list">
         {tasks.map((task, index) => {

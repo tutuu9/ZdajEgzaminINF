@@ -185,7 +185,7 @@ export class ProjectStore {
     const result = await this.request((project) =>
       api<ExamStudyResponse>(`/attempts/${project.ticket.id}/study`, {
         method: 'POST',
-        body: { token: project.ticket.token, guideVersion: 3 },
+        body: { token: project.ticket.token },
       }),
     );
     await this.patch((project) => ({

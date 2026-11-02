@@ -153,9 +153,13 @@ async function computedValues(
   frame.setAttribute('sandbox', 'allow-same-origin');
   frame.setAttribute('aria-hidden', 'true');
   frame.tabIndex = -1;
+  frame.inert = true;
   frame.style.cssText =
     'position:fixed;left:-10000px;top:0;width:1280px;height:800px;visibility:hidden;pointer-events:none';
-  const preview = createPreview(files, entry, { scripts: false });
+  const preview = createPreview(files, entry, {
+    scripts: false,
+    preserveResourceAttributes: true,
+  });
   try {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Style inspection timeout')), 2500);

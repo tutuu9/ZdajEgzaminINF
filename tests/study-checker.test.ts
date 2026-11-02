@@ -15,6 +15,15 @@ describe('fixed educational runtime preparation', () => {
       studyRuntimeAdapter('inf03-08-25-06-sg', 3, 'calculator/calculator-check'),
     ).toBeUndefined();
     expect(studyRuntimeAdapter('cke-wedkowanie', 3, 'php/query')).toBeUndefined();
+    for (const [taskId, adapter] of [
+      ['inf03-01-24-01-sg', 'firma-contact'],
+      ['inf03-05-24-01-sg', 'salon-calculator'],
+      ['inf03-02-24-06-sg', 'chat-messages'],
+    ]) {
+      expect(studyRuntimeAdapter(taskId!, 1, 'runtime/runtime-check')?.id).toBe(adapter);
+      expect(studyRuntimeAdapter(taskId!, 3, 'runtime/runtime-check')).toBeUndefined();
+      expect(studyRuntimeAdapter(taskId!, 1, 'runtime/learner-script')).toBeUndefined();
+    }
   });
 
   it('hashes the original files independently of upload order and default encoding', () => {

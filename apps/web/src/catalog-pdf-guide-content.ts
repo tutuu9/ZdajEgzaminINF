@@ -156,4 +156,219 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-01-24-06-sg': {
+    title: 'Motocykle — INF.03-01-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753444633550_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i zapytania',
+        focus: [
+          'Odszukaj warunek OR, złączenie tabel, liczbę wycieczek oraz zmianę struktury. Zachowaj wymagane dowody.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i zawartość',
+        focus: [
+          'Przeskaluj droga1.jpg proporcjonalnie. Odróżnij listę definicji od listy numerowanej.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'CSS i PHP',
+        focus: [
+          'Porównaj warstwy obrazu, przezroczyste tła i przewijanie. Ścieżki zdjęć buduj z danych właściwego rekordu.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Oddanie pracy',
+        focus: ['Sprawdź wszystkie pięć zdjęć, motor.png, motor.php, zapytania i zrzuty.'],
+      },
+    ],
+  },
+  'inf03-03-24-06-sg': {
+    title: 'Poziomy rzek — INF.03-03-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i zapytania',
+        focus: [
+          'Rozdziel złączenie danych dla daty 2022-05-05, filtr ostrzegawczy i średnie grupowane według daty.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Mapa i formularz',
+        focus: [
+          'Zachowaj przezroczystość tła mapy i zmień właściwy region. Trzy opcje radio tworzą jedną grupę.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Tabela, CSS i filtrowanie',
+        focus: [
+          'Powiąż wariant formularza z zakresem wierszy. Porównaj progi ostrzegawcze i alarmowe.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Średnie i oddanie',
+        focus: [
+          'Sprawdź osobny akapit dla każdej daty, obrazy i komplet plików. Zachowaj wielkość liter poziomRzek.php.',
+        ],
+      },
+    ],
+  },
+  'inf03-01-24-01-sg': {
+    title: 'Firma IT — INF.03-01-24.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753704828595_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Grafika i pliki',
+        focus: [
+          'Sprawdź rozmiary logo i dwóch banerów, przezroczystość, kadrowanie oraz treść napisów.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Animacja i układ',
+        focus: ['Odszukaj czas 3000 ms, zrzut ustawień animacji oraz wspólne bloki trzech stron.'],
+      },
+      {
+        page: 4,
+        title: 'Treść, formularz i CSS',
+        focus: [
+          'Przyporządkuj zawartość do index.html, uslugi.html i kontakt.html. Zwróć uwagę na tabelę formularza i selektor button.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Obsługa zgłoszenia',
+        focus: [
+          'Rozdziel brak zgody od poprawnego zgłoszenia. Sprawdź kolor, wielkie litery i nowy wiersz.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Oddawane pliki',
+        focus: ['Porównaj listę rezultatów, formaty grafik i zapis nazwy przeglądarki.'],
+      },
+    ],
+  },
+  'inf03-05-24-01-sg': {
+    title: 'Salon kosmetyczny — INF.03-05-24.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl: 'https://edu-update.pl/wp-content/uploads/2025/10/inf_03_2024_01_05_SG_kolor.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Odróżnij import, odczyt danych, agregację oraz konto i uprawnienia. Zachowaj pełne zrzuty.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i układ',
+        focus: [
+          'Skaluj obrazy proporcjonalnie do podanych szerokości. Porównaj wspólne bloki dwóch stron.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Treść stron i CSS',
+        focus: [
+          'Sprawdź podlistę oferty, pola usług i wymagane selektory znaczników h2, ul oraz img.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Cena usług',
+        focus: [
+          'Zaznaczenia są niezależne. Sprawdź wszystkie kombinacje cen 45, 30, 20 i 50 oraz brak zaznaczeń.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Komplet rezultatów',
+        focus: ['Zwróć uwagę na styl7.css, twarz.html, import.png i kw1.jpg–kw4.jpg.'],
+      },
+    ],
+  },
+  'inf03-02-24-06-sg': {
+    title: 'Chat — INF.03-02-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525305768_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i pięć zapytań',
+        focus: [
+          'Sprawdź powiązanie Jeremiego, średnią roku z częścią całkowitą, złączenie oraz konto i uprawnienia.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Awatary i układ',
+        focus: [
+          'Najpierw wykadruj twarz Jolanty do kwadratu, potem skaluj do 70 × 70. Zachowaj dwa początkowe komunikaty.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Style i wysyłanie',
+        focus: [
+          'Rozróżnij kolory i wyrównanie rozmówców; nowa wiadomość ma dochodzić na końcu historii.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Losowe odpowiedzi',
+        focus: [
+          'Użyj dziewięciu tekstów danych wejściowych, indeksów 0–8 i przewijania do dopisanego komunikatu.',
+        ],
+      },
+      {
+        page: 7,
+        title: 'Komplet rezultatów',
+        focus: ['Arkusz wymaga pięciu zrzutów kw1.jpg–kw5.jpg. Porównaj pisownię nazw awatarów.'],
+      },
+    ],
+  },
 };
