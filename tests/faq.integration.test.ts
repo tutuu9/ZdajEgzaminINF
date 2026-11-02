@@ -200,6 +200,40 @@ describe('FAQ publication through the real API and PostgreSQL', () => {
     ).toBe(2);
   });
 
+  it('rejects publishing an older draft after a newer version is already public', async () => {
+    const original = seed[3]!;
+    const drafts: ContentDraft[] = [];
+    for (const answer of ['Starszy zapisany szkic.', 'Nowsza opublikowana odpowiedź.']) {
+      const response = await owner.request<ContentDraft>('/admin/content/drafts', 'POST', {
+        kind: 'faq',
+        key: original.id,
+        payload: { ...original, answer },
+      });
+      expect(response.status).toBe(201);
+      drafts.push(response.data);
+    }
+    expect(drafts.map((draft) => draft.version)).toEqual([2, 3]);
+    expect(
+      (await owner.request(`/admin/content/${drafts[1]!.id}/publish`, 'POST', {})).status,
+    ).toBe(201);
+    const rejected = await owner.request(`/admin/content/${drafts[0]!.id}/publish`, 'POST', {});
+    expect(rejected.status).toBe(409);
+    expect(rejected.data.message).toContain('nowszą wersję');
+    const current = (await learner.request<FaqResponse>('/faq')).data.entries.find(
+      (entry) => entry.id === original.id,
+    );
+    expect(current).toMatchObject({ version: 3, answer: 'Nowsza opublikowana odpowiedź.' });
+    const olderDraft = await db.contentRevision.findUniqueOrThrow({ where: { id: drafts[0]!.id } });
+    expect(olderDraft.status).toBe('draft');
+    expect(olderDraft.publishedAt).toBeNull();
+    expect(olderDraft.payload).toMatchObject({ version: 2, answer: 'Starszy zapisany szkic.' });
+    expect(
+      await db.event.count({
+        where: { type: 'content.published', detail: { path: ['key'], equals: original.id } },
+      }),
+    ).toBe(1);
+  });
+
   it('rejects invalid source links, unsupported categories and impossible review dates on the server', async () => {
     for (const payload of [
       { ...seed[2], sources: [{ title: 'Unsafe', section: 'Test', url: 'javascript:alert(1)' }] },

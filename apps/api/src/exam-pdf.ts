@@ -123,7 +123,7 @@ export async function originalExamSheet(id: string) {
       throw new BadGatewayException('Odpowiedź źródła nie jest plikiem PDF.');
     if (source.sha256 && createHash('sha256').update(bytes).digest('hex') !== source.sha256)
       throw new BadGatewayException(
-        'Dokument źródłowy zmienił się. Pytania wymagają ponownej weryfikacji przed udostępnieniem podglądu.',
+        'Dokument źródłowy zmienił się. Wymaga ponownej weryfikacji przed udostępnieniem podglądu.',
       );
     return { bytes, source };
   } catch (error) {

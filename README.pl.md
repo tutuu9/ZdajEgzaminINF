@@ -4,18 +4,19 @@ Polski · [English](README.md)
 
 Polskojęzyczna pracownia do przygotowania do kwalifikacji **INF.03**, z planem rozszerzenia o INF.04. Czytaj oryginalne arkusze, rozwiązuj zadania lokalnie i ćwicz na opublikowanych przykładach pytań CKE.
 
-Nowe próby korzystają z **3 oryginalnych arkuszy praktycznych CKE i 25 opublikowanych przykładów pytań CKE**, wspartych 12 lekcjami objaśniającymi. Dwa arkusze pochodzą z jawnie oznaczonego archiwum zewnętrznego. To nie pełny bank pytań ani oficjalny system egzaminacyjny. Wcześniejsze autorskie zadania i pytania pozostają wyłącznie dla zgodności starych prób i testów mechanizmu sprawdzania.
+Nowe próby korzystają z **8 oryginalnych arkuszy praktycznych CKE i 25 opublikowanych przykładów pytań CKE**, wspartych 12 lekcjami objaśniającymi. Siedem PDF to jawnie oznaczone kopie z archiwów zewnętrznych. To nie pełny bank pytań ani oficjalny system egzaminacyjny. Wcześniejsze autorskie zadania i pytania pozostają wyłącznie dla zgodności starych prób i testów mechanizmu sprawdzania.
 
 ## Możliwości
 
 - Trzy poziomy przygotowania oraz **Nauka**, **Trening** i praktyczny **Egzamin**.
 - Edytor projektu, odizolowany podgląd HTML/CSS/JavaScript, import/eksport ZIP i lokalny zapis zakończenia pracy. Obecne arkusze CKE nie mają automatycznej oceny; zakończenie nie przyznaje punktów.
 - Podgląd oryginalnych PDF z nawigacją po stronach i oddzielnymi wskazówkami do czytania. W trybie Egzamin wskazówki są ukryte do zakończenia pracy. Więcej: [oryginalne PDF i wskazówki](docs/reading-exam-pdfs.md).
-- Nauka na jednym rosnącym projekcie dla trzech arkuszy: krótkie wyjaśnienie i mała zmiana rzeczywistych plików. Przejście do innego kroku nie zastępuje kodu. HTML/CSS mają kontrole z wyjaśnieniem, wybrane zachowania JavaScript sprawdza osobny wykonawca, a PHP, SQL i grafika mają jawną kontrolę ręczną. Wersja kursu, plik, kursor i projekt zapisują się lokalnie. `!` + Tab tworzy podstawowy HTML. Dawne notatniki pozostają w archiwum; przykłady i [gotowe rozwiązania](docs/solution-sources.md) są oddzielone od projektu i niedostępne przed zakończeniem Egzaminu.
-- Interfejs Liquid Glass z czterema sekcjami: **Nauka**, **Arkusze**, **Teoria**, **Moje prace**. Lekcja, edytor i podgląd są obok siebie, a na mniejszych ekranach mają podpisane zakładki.
+- Nauka na jednym rosnącym projekcie dla ośmiu arkuszy: krótkie wyjaśnienie i mała zmiana rzeczywistych plików. Przejście do innego kroku nie zastępuje kodu. HTML/CSS mają kontrole z wyjaśnieniem, wybrane zachowania JavaScript sprawdza osobny wykonawca, a PHP, SQL i grafika mają jawną kontrolę ręczną. Wersja kursu, plik, kursor i projekt zapisują się lokalnie. `!` + Tab tworzy podstawowy HTML. Dawne notatniki pozostają w archiwum; przykłady i [gotowe rozwiązania](docs/solution-sources.md) są oddzielone od projektu i niedostępne przed zakończeniem Egzaminu.
+- Interfejs Liquid Glass z pięcioma sekcjami: **Nauka**, **Arkusze**, **Teoria**, **Moje prace**, **Pytania i odpowiedzi** (FAQ). Lekcja, edytor i podgląd są obok siebie, a na mniejszych ekranach mają podpisane zakładki.
+- [35 sprawdzonych odpowiedzi FAQ](docs/faq.md) w siedmiu grupach: wyszukiwanie, bezpośrednie linki, źródła i daty sprawdzenia zasad egzaminu. Administrator edytuje zwykłe pola i publikuje kolejne wersje. FAQ nie korzysta z AI.
 - Nauka i trening teorii na sprawdzonych fragmentach oficjalnego informatora. Źródło zawiera dostępny klucz, dlatego nie oferujemy z niego egzaminu z ukrytymi odpowiedziami ani sztucznie uzupełnionego zestawu 40 pytań.
 - Postęp i szkice przechowywane w przeglądarce oraz eksport kopii zapasowej. Bez kont uczniów i automatycznej synchronizacji urządzeń.
-- Panel administratora: wersje materiałów, katalog źródeł, zarządzanie sprawdzaniem i zbiorcza statystyka działania.
+- Panel administratora pod `/admin`: wersje materiałów, katalog źródeł, zarządzanie sprawdzaniem i zbiorcza statystyka działania. W stopce jest kontakt do [właściciela](https://t.me/tutuu9), bez skrótu do administracji.
 - Opcjonalne wyjaśnienia DeepSeek, niedostępne bez klucza i włączenia przez administratora. Początkowy budżet aplikacji wynosi **2 USD łącznie**, bez automatycznego odnowienia.
 
 Interfejs i materiały są po polsku, dokumentacja techniczna po angielsku. Projekty pozostają w przeglądarce; jawne sprawdzenie zachowania skryptu przesyła tymczasowo kod do wykonawcy. Administrator nie otrzymuje trwałej historii prac ucznia. Szczegóły: [architektura](docs/architecture.md) i [sprawdzanie](docs/checking.md).

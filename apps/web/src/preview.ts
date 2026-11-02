@@ -89,13 +89,16 @@ function resolvePath(from: string, to: string): string | null {
 export function createPreview(
   files: ProjectFile[],
   entry: string,
-  options: { scripts?: boolean } = {},
+  options: { scripts?: boolean; preserveResourceAttributes?: boolean } = {},
 ): { html: string; dispose: () => void } {
   const map = new Map(files.map((file) => [file.path, file]));
   const source = map.get(entry);
   if (!source || source.encoding === 'base64' || !/\.(?:html?|php)$/i.test(entry))
     return { html: '', dispose: () => undefined };
   const nonce = previewNonce();
+  // Used only by the hidden, script-free style measurement frame. CSP blocks
+  // original URLs, while attribute selectors retain their actual meaning.
+  const preserveAttributes = options.scripts === false && options.preserveResourceAttributes;
   const asset = (from: string, value: string) => {
     const path = resolvePath(from, value),
       file = path ? map.get(path) : undefined;
@@ -189,13 +192,13 @@ export function createPreview(
     }
   });
   root.querySelectorAll<HTMLElement>('[src]:not(script),[srcset]').forEach((element) => {
-    if (element.hasAttribute('src'))
+    if (element.hasAttribute('src') && !preserveAttributes)
       element.setAttribute('src', asset(entry, element.getAttribute('src') || ''));
-    element.removeAttribute('srcset');
+    if (!preserveAttributes) element.removeAttribute('srcset');
   });
   root.querySelectorAll('a[href]').forEach((link) => {
     const path = resolvePath(entry, link.getAttribute('href') || '');
-    link.setAttribute('href', '#');
+    if (!preserveAttributes) link.setAttribute('href', '#');
     if (path && map.has(path) && /\.(?:html?|php)$/i.test(path))
       link.setAttribute('data-preview-path', path);
     link.removeAttribute('target');

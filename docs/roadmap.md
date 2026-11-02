@@ -2,9 +2,11 @@
 
 ## First release scope
 
-The current release uses CKE INF.03 assignments and questions exclusively: three original practical papers, 25 static examples from the official informator and twelve explanatory lessons. The user's CKE-only requirement supersedes the earlier authored-project and 80-question target. Authored content survives only in historical compatibility and regression fixtures. A source-backed paper and a fully verified automatic checking adapter are separate levels of support.
+The v1.0.0 release preserves the first three CKE practical courses and cumulative-learning redesign. The following expansion adds five 2024 courses and 35 sourced FAQ answers: the current application has eight original practical papers, 25 static examples from the official informator and twelve explanatory lessons. The user's CKE-only requirement supersedes the earlier authored-project and 80-question target. Authored content survives only in historical compatibility and regression fixtures. A source-backed paper and a fully verified automatic checking adapter are separate levels of support.
 
 The cumulative-learning redesign adds 175 small actions across the three papers. Version 3 starts with the HTML document and grows the same saved project through the remaining requirements. See [course coverage](cumulative-guide-coverage.md) and [interface design](design.md). Educational HTML/CSS and selected JavaScript checks remain separate from complete-paper grading.
+
+The five new revision-1 guides add 317 actions: Firma IT 61, Salon 65, Motocykle 55, Chat 69 and Poziomy rzek 67. See [their source and coverage maps](courses-2024.md). All routes preserve project files while changing instructions. The FAQ is versioned editorial content, independent of AI availability.
 
 | Stage                     | Deliverable                                                             | Evidence required                                                                                     |
 | ------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |

@@ -484,7 +484,9 @@ export const salonSteps = [
         'Ten padding dotyczy tylko powrotu, nie odnośnika usługi. Możesz wybrać go własną klasą.',
         'Dodaj padding:25px do powrotu na index.html.',
         '.powrot { padding: 25px; }',
-        [visual('a[href="index.html"]', 'padding-top', ['25px'])],
+        own(
+          'Czy link Strona główna ma padding 25px z każdej strony, a link usługi zachował własne odstępy? Sprawdź wynik i regułę w styl7.css.',
+        ),
       ),
     ],
   ),

@@ -4,18 +4,19 @@
 
 A Polish learning workshop for the vocational qualification **INF.03**, with a path toward INF.04. Read an original examination sheet, work locally, and practise with published CKE theory examples.
 
-New assignments use **3 original CKE practical papers and 25 published CKE theory examples**, supported by 12 explanatory lessons. Two practical PDFs come from an explicitly labelled third-party archive. This is not the complete CKE question bank or an official examination service. Earlier authored assignments and questions remain only for compatibility and checker fixtures; they are not offered for new learner attempts.
+New assignments use **8 original CKE practical papers and 25 published CKE theory examples**, supported by 12 explanatory lessons. Seven practical PDFs are explicitly labelled third-party copies. This is not the complete CKE question bank or an official examination service. Earlier authored assignments and questions remain only for compatibility and checker fixtures; they are not offered for new learner attempts.
 
 ## What is included
 
 - Three learning levels and **Nauka**, **Trening** and practical **Egzamin** modes.
 - A project editor, isolated HTML/CSS/JavaScript preview, project ZIP import/export and local completion records. The current CKE papers have no automatic grading adapter; completion does not award a score.
 - An original PDF viewer with page navigation and separate reading guidance. Guidance stays hidden until completion in Egzamin mode. See [original PDFs and reading guidance](docs/reading-exam-pdfs.md).
-- Cumulative learning for all three papers: one explanation and one small change in the actual project files. Switching steps never replaces code. HTML/CSS checks explain their findings; selected JavaScript behaviours use the trusted worker, while PHP, SQL and graphics have explicit manual checks. A versioned course, active file, cursor and project are saved locally. `!` followed by Tab inserts a basic HTML document. Legacy notebooks remain readable; examples and [external solutions](docs/solution-sources.md) stay separate from the project and unavailable during an unfinished Egzamin attempt.
-- A Liquid Glass interface with four sections: **Nauka**, **Arkusze**, **Teoria**, **Moje prace**. The workspace places the lesson, editor and preview together, with labelled tabs on smaller screens.
+- Cumulative learning for all eight papers: one explanation and one small change in the actual project files. Switching steps never replaces code. HTML/CSS checks explain their findings; selected JavaScript behaviours use the trusted worker, while PHP, SQL and graphics have explicit manual checks. A versioned course, active file, cursor and project are saved locally. `!` followed by Tab inserts a basic HTML document. Legacy notebooks remain readable; examples and [external solutions](docs/solution-sources.md) stay separate from the project and unavailable during an unfinished Egzamin attempt.
+- A Liquid Glass interface with five sections: **Nauka**, **Arkusze**, **Teoria**, **Moje prace**, **Pytania i odpowiedzi** (FAQ). The workspace places the lesson, editor and preview together, with labelled tabs on smaller screens.
+- [35 reviewed FAQ answers](docs/faq.md) in seven categories, with search, direct links, source references and dated examination rules. Administrators edit ordinary fields and publish new immutable revisions; no AI call is needed.
 - Theory learning and practice using reviewed excerpts from an official informator. Its published answer key remains accessible in the source, so a hidden-key theory exam and a fabricated 40-question set are not offered.
 - Browser-local progress, draft recovery and a portable backup. Student registration and cross-device synchronisation are not included.
-- An administrator panel for versioned content, source metadata, checking controls and aggregate operational statistics.
+- An administrator panel at `/admin` for versioned content, source metadata, checking controls and aggregate operational statistics. Public pages link to the [owner](https://t.me/tutuu9); there is no administrator shortcut in the footer.
 - Optional DeepSeek explanations, disabled without a key and an administrator setting. The initial application budget is **$2 total**, not a renewing subscription.
 
 The interface and learning material are Polish. Technical documentation is English. Projects stay in the browser; explicit runtime checks temporarily upload code to the trusted worker. The administrator does not receive a permanent student history. See [architecture](docs/architecture.md) and [checking](docs/checking.md).
