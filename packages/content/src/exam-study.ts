@@ -1,3 +1,4 @@
+import { rzekiGuide } from './study-project-rzeki.js';
 import { motocykleGuide } from './study-project-motocykle.js';
 import type { ExamStudyGuide } from '@zdaj/shared';
 import { wedkowanieStudy } from './study-wedkowanie.js';
@@ -607,6 +608,8 @@ export const examStudyGuides: ExamStudyGuide[] = legacyExamStudyGuides.map((guid
 });
 
 examStudyGuides.push(motocykleGuide);
+
+examStudyGuides.push(rzekiGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,

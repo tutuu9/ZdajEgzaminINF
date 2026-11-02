@@ -5,6 +5,8 @@ import type { ExamStudyGuide, StudyCheckSpec } from '@zdaj/shared';
 import { staticPhpTemplate } from '@zdaj/checker';
 import { motocykleGuide } from '../packages/content/src/study-project-motocykle.js';
 import { motocykleFixtures, motocykleHtmlMistakes } from '../fixtures/study/motocykle.js';
+import { rzekiGuide } from '../packages/content/src/study-project-rzeki.js';
+import { rzekiFixtures, rzekiHtmlMistakes } from '../fixtures/study/rzeki.js';
 
 type HtmlCheck = Extract<StudyCheckSpec, { kind: 'html' }>;
 function matches(source: string, check: HtmlCheck): boolean {
@@ -131,6 +133,123 @@ describe('Motocykle cumulative original-paper course', () => {
     );
     for (const section of motocykleGuide.steps.filter((section) =>
       ['graphics', 'database', 'queries', 'php-list', 'php-count', 'delivery'].includes(section.id),
+    )) {
+      for (const activity of section.activities!)
+        expect(
+          activity.checks!.some((check) => check.kind === 'manual'),
+          activity.id,
+        ).toBe(true);
+    }
+  });
+});
+
+describe('Poziomy rzek cumulative original-paper course', () => {
+  it('maps the complete paper to a minimal, persistent project with exact file names', () => {
+    verifyGuide(rzekiGuide);
+    expect(rzekiGuide.project!.requiredFiles).toEqual([
+      'import.png',
+      'kw1.jpg',
+      'kw2.jpg',
+      'kw3.jpg',
+      'kw4.jpg',
+      'kwerendy.txt',
+      'obraz1.png',
+      'obraz2.jpg',
+      'poziomRzek.php',
+      'przeglądarka.txt',
+      'styl.css',
+    ]);
+    expect(
+      rzekiGuide.steps.flatMap((section) => section.activities!).length,
+    ).toBeGreaterThanOrEqual(65);
+    expect(rzekiGuide.steps.find((section) => section.id === 'graphics')!.activities).toHaveLength(
+      4,
+    );
+    expect(rzekiGuide.steps.find((section) => section.id === 'queries')!.activities).toHaveLength(
+      8,
+    );
+  });
+
+  for (const fixture of rzekiFixtures) {
+    it(`accepts alternate static structure and valid PHP syntax: ${fixture.variant}`, () => {
+      const source = fixture.files.find((file) => file.path === 'poziomRzek.php')!.content;
+      const errors: number[] = [];
+      phpParser
+        .configure({ top: 'Template' })
+        .parse(source)
+        .iterate({
+          enter(node) {
+            if (node.type.isError) errors.push(node.from);
+          },
+        });
+      expect(errors).toEqual([]);
+      for (const check of rzekiGuide.steps.flatMap((section) =>
+        section.activities!.flatMap((activity) => activity.checks!),
+      )) {
+        if (check.kind === 'html') expect(matches(source, check), check.id).toBe(true);
+      }
+      for (const asset of fixture.manualAssets)
+        expect(fixture.files.some((file) => file.path === asset)).toBe(false);
+      expect(new Set([...fixture.files.map((file) => file.path), ...fixture.manualAssets])).toEqual(
+        new Set(rzekiGuide.project!.requiredFiles),
+      );
+      const $ = load(staticPhpTemplate(source));
+      const radios = $('form input[type="radio"]');
+      expect(radios).toHaveLength(3);
+      expect(new Set(radios.map((_, element) => $(element).attr('name')).get()).size).toBe(1);
+      expect(new Set(radios.map((_, element) => $(element).attr('value')).get()).size).toBe(3);
+      expect(
+        $('table thead th')
+          .map((_, element) => $(element).text())
+          .get(),
+      ).toEqual(['Wodomierz', 'Rzeka', 'Ostrzegawczy', 'Alarmowy', 'Aktualny']);
+    });
+  }
+
+  for (const mistake of rzekiHtmlMistakes) {
+    it(`detects ${mistake.name} at its own learning activity`, () => {
+      const [sectionId, activityId] = mistake.activityId.split('/');
+      const activity = rzekiGuide.steps
+        .find((section) => section.id === sectionId)!
+        .activities!.find((candidate) => candidate.id === activityId)!;
+      expect(
+        activity
+          .checks!.filter((check): check is HtmlCheck => check.kind === 'html')
+          .some((check) => !matches(mistake.content, check)),
+      ).toBe(true);
+    });
+  }
+
+  it('teaches both threshold branches, grouping and manual verification without an executable adapter', () => {
+    const actions = rzekiGuide.steps.flatMap((section) => section.activities!);
+    expect(actions.find((activity) => activity.id === 'query-two')!.exampleCode).toContain(
+      'w.id = p.wodowskazy_id',
+    );
+    expect(actions.find((activity) => activity.id === 'query-two')!.exampleCode).toContain(
+      "p.dataPomiaru = '2022-05-05'",
+    );
+    expect(actions.find((activity) => activity.id === 'warning-filter')!.exampleCode).toContain(
+      'p.stanWody > w.stanOstrzegawczy',
+    );
+    expect(actions.find((activity) => activity.id === 'alarm-filter')!.exampleCode).toContain(
+      'p.stanWody > w.stanAlarmowy',
+    );
+    expect(actions.find((activity) => activity.id === 'query-four')!.exampleCode).toContain(
+      'GROUP BY dataPomiaru',
+    );
+    expect(actions.find((activity) => activity.id === 'filter-check')!.instruction).toContain(
+      '17, 5 i 1',
+    );
+    for (const section of rzekiGuide.steps.filter((section) =>
+      [
+        'graphics',
+        'database',
+        'queries',
+        'php-form',
+        'php-rows',
+        'php-averages',
+        'delivery',
+      ].includes(section.id),
     )) {
       for (const activity of section.activities!)
         expect(

@@ -622,7 +622,7 @@ describe('real Nest API and PostgreSQL boundaries', () => {
   });
 
   it('reveals source-specific study guides only through a valid matching attempt secret', async () => {
-    expect(seed.examStudyGuides).toHaveLength(3);
+    expect(seed.examStudyGuides).toHaveLength(seed.officialTasks.length);
     const publicData = (await learner.request<Bootstrap>('/bootstrap')).data;
     const publicJson = JSON.stringify(publicData);
     expect(publicData).not.toHaveProperty('examStudyGuides');

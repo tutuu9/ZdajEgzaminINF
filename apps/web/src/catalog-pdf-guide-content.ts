@@ -195,4 +195,45 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-03-24-06-sg': {
+    title: 'Poziomy rzek — INF.03-03-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i zapytania',
+        focus: [
+          'Rozdziel złączenie danych dla daty 2022-05-05, filtr ostrzegawczy i średnie grupowane według daty.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Mapa i formularz',
+        focus: [
+          'Zachowaj przezroczystość tła mapy i zmień właściwy region. Trzy opcje radio tworzą jedną grupę.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Tabela, CSS i filtrowanie',
+        focus: [
+          'Powiąż wariant formularza z zakresem wierszy. Porównaj progi ostrzegawcze i alarmowe.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Średnie i oddanie',
+        focus: [
+          'Sprawdź osobny akapit dla każdej daty, obrazy i komplet plików. Zachowaj wielkość liter poziomRzek.php.',
+        ],
+      },
+    ],
+  },
 };

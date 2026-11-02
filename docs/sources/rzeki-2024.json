@@ -1,0 +1,186 @@
+{
+  "slug": "rzeki",
+  "title": "Poziomy rzek",
+  "code": "INF.03-03-24.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/17",
+  "verifiedAt": "2026-11-02T17:36:03.366225+00:00",
+  "inputInspection": {
+    "slug": "rzeki",
+    "code": "INF.03-03-24.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "textCharacters": 15893,
+        "coverCodeVerified": true,
+        "sha256": "66d22d97430a9d33d5af2a34684a92aa5f41890fcd5a26bb08cc838e9a89375f"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 0,
+        "coverCodeVerified": true,
+        "sha256": "004833b11a11af23bb2ea63c6bdd3af8cd5e4e7d8fbde844042bb8604221d35e",
+        "coverVerificationMethod": "manual review of rendered identifier in criteria-headers.png"
+      }
+    ],
+    "archive": "pliki3.zip",
+    "archivePassword": "St@ny%RzeK",
+    "memberCount": 3,
+    "fileCount": 3,
+    "totalExtractedBytes": 93746,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "baza.sql",
+        "bytes": 4006,
+        "sha256": "004dec1a3c72488a0013d1290900d5d7a113597a36a431a98c5dc4b51023868b"
+      },
+      {
+        "path": "obraz1.png",
+        "bytes": 23395,
+        "sha256": "5253272fbe63e8fd6e4ba279bd15636eb9f2d322b7332f3da88808b862bc8c32",
+        "width": 100,
+        "height": 100,
+        "format": "PNG",
+        "mode": "RGB"
+      },
+      {
+        "path": "obraz2.jpg",
+        "bytes": 66345,
+        "sha256": "be2121be06a363d575a8908949013f1b7f7660feb0c5fafd28d5cad3fe87b066",
+        "width": 450,
+        "height": 253,
+        "format": "JPEG",
+        "mode": "RGB"
+      }
+    ]
+  },
+  "deliverables": [
+    "import.png",
+    "kw1.jpg",
+    "kw2.jpg",
+    "kw3.jpg",
+    "kw4.jpg",
+    "kwerendy.txt",
+    "obraz1.png",
+    "obraz2.jpg",
+    "poziomRzek.php",
+    "przeglądarka.txt",
+    "styl.css"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Import baza.sql into rzeki with Polish collation; import.png and kw1..kw4.jpg full-screen screenshots; accumulate query text."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Select3 water-gauge fields; JOIN gauges+measurements dated2022-05-05 selecting5 named fields; filter current level>warning; AVG water grouped by date."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Przygotowanie grafiki",
+      "coverage": "Original obraz1.png100x100 RGB: make exterior background transparent and fill Lower Silesia blue of any shade; preserve other regions; compare original figure. Keep obraz2.jpg."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "poziomRzek.php (case-sensitive name), styl.css, Polish HTML5/title; semantic two banner blocks/menu/left/right/footer; map+h1; POST same-page form3 mutually exclusive labelled radios+submit; heading/table5columns; sidebar3bullet warnings, averages, external link and river image; footer."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Georgia/Navy/Azure/Silver; 50% banners100px, 70/30%550px columns; radio-text class margin50/hover white underline; mandatory table tag selector border1px Navy/margin auto/width70%; tr hoverSkyBlue; sidebar image90%."
+    },
+    {
+      "id": "php-filter",
+      "page": 4,
+      "heading": "Skrypt połączenia z bazą",
+      "coverage": "localhost/root/no password/rzeki; POST radios choose all measurements usingquery2, warning above threshold usingquery3 OR query2+PHPcondition, alarm usingmodifiedquery3 OR query2+PHPcondition; allow equivalent implementation. Manual until verified adapter."
+    },
+    {
+      "id": "php-averages",
+      "page": 5,
+      "heading": "Skrypt 2",
+      "coverage": "Query4 emits one paragraph per returned date+average; close connection; meaningful names. Figure3 warning and Figure4 alarm exact expected records visible on page5."
+    },
+    {
+      "id": "handover",
+      "page": 5,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "Browser record, import and4query screenshots, updated map, river image, PHP/CSS, kwerendy.txt."
+    }
+  ],
+  "paperTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\rzeki\\paper.txt",
+  "criteriaTextPath": "C:\\Projects\\ZdajEgzaminINF\\tmp\\cke-expansion-20261102\\rzeki\\criteria-ocr.txt",
+  "criteriaTextWarning": "OCR is an aid only: punctuation, identifiers and row numbers must be compared with criteria-pages PNGs before authoring any scoring rule.",
+  "files": {
+    "criteria": {
+      "slug": "rzeki",
+      "code": "INF.03-03-24.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758023229_inf_03_2024_06_03_SG_zo.pdf",
+      "checkedAt": "2026-11-02T17:29:45.499164+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://technikinformatyk.pl/practical_exam_attachments/1758023229_inf_03_2024_06_03_SG_zo.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Tue, 16 Sep 2025 23:34:20 GMT",
+      "status": "downloaded",
+      "bytes": 1094984,
+      "sha256": "004833b11a11af23bb2ea63c6bdd3af8cd5e4e7d8fbde844042bb8604221d35e",
+      "exactCodeVerified": true,
+      "verificationMethod": "Rendered first-page identifier visually checked"
+    },
+    "input": {
+      "slug": "rzeki",
+      "code": "INF.03-03-24.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525728237_files.zip",
+      "checkedAt": "2026-11-02T17:29:45.508161+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525728237_files.zip",
+      "contentType": "application/x-zip-compressed",
+      "lastModified": "Sat, 26 Jul 2025 10:28:49 GMT",
+      "status": "downloaded",
+      "bytes": 85662,
+      "sha256": "ee7b625cccb2e88683d29326c1354fbb39f7ad65ef38e1437d591d386e6f16a8"
+    },
+    "paper": {
+      "slug": "rzeki",
+      "code": "INF.03-03-24.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf",
+      "checkedAt": "2026-11-02T17:30:34.683763+00:00",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "finalUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Sat, 26 Jul 2025 10:28:49 GMT",
+      "status": "downloaded",
+      "bytes": 612720,
+      "sha256": "66d22d97430a9d33d5af2a34684a92aa5f41890fcd5a26bb08cc838e9a89375f",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction and cover review"
+    }
+  },
+  "watermarks": "Third-party copies: assessment scans may contain archive watermarks. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

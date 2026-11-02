@@ -164,4 +164,45 @@ export const catalog: CatalogEntry[] = [
     notes:
       'Sprawdzono kod PDF i kryteriów INF.03-01-24.06-SG, zawartość archiwum (7 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
   },
+  {
+    id: 'inf03-03-24-06-sg',
+    title: 'Poziomy rzek',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2024,
+    session: 'Czerwiec',
+    identifier: 'INF.03-03-24.06-SG',
+    variant: '03',
+    topics: ['html-css', 'php', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'PHP', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/17',
+    sourceName: 'Archiwum zewnętrzne — kopia CKE',
+    attachments: [
+      {
+        title: 'Arkusz CKE — zweryfikowana kopia archiwalna',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525727422_sheet.pdf',
+        type: 'pdf',
+        sha256: '66d22d97430a9d33d5af2a34684a92aa5f41890fcd5a26bb08cc838e9a89375f',
+      },
+      {
+        title: 'Dane wejściowe — pliki3.zip',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753525728237_files.zip',
+        type: 'zip',
+        sha256: 'ee7b625cccb2e88683d29326c1354fbb39f7ad65ef38e1437d591d386e6f16a8',
+      },
+      {
+        title: 'Zasady oceniania CKE — kopia archiwalna',
+        url: 'https://technikinformatyk.pl/practical_exam_attachments/1758023229_inf_03_2024_06_03_SG_zo.pdf',
+        type: 'pdf',
+        sha256: '004833b11a11af23bb2ea63c6bdd3af8cd5e4e7d8fbde844042bb8604221d35e',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T17:36:03.366225+00:00',
+    notes:
+      'Sprawdzono kod PDF i kryteriów INF.03-03-24.06-SG, zawartość archiwum (3 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
+  },
 ];
