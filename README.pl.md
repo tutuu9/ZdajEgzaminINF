@@ -70,7 +70,7 @@ Każde nowe zadanie praktyczne i pytanie teoretyczne odsyła do zweryfikowanego,
 
 25 pytań to niewielki opublikowany zestaw, nie pełne pokrycie programu. Pominięto pytanie wymagające filmu. Nieścisłość typograficzna jednego przykładu CSS jest objaśniona po oddaniu, z zachowaniem oryginalnej treści i klucza CKE. Kursy są powiązane z wymaganiami PDF; przykłady i cudze rozwiązania nie są certyfikowanymi pracami. PHP/SQL i kompletność projektu wymagają własnego środowiska oraz kontroli ręcznej. Kontrole edukacyjne nie wystawiają punktów CKE.
 
-Profil programistyczny Windows **nie stanowi potwierdzenia gotowości do publicznego uruchamiania obcego kodu**. Publiczne sprawdzanie wymaga profilu Linux/gVisor oraz oddzielnych testów izolacji i zasobów. Parametry docelowego VPS i możliwość takiego wdrożenia nie zostały jeszcze potwierdzone. Projekt nie publikuje się automatycznie na GitHub ani na hostingu.
+Profil programistyczny Windows **nie stanowi potwierdzenia gotowości do publicznego uruchamiania obcego kodu**. Publiczne sprawdzanie wymaga profilu Linux/gVisor oraz oddzielnych testów izolacji i zasobów. Oddzielny [profil wdrożenia samego serwisu](docs/site-deployment.md) udostępnia kursy, PDF, teorię, edytor i przeglądarkowe kontrole HTML/CSS bez procesu wykonującego kod i bez AI. Compose korzysta z gotowego obrazu; wdrożenie pozostaje ręczną, zatwierdzoną operacją.
 
 ## Struktura projektu
 

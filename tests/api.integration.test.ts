@@ -15,6 +15,7 @@ import type {
   TheoryTicket,
 } from '@zdaj/shared';
 import { toPublicQuestion } from '@zdaj/shared';
+import { disableServerFeatures } from '../packages/database/src/site-only.js';
 
 loadEnv({ quiet: true });
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -224,6 +225,38 @@ afterAll(async () => {
 }, 180_000);
 
 describe('real Nest API and PostgreSQL boundaries', () => {
+  it('disables public server features atomically without resetting budgets or other settings', async () => {
+    const original = await db.setting.findUniqueOrThrow({ where: { id: 'site' } });
+    const budget = await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } });
+    const configured = {
+      ...(original.value as object),
+      aiEnabled: true,
+      checkingEnabled: true,
+      queueLimit: 7,
+      futureSetting: 'preserved',
+    };
+    try {
+      await db.setting.update({ where: { id: 'site' }, data: { value: configured } });
+      await disableServerFeatures(db);
+      await disableServerFeatures(db);
+      const updated = await db.setting.findUniqueOrThrow({ where: { id: 'site' } });
+      expect(updated.value).toEqual({ ...configured, aiEnabled: false, checkingEnabled: false });
+      expect(await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } })).toEqual(budget);
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features).toEqual({
+        aiAvailable: false,
+        checkingAvailable: false,
+      });
+      await db.setting.delete({ where: { id: 'site' } });
+      await expect(disableServerFeatures(db)).rejects.toThrow('settings are missing');
+    } finally {
+      await db.setting.upsert({
+        where: { id: 'site' },
+        create: { id: 'site', value: original.value as object },
+        update: { value: original.value as object },
+      });
+    }
+  });
+
   it('retrieves an immutable requested guide revision and rejects missing versions', async () => {
     const ticket = await studyPractice();
     for (const version of [1, 2, 3]) {

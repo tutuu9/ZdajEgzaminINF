@@ -12,3 +12,7 @@ tmp
 test-results
 playwright-report
 **/dist
+**/__pycache__
+**/*.pyc
+**/*.dump
+**/*.dump.sha256
