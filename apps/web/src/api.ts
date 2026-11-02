@@ -1,4 +1,5 @@
 let csrfToken = '';
+let sessionRequest: Promise<void> | undefined;
 
 export class ApiError extends Error {
   constructor(
@@ -9,15 +10,22 @@ export class ApiError extends Error {
   }
 }
 
-export async function initializeSession(): Promise<void> {
-  const response = await fetch('/api/v1/session', { credentials: 'include' });
-  if (!response.ok)
-    throw new ApiError(
-      'Nie udało się połączyć z serwerem. Spróbuj ponownie za chwilę.',
-      response.status,
-    );
-  const data = (await response.json()) as { csrfToken: string };
-  csrfToken = data.csrfToken;
+export function initializeSession(): Promise<void> {
+  // Concurrent mounts or the first mutation share one cookie/CSRF exchange.
+  // Clear on failure as well, so a later explicit retry can recover.
+  sessionRequest ??= (async () => {
+    const response = await fetch('/api/v1/session', { credentials: 'include' });
+    if (!response.ok)
+      throw new ApiError(
+        'Nie udało się połączyć z serwerem. Spróbuj ponownie za chwilę.',
+        response.status,
+      );
+    const data = (await response.json()) as { csrfToken: string };
+    csrfToken = data.csrfToken;
+  })().finally(() => {
+    sessionRequest = undefined;
+  });
+  return sessionRequest;
 }
 
 export async function api<T>(
@@ -25,7 +33,10 @@ export async function api<T>(
   options: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const method = options.method ?? 'GET';
-  if (method !== 'GET' && !csrfToken) await initializeSession();
+  if (method !== 'GET') {
+    if (sessionRequest) await sessionRequest;
+    else if (!csrfToken) await initializeSession();
+  }
   const isForm = options.body instanceof FormData;
   let response: Response;
   try {
