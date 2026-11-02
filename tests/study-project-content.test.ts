@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { load } from 'cheerio';
 import { parser as phpParser } from '@lezer/php';
 import type { StudyCheckSpec } from '@zdaj/shared';
-import { allExamStudyGuides, examStudyGuides } from '@zdaj/content';
+import { allExamStudyGuides, examStudyGuides as currentGuides } from '@zdaj/content';
 import { staticPhpTemplate, studyRuntimeAdapter } from '@zdaj/checker';
 import { validStudyProjects, invalidStudyProjects } from '../fixtures/study/projects.js';
+
+const examStudyGuides = currentGuides.filter((guide) => guide.version === 3);
 
 function htmlMatches(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>): boolean {
   const $ = load(source.includes('<?') ? staticPhpTemplate(source) : source);
@@ -41,8 +43,11 @@ describe('cumulative CKE project guides, revision 3', () => {
   });
 
   it('preserves both previous published revisions and initializes only a minimal project', () => {
-    expect(allExamStudyGuides).toHaveLength(9);
-    expect(new Set(allExamStudyGuides.map((guide) => `${guide.id}:${guide.version}`)).size).toBe(9);
+    const previous = allExamStudyGuides.filter((guide) =>
+      examStudyGuides.some((current) => current.id === guide.id),
+    );
+    expect(previous).toHaveLength(9);
+    expect(new Set(previous.map((guide) => `${guide.id}:${guide.version}`)).size).toBe(9);
     for (const guide of examStudyGuides) {
       expect(guide.version).toBe(3);
       expect(

@@ -94,4 +94,36 @@ export const officialTasks: TaskVersion[] = [
     sourceCatalogId: 'inf03-08-25-06-sg',
     supportStatus: 'catalog-only',
   },
+  {
+    id: 'inf03-01-24-06-sg',
+    version: 1,
+    title: 'Motocykle — INF.03-01-24.06-SG',
+    summary:
+      'Oryginalny arkusz CKE z 2024 roku, dostępny jako zweryfikowana kopia archiwalna. Pełny kurs rozwija jeden projekt małymi krokami; końcowa ocena wymaga samodzielnego porównania z PDF.',
+    qualification: 'INF.03',
+    topicIds: ['html-css', 'php', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'PHP', 'SQL', 'Grafika'],
+    durationMinutes: 150,
+    difficulty: 'intermediate',
+    runtimeProfile: 'php-mariadb',
+    requirements: [
+      'Oryginalny PDF określa wymagania. Objaśnienia kursu pomagają wykonać je kolejno w tych samych plikach.',
+      'Sprawdź każdą nazwę pliku, wymagane zrzuty, grafikę i końcową listę rezultatów w PDF.',
+      'Dane wejściowe i kryteria pochodzą z zewnętrznych kopii CKE; pochodzenie i hasze podano w źródłach.',
+      'Automatyczne kontrole kroków obejmują tylko wskazane zachowania. PHP, SQL, grafika i pełna zgodność z arkuszem wymagają kontroli ręcznej.',
+    ],
+    starterFiles: [],
+    guidance: {
+      beginner: [],
+      intermediate: [],
+      advanced: [],
+    },
+    hints: [],
+    criteria: [],
+    followUp:
+      'Porównaj wszystkie rezultaty z oryginalnym arkuszem i kryteriami. Zakończenie lokalnej pracy nie jest oficjalnym wynikiem CKE.',
+    origin: 'exam',
+    sourceCatalogId: 'inf03-01-24-06-sg',
+    supportStatus: 'catalog-only',
+  },
 ];

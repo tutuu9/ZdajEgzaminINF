@@ -156,4 +156,43 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-01-24-06-sg': {
+    title: 'Motocykle — INF.03-01-24.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753444633550_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Oddziel zasady organizacyjne od rezultatów zadania.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i zapytania',
+        focus: [
+          'Odszukaj warunek OR, złączenie tabel, liczbę wycieczek oraz zmianę struktury. Zachowaj wymagane dowody.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i zawartość',
+        focus: [
+          'Przeskaluj droga1.jpg proporcjonalnie. Odróżnij listę definicji od listy numerowanej.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'CSS i PHP',
+        focus: [
+          'Porównaj warstwy obrazu, przezroczyste tła i przewijanie. Ścieżki zdjęć buduj z danych właściwego rekordu.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Oddanie pracy',
+        focus: ['Sprawdź wszystkie pięć zdjęć, motor.png, motor.php, zapytania i zrzuty.'],
+      },
+    ],
+  },
 };

@@ -123,4 +123,45 @@ export const catalog: CatalogEntry[] = [
     notes:
       'Identyfikator odczytano z kopii PDF. Pobrano pliki7.7z i sprawdzono listę plików: bazasmoki.sql, opis.txt, smok1.JPG, smok2.JPG i smok3.JPG w katalogu pliki7; odczytano SQL i potwierdzono oznaczenie PDF kryteriów. Uważaj na wielkość liter rozszerzeń plików. Prawa redystrybucji pozostają nieustalone. Weryfikacja źródeł nie potwierdza działania całego rozwiązania; automatyczna ocena tego arkusza pozostaje niedostępna.',
   },
+  {
+    id: 'inf03-01-24-06-sg',
+    title: 'Motocykle',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2024,
+    session: 'Czerwiec',
+    identifier: 'INF.03-01-24.06-SG',
+    variant: '01',
+    topics: ['html-css', 'php', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'PHP', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/15',
+    sourceName: 'Archiwum zewnętrzne — kopia CKE',
+    attachments: [
+      {
+        title: 'Arkusz CKE — zweryfikowana kopia archiwalna',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753444633550_sheet.pdf',
+        type: 'pdf',
+        sha256: '87a33c12040b7a958ae97dbbd71a99472bdb83019dcc34731e0fe7d467a32b67',
+      },
+      {
+        title: 'Dane wejściowe — pliki1.zip',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753444634214_files.zip',
+        type: 'zip',
+        sha256: '073f3bc10c17ba9dc5ccc524dd1256451b09a8fa2d00a3091d5154f684c9f47a',
+      },
+      {
+        title: 'Zasady oceniania CKE — kopia archiwalna',
+        url: 'https://arkusze.pl/zawodowy/inf03-2024-czerwiec-egzamin-zawodowy-praktyczny-zasady-oceniania.pdf',
+        type: 'pdf',
+        sha256: '5dcd9cdb448f72ff1c68d3ff00d629c35b13e97c73cb5d642cc667ac1479d546',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-02T17:36:03.366225+00:00',
+    notes:
+      'Sprawdzono kod PDF i kryteriów INF.03-01-24.06-SG, zawartość archiwum (7 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
+  },
 ];
