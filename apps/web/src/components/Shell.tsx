@@ -12,6 +12,7 @@ import { Suspense } from 'react';
 import { useApp } from '../context';
 import { ErrorNotice, Loading } from './common';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
+import { ThemePicker } from './ThemePicker';
 
 const navigation = [
   { to: '/nauka', label: 'Nauka', icon: BookOpen },
@@ -53,10 +54,13 @@ export function Shell() {
               </NavLink>
             ))}
           </nav>
-          <span className="qualification-badge">
-            <span />
-            INF.03
-          </span>
+          <div className="header-tools">
+            <span className="qualification-badge">
+              <span />
+              INF.03
+            </span>
+            <ThemePicker />
+          </div>
         </header>
       )}
       <div className="main-area">

@@ -11,6 +11,7 @@ import { AppProvider } from './context';
 import { Shell } from './components/Shell';
 import { Home } from './pages/Home';
 import { EmptyState } from './components/common';
+import { ThemeProvider } from './theme';
 
 const Learn = lazy(() => import('./pages/Learn').then((module) => ({ default: module.Learn })));
 const PracticeList = lazy(() =>
@@ -47,35 +48,37 @@ function LearningEntry() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <AppProvider>
-        <Routes>
-          <Route element={<Shell />}>
-            <Route index element={<RouteAlias to="/nauka" />} />
-            <Route path="nauka" element={<LearningEntry />} />
-            <Route path="nauka/podstawy" element={<Learn />} />
-            <Route path="nauka/:id" element={<Learn />} />
-            <Route path="katalog" element={<RouteAlias to="/arkusze" />} />
-            <Route path="praktyka" element={<RouteAlias to="/arkusze" />} />
-            <Route path="arkusze" element={<PracticeList />} />
-            <Route path="arkusze/:id" element={<RouteAlias to="/praktyka" task />} />
-            <Route path="praktyka/:id" element={<Workspace />} />
-            <Route path="teoria" element={<Theory />} />
-            <Route path="postepy" element={<RouteAlias to="/moje-prace" />} />
-            <Route path="moje-prace" element={<Progress />} />
-            <Route path="admin" element={<Admin />} />
-            <Route path="faq" element={<Faq />} />
-            <Route
-              path="*"
-              element={
-                <EmptyState title="Nie znaleziono tej strony" to="/" label="Wróć do pracowni">
-                  Wybierz jeden z tematów w menu, aby wrócić do nauki.
-                </EmptyState>
-              }
-            />
-          </Route>
-        </Routes>
-      </AppProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppProvider>
+          <Routes>
+            <Route element={<Shell />}>
+              <Route index element={<RouteAlias to="/nauka" />} />
+              <Route path="nauka" element={<LearningEntry />} />
+              <Route path="nauka/podstawy" element={<Learn />} />
+              <Route path="nauka/:id" element={<Learn />} />
+              <Route path="katalog" element={<RouteAlias to="/arkusze" />} />
+              <Route path="praktyka" element={<RouteAlias to="/arkusze" />} />
+              <Route path="arkusze" element={<PracticeList />} />
+              <Route path="arkusze/:id" element={<RouteAlias to="/praktyka" task />} />
+              <Route path="praktyka/:id" element={<Workspace />} />
+              <Route path="teoria" element={<Theory />} />
+              <Route path="postepy" element={<RouteAlias to="/moje-prace" />} />
+              <Route path="moje-prace" element={<Progress />} />
+              <Route path="admin" element={<Admin />} />
+              <Route path="faq" element={<Faq />} />
+              <Route
+                path="*"
+                element={
+                  <EmptyState title="Nie znaleziono tej strony" to="/" label="Wróć do pracowni">
+                    Wybierz jeden z tematów w menu, aby wrócić do nauki.
+                  </EmptyState>
+                }
+              />
+            </Route>
+          </Routes>
+        </AppProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   </StrictMode>,
 );

@@ -4,14 +4,14 @@
   gap: 16px;
   margin-top: 25px;
   padding: 20px 22px;
-  background: #eaf1fa;
-  border: 1px solid #c7d8ee;
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  color: #194a87;
+  color: var(--accent-ink);
 }
 .authored-sheet-note {
   margin: 15px 0 0;
-  color: #526783;
+  color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -20,32 +20,32 @@
   align-items: center;
   gap: 5px;
   margin-left: 4px;
-  color: #194a87;
+  color: var(--accent-ink);
   font-weight: 600;
 }
 .pdf-source-line {
   margin: 0;
   padding: 0 20px 18px;
-  color: #3e526d;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .manual-completion {
   padding: 30px;
-  color: #304763;
+  color: var(--ink);
   line-height: 1.7;
 }
 .manual-completion > svg {
-  color: #24705b;
+  color: var(--green);
 }
 .manual-completion h2 {
   font-size: 26px;
-  color: #172b4d;
+  color: var(--ink);
 }
 .manual-completion h3 {
   font-size: 19px;
-  color: #172b4d;
+  color: var(--ink);
 }
 .manual-completion ul {
   padding-left: 21px;
@@ -67,7 +67,7 @@
   border-radius: 6px;
 }
 .pdf-source-line a {
-  color: #194a87;
+  color: var(--accent-ink);
   font-weight: 600;
   display: inline-flex;
   gap: 5px;
@@ -82,7 +82,7 @@
 }
 .catalog-page-guide > section {
   padding: 14px 0;
-  border-top: 1px solid #d9e1ed;
+  border-top: 1px solid var(--line);
 }
 .catalog-page-guide > section > .text-button {
   text-align: left;
@@ -94,7 +94,7 @@
   margin-bottom: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #3e526d;
+  color: var(--muted);
 }
 .catalog-page-guide li + li {
   margin-top: 7px;
@@ -124,7 +124,7 @@
 .task-sheet-intro p {
   margin: 4px 0 0;
   font-size: 14px;
-  color: #3c587c;
+  color: var(--accent-ink);
 }
 .sheet-before-start {
   display: grid;
@@ -140,10 +140,10 @@
 }
 .pdf-sheet {
   min-width: 0;
-  border: 1px solid var(--line, #d9e1ed);
+  border: 1px solid var(--line);
   border-radius: 9px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
 }
 .pdf-heading {
   display: flex;
@@ -159,7 +159,7 @@
   gap: 11px;
 }
 .pdf-heading > div:first-child > svg {
-  color: #2361b8;
+  color: var(--blue);
   flex-shrink: 0;
 }
 .pdf-heading h2 {
@@ -168,7 +168,7 @@
 }
 .pdf-heading p {
   margin: 3px 0 0;
-  color: #526783;
+  color: var(--muted);
   font-size: 12px;
 }
 .pdf-links {
@@ -184,9 +184,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid #e0e7f0;
-  border-bottom: 1px solid #d3dce9;
-  background: #f5f8fc;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
   padding: 7px 14px;
   gap: 10px;
 }
@@ -210,13 +210,14 @@
   overflow: auto;
   max-height: 76vh;
   min-height: 250px;
-  background: #e4eaf2;
+  background: var(--surface-elevated);
   padding: 16px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
 }
 .pdf-viewport > canvas {
+  color-scheme: light;
   display: block;
   margin: 0 auto;
   background: white;
@@ -230,7 +231,7 @@
 .pdf-unavailable {
   width: 100%;
   text-align: center;
-  color: #526783;
+  color: var(--muted);
   padding: 65px 20px;
 }
 .pdf-unavailable > svg {
@@ -238,15 +239,15 @@
 }
 .pdf-text {
   padding: 15px 20px;
-  border-top: 1px solid #d9e1ed;
+  border-top: 1px solid var(--line);
   font-size: 14px;
   line-height: 1.65;
-  color: #304763;
+  color: var(--ink);
 }
 .pdf-text summary {
   cursor: pointer;
   font-weight: 600;
-  color: #194a87;
+  color: var(--accent-ink);
 }
 .pdf-text h3 {
   font-size: 18px;
@@ -262,8 +263,8 @@
 }
 .pdf-reading-guide {
   padding: 23px;
-  background: #f5f8fc;
-  border: 1px solid #d9e1ed;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
   border-radius: 9px;
 }
 .pdf-reading-guide > header {
@@ -273,7 +274,7 @@
   margin-bottom: 18px;
 }
 .pdf-reading-guide > header > svg {
-  color: #2361b8;
+  color: var(--blue);
   flex-shrink: 0;
   margin-top: 3px;
 }
@@ -283,12 +284,12 @@
 }
 .pdf-reading-guide header p {
   font-size: 14px;
-  color: #526783;
+  color: var(--muted);
   line-height: 1.5;
   margin: 6px 0 0;
 }
 .pdf-reading-guide details {
-  border-top: 1px solid #d9e1ed;
+  border-top: 1px solid var(--line);
   padding: 13px 0;
 }
 .pdf-reading-guide summary {
@@ -296,26 +297,26 @@
   font-weight: 600;
   font-size: 14px;
   line-height: 1.5;
-  color: #172b4d;
+  color: var(--ink);
   display: flex;
   gap: 10px;
 }
 .pdf-reading-guide summary > span {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
-  color: #456b98;
+  color: var(--accent-ink);
   margin-top: 3px;
 }
 .pdf-reading-guide details p {
   margin: 9px 0 1px 26px;
   font-size: 14px;
-  color: #3e526d;
+  color: var(--muted);
   line-height: 1.6;
 }
 .pdf-task-focus {
   margin-top: 15px;
   padding-top: 17px;
-  border-top: 2px solid #c7d8ee;
+  border-top: 2px solid var(--line);
 }
 .pdf-task-focus h3 {
   font-size: 16px;
@@ -336,7 +337,7 @@
 }
 .pdf-task-focus li > svg {
   flex-shrink: 0;
-  color: #24705b;
+  color: var(--green);
   margin-top: 3px;
 }
 .workspace-sheet .pdf-reading-guide {
