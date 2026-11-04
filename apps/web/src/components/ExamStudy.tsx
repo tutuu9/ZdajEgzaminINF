@@ -5,7 +5,7 @@ import type { ExamStudyGuide } from '@zdaj/shared';
 import type { ProjectStore } from '../project-store';
 import { Editor } from './Editor';
 import { LegacyStudyNotebook } from './StudySequence';
-import { ProjectLesson } from './ProjectLesson';
+import { ProjectLesson, type RevealCode } from './ProjectLesson';
 import { ArchivedNotes } from './ArchivedNotes';
 import { Notice } from './common';
 import '../study.css';
@@ -182,12 +182,14 @@ function StudyReference({ guide, attemptId }: { guide: ExamStudyGuide; attemptId
 export function ExamStudy({
   store,
   onOpenFile,
+  onRevealCode,
   onOpenSheet,
   editor,
   preview,
 }: {
   store: ProjectStore;
   onOpenFile: (path: string) => void;
+  onRevealCode: RevealCode;
   onOpenSheet: (page: number) => void;
   editor: ReactNode;
   preview: ReactNode;
@@ -219,6 +221,7 @@ export function ExamStudy({
     <ProjectLesson
       store={store}
       onOpenFile={onOpenFile}
+      onRevealCode={onRevealCode}
       onOpenSheet={onOpenSheet}
       editor={editor}
       preview={preview}
