@@ -100,12 +100,50 @@ describe('Firma IT learning advice', () => {
       missing: 'kontakt.html',
     });
     expect(services).toBeUndefined();
-    expect(contact?.warning).toBe(true);
+    expect(contact?.warning).toBe('missing-file');
     expect(contact?.explanation).toContain('brakuje pliku kontakt.html');
     expect(selected(html, contact)).toBe('href="./strony/../kontakt.html"');
     expect(
       check('structure/stylesheet', '<link rel="stylesheet" href="./styl.css">', { passed: true }),
     ).toEqual([undefined]);
+  });
+
+  it('advises on each named menu item when swapped hrefs pass the v1 presence checks', () => {
+    const html = '<nav><a href="./kontakt.html">Usługi</a><a href="uslugi.html">Kontakt</a></nav>';
+    const [services, contact] = check('common/other-links', html, { passed: true });
+    expect(services?.warning).toBe('menu-target');
+    expect(contact?.warning).toBe('menu-target');
+    expect(selected(html, services)).toBe('href="./kontakt.html"');
+    expect(selected(html, contact)).toBe('href="uslugi.html"');
+  });
+
+  it.each([
+    ['<a href="kontkat.html">', 'href="kontkat.html"'],
+    ['<a class="kontakt">', '<a class="kontakt">'],
+  ])('finds %s in the menu when a correct footer href masks the mistake', (tag, expected) => {
+    const html = `<nav>${tag}Kontakt</a></nav><footer><a href="kontakt.html">Kontakt</a></footer>`;
+    const contact = check('common/other-links', html, { passed: true })[1];
+    expect(contact?.warning).toBe('menu-target');
+    expect(selected(html, contact)).toBe(expected);
+  });
+
+  it('locates the named menu item for a deleted target and falls back when the menu is ambiguous', () => {
+    const footer = '<footer><a href="kontakt.html">Kontakt</a></footer>';
+    const menu = '<nav><a href="./kontakt.html">Kontakt</a></nav>';
+    const options = { passed: true, missing: 'kontakt.html' };
+    const html = menu + footer;
+    const contact = check('common/other-links', html, options)[1];
+    expect(contact?.warning).toBe('missing-file');
+    expect(selected(html, contact)).toBe('href="./kontakt.html"');
+    const ambiguous = check('common/other-links', menu + menu + footer, options)[1];
+    expect(ambiguous?.warning).toBe('missing-file');
+    expect(ambiguous?.range).toBeUndefined();
+  });
+
+  it('respects an accepted alternate label and does not mistake a footer for the named menu link', () => {
+    const html =
+      '<nav><a href="kontakt.html">Napisz do nas</a></nav><footer><a href="poczta.html">Kontakt</a></footer>';
+    expect(check('common/other-links', html, { passed: true })[1]).toBeUndefined();
   });
 
   it('does not invent diagnoses for other steps or links to missing source files', () => {

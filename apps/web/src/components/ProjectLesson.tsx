@@ -151,7 +151,7 @@ export function ProjectLesson({
     (!manualNeeded || manual);
   const completedFresh = checkpoint?.filesHash === hash;
   const navigationBlocked = busy || saving || !!saveError;
-  const blocked = navigationBlocked || !!project.submittedAt;
+  const blocked = busy || !!saveError || !!project.submittedAt;
   const reveal = (diagnostic: FirmaDiagnostic) => {
     const isCurrent = () => {
       const { project: latest, error: storageError } = store.get();
@@ -299,7 +299,10 @@ export function ProjectLesson({
   };
   const complete = async () => {
     if (!canComplete && !completedFresh) return;
+    setBusy(true);
     try {
+      // A cursor save may still be pending when the learner clicks Next.
+      await store.flush();
       const checkedProject = store.get().project;
       const currentHash = await filesHash(checkedProject.files ?? []);
       if (currentHash !== hash) throw new Error('Kod zmienił się. Sprawdź ponownie.');
@@ -331,6 +334,8 @@ export function ProjectLesson({
       if (positions[index + 1]) await navigate(positions[index + 1]!);
     } catch (cause) {
       setError(errorMessage(cause));
+    } finally {
+      if (mounted.current) setBusy(false);
     }
   };
   return (
@@ -458,6 +463,7 @@ export function ProjectLesson({
               {results.map((item, ordinal) => {
                 const diagnostic =
                   coachEnabled && fresh ? currentReport?.diagnostics[ordinal] : undefined;
+                const explanationId = `study-feedback-${current.id}-${ordinal}`;
                 return (
                   <div className={`course-check ${item.status}`} key={`${ordinal}:${item.id}`}>
                     <strong>
@@ -474,11 +480,18 @@ export function ProjectLesson({
                     )}
                     {diagnostic && (
                       <div className={diagnostic.warning ? 'course-file-warning' : undefined}>
-                        {diagnostic.warning && <strong>Brakuje pliku w projekcie</strong>}
-                        <p>{diagnostic.explanation}</p>
+                        {diagnostic.warning && (
+                          <strong>
+                            {diagnostic.warning === 'missing-file'
+                              ? 'Brakuje pliku w projekcie'
+                              : 'Sprawdź cel odnośnika w menu'}
+                          </strong>
+                        )}
+                        <p id={explanationId}>{diagnostic.explanation}</p>
                         <button
                           type="button"
                           className="button secondary small course-reveal"
+                          aria-describedby={explanationId}
                           disabled={blocked}
                           onClick={() => reveal(diagnostic)}
                         >

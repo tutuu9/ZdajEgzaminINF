@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { firmaFixtures } from '../../fixtures/study/firma.js';
 
 const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
 const panel = (page: Page, name: 'Lekcja' | 'Kod') => page.getByRole('tab', { name, exact: true });
@@ -111,4 +112,57 @@ test('Firma IT highlights the original opening tag when the language attribute i
   await button(page, 'Sprawdź ten krok').click();
   await button(page, 'Pokaż w kodzie').click();
   await expectSelection(page, openingTag);
+});
+
+test('Firma IT reveals swapped menu destinations separately and distinguishes a deleted page', async ({
+  page,
+}) => {
+  await startCourse(page);
+  const source = firmaFixtures[0]!.files.find((file) => file.path === 'index.html')!.content;
+  const swapped = source
+    .replace('href="uslugi.html">Usługi', 'href="kontakt.html">Usługi')
+    .replace('href="kontakt.html">Kontakt', 'href="uslugi.html">Kontakt');
+  await editor(page).fill(swapped);
+  const next = button(page, 'Zapisz i przejdź dalej');
+  for (const upcoming of [
+    'structure/title',
+    'structure/stylesheet',
+    'structure/favicon',
+    'structure/container',
+    'structure/blocks',
+    'common/logo',
+    'common/home-link',
+    'common/other-links',
+  ]) {
+    await button(page, 'Sprawdź ten krok').click();
+    await expect(page.locator('.course-check-results')).toBeVisible();
+    const manual = page.getByRole('checkbox', { name: /^Potwierdzam kontrolę ręczną:/ });
+    if (await manual.count()) await manual.check();
+    await next.click();
+    await expect(step(page)).toHaveValue(upcoming);
+  }
+  await button(page, 'Sprawdź ten krok').click();
+  // In the pinned guide, the two existing checks verify the presence of each href.
+  const rows = page.locator('.course-check-results .course-check.passed');
+  await expect(rows).toHaveCount(2);
+  for (const [label, actual] of [
+    ['Usługi', 'kontakt.html'],
+    ['Kontakt', 'uslugi.html'],
+  ]) {
+    const advisory = rows.filter({ hasText: `„${label}”` });
+    await advisory.getByRole('button', { name: 'Pokaż w kodzie' }).click();
+    await expectSelection(page, `href="${actual}"`);
+  }
+  await editor(page).fill(source);
+  await page
+    .locator('.file-list')
+    .getByRole('button', { name: 'kontakt.html', exact: true })
+    .click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await button(page, 'Usuń plik kontakt.html').click();
+  await button(page, 'Sprawdź ponownie').click();
+  const missing = rows.filter({ hasText: 'brakuje pliku kontakt.html' });
+  await missing.getByRole('button', { name: 'Pokaż w kodzie' }).click();
+  await expect(page.locator('.editor-filebar')).toHaveText('index.html');
+  await expectSelection(page, 'href="kontakt.html"');
 });

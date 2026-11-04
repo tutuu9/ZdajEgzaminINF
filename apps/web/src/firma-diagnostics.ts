@@ -6,7 +6,7 @@ export interface FirmaDiagnostic {
   explanation: string;
   path: string;
   range?: { from: number; to: number };
-  warning?: boolean;
+  warning?: 'missing-file' | 'menu-target';
 }
 
 type Element = DefaultTreeAdapterMap['element'];
@@ -76,13 +76,10 @@ function unique(elements: Element[]) {
   return elements.length === 1 ? elements[0] : undefined;
 }
 
-function inNavigation(link: Element) {
+function inLandmark(link: Element, tag: string, role: string) {
   let parent = link.parentNode;
   while (parent && 'tagName' in parent) {
-    if (
-      parent.tagName === 'nav' ||
-      attribute(parent, 'role')?.trim().toLowerCase() === 'navigation'
-    )
+    if (parent.tagName === tag || attribute(parent, 'role')?.trim().toLowerCase() === role)
       return true;
     parent = parent.parentNode;
   }
@@ -90,11 +87,15 @@ function inNavigation(link: Element) {
 }
 
 function menuLink(links: Element[], label: string) {
-  const named = links.filter(
-    (link) => linkLabel(link).toLocaleLowerCase('pl') === label.toLocaleLowerCase('pl'),
+  const navigation = links.filter((link) => inLandmark(link, 'nav', 'navigation'));
+  const candidates = navigation.length
+    ? navigation
+    : links.filter((link) => !inLandmark(link, 'footer', 'contentinfo'));
+  return unique(
+    candidates.filter(
+      (link) => linkLabel(link).toLocaleLowerCase('pl') === label.toLocaleLowerCase('pl'),
+    ),
   );
-  const inMenu = named.filter(inNavigation);
-  return unique(inMenu.length ? inMenu : named);
 }
 
 function languageDiagnostic(path: string, elements: Element[]): FirmaDiagnostic {
@@ -120,26 +121,29 @@ function linkDiagnostic(
   label: string | undefined,
   targetExists: boolean,
   passed: boolean,
-): FirmaDiagnostic {
+): FirmaDiagnostic | undefined {
   const links = label
     ? elements.filter((element) => element.tagName === 'a')
     : elements.filter(
         (element) =>
           element.tagName === 'link' && attribute(element, 'rel')?.toLowerCase() === 'stylesheet',
       );
-  if (passed) {
-    const linked = unique(
-      links.filter((link) => attributeMatches('href', attribute(link, 'href') ?? null, expected)),
-    );
+  const matchesTarget = (link: Element) =>
+    attributeMatches('href', attribute(link, 'href') ?? null, expected);
+  const link = label ? menuLink(links, label) : unique(links);
+  // Guide v1 accepts the expected href anywhere. A named menu item can still point elsewhere.
+  const menuMismatch = label && link && !matchesTarget(link);
+  if (passed && !menuMismatch) {
+    if (targetExists) return;
+    const linked = label ? link : unique(links.filter(matchesTarget));
     return {
       path,
       explanation: `Adres w href jest poprawny, ale w projekcie brakuje pliku ${expected}. Przywróć go, aby ${label ? 'odnośnik otwierał stronę' : 'przeglądarka wczytała style'}.`,
       range: sourceRange(linked, 'href'),
-      warning: true,
+      warning: 'missing-file',
     };
   }
 
-  const link = label ? menuLink(links, label) : unique(links);
   const subject = label ? `odnośnik „${label}”` : 'odnośnik do arkusza stylów';
   const actual = link && attribute(link, 'href');
   const observation = !link
@@ -150,7 +154,12 @@ function linkDiagnostic(
   const instruction = targetExists
     ? `W projekcie masz plik ${expected}. Ustaw href tak, aby ${label ? 'otwierał tę stronę' : 'wskazywał ten arkusz stylów'}.`
     : `Arkusz wymaga pliku ${expected}. Przywróć ten plik w projekcie i wpisz jego nazwę w href.`;
-  return { path, explanation: `${observation} ${instruction}`, range: sourceRange(link, 'href') };
+  return {
+    path,
+    explanation: `${observation} ${instruction}`,
+    range: sourceRange(link, 'href'),
+    warning: passed ? 'menu-target' : undefined,
+  };
 }
 
 /** Attach advice to the original check ordinal: two menu checks in guide v1 share their ID. */
@@ -185,7 +194,7 @@ export function diagnoseFirmaChecks(
     const stylesheet = check.selector === 'link[rel="stylesheet"]' && check.equals === 'styl.css';
     if (!menuLabel && !stylesheet) return;
     const targetExists = files.some((item) => item.path === check.equals);
-    if (result.status === 'passed' && targetExists) return;
+    if (result.status === 'passed' && targetExists && stylesheet) return;
     return linkDiagnostic(
       file.path,
       (elements ??= elementsIn(file.content)),
