@@ -39,7 +39,7 @@ import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { createPreview } from '../preview';
-import { Editor } from '../components/Editor';
+import { Editor, type EditorReveal } from '../components/Editor';
 import { ProjectStore, projectStore, recoverySnapshot, type ProjectPatch } from '../project-store';
 import '../cumulative.css';
 import { ThemePicker } from '../components/ThemePicker';
@@ -119,6 +119,7 @@ export function Workspace() {
     [error, setError] = useState(''),
     [saved, setSaved] = useState(true);
   const [selected, setSelectedState] = useState(''),
+    [editorReveal, setEditorReveal] = useState<EditorReveal>(),
     [newPath, setNewPath] = useState(''),
     [adding, setAdding] = useState(false),
     [tab, setTabState] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study'>('code'),
@@ -140,6 +141,10 @@ export function Workspace() {
   const storeRef = useRef<ProjectStore | null>(null);
   const [store, setStore] = useState<ProjectStore | null>(null);
   attemptRef.current = attempt;
+  const currentReveal = editorReveal?.valid() ? editorReveal : undefined;
+  useEffect(() => {
+    if (editorReveal && !currentReveal) setEditorReveal(undefined);
+  }, [editorReveal, currentReveal]);
   useEffect(() => {
     if (!store) return;
     const sync = () => {
@@ -177,11 +182,13 @@ export function Workspace() {
       .catch((cause) => setError(errorMessage(cause)));
   }, []);
   const setSelected = (path: string) => {
+    setEditorReveal(undefined);
     setSelectedState(path);
     remember({ activeFile: path });
   };
   const setTab = useCallback(
     (view: NonNullable<AttemptSnapshot['workspace']>['view']) => {
+      setEditorReveal(undefined);
       setTabState(view);
       remember({ view });
       setParams(
@@ -212,6 +219,7 @@ export function Workspace() {
     setBusy(false);
     setError('');
     setAttempt(null);
+    setEditorReveal(undefined);
     setAiText('');
     setTabState('code');
     storeRef.current = null;
@@ -822,6 +830,7 @@ export function Workspace() {
           ) : (
             <Editor
               path={file.path}
+              reveal={tab === 'study' && !closed ? currentReveal : undefined}
               sessionKey={`${attempt.id}/${file.path}`}
               initialView={attempt.workspace?.editors[file.path]}
               onViewChange={(view) => {
@@ -1203,6 +1212,11 @@ export function Workspace() {
                 editor={editorPanel}
                 preview={previewPanel}
                 onOpenFile={setSelected}
+                onRevealCode={(path, range, valid) => {
+                  if (!valid()) return;
+                  setSelected(path);
+                  setEditorReveal({ path, range, valid });
+                }}
                 onOpenSheet={(page) => {
                   setSheetPage(page);
                   setTab('sheet');

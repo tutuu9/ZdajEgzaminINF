@@ -293,6 +293,16 @@
 .course-check p {
   margin: 5px 0 0;
 }
+.course-reveal {
+  margin-top: 9px;
+}
+.course-file-warning {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--warning-bg);
+  color: var(--warning);
+}
 .course-check.passed {
   color: var(--green);
   background: var(--positive-bg);

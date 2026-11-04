@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Compartment, EditorState, StateEffect, Transaction } from '@codemirror/state';
+import {
+  Annotation,
+  Compartment,
+  type EditorSelection,
+  EditorState,
+  StateEffect,
+  Transaction,
+} from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -41,6 +48,22 @@ type SavedEditor = {
 };
 const sessions = new Map<string, SavedEditor>();
 
+export type EditorReveal = {
+  path: string;
+  range?: { from: number; to: number };
+  valid: () => boolean;
+};
+const externalValue = Annotation.define<boolean>();
+
+function syncText(view: EditorView, value: string) {
+  const normalized = value.replace(/\r\n?/g, '\n');
+  if (view.state.doc.toString() !== normalized)
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: normalized },
+      annotations: [externalValue.of(true), Transaction.addToHistory.of(false)],
+    });
+}
+
 export function Editor({
   value,
   path,
@@ -51,6 +74,7 @@ export function Editor({
   sessionKey,
   initialView,
   onViewChange,
+  reveal,
 }: {
   value: string;
   path: string;
@@ -61,14 +85,24 @@ export function Editor({
   sessionKey?: string;
   initialView?: ViewPosition;
   onViewChange?: (view: ViewPosition) => void;
+  reveal?: EditorReveal;
 }) {
   const container = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | null>(null),
+    revealedSelection = useRef<EditorSelection | null>(null),
     callback = useRef(onChange);
   callback.current = onChange;
   const positionCallback = useRef(onViewChange),
     compartments = useRef<SavedEditor | null>(null);
   positionCallback.current = onViewChange;
+  const clearReveal = (instance: EditorView) => {
+    if (instance.state.selection === revealedSelection.current)
+      instance.dispatch({
+        selection: { anchor: instance.state.selection.main.head },
+        annotations: Transaction.addToHistory.of(false),
+      });
+    revealedSelection.current = null;
+  };
   useEffect(() => {
     if (!container.current) return;
     const language = /\.php$/i.test(path)
@@ -92,7 +126,10 @@ export function Editor({
       if (positionTimer) clearTimeout(positionTimer);
       positionTimer = setTimeout(() => {
         positionCallback.current?.({
-          anchor: instance.state.selection.main.anchor,
+          anchor:
+            instance.state.selection === revealedSelection.current
+              ? instance.state.selection.main.head
+              : instance.state.selection.main.anchor,
           head: instance.state.selection.main.head,
           scrollTop: instance.scrollDOM.scrollTop,
         });
@@ -163,7 +200,8 @@ export function Editor({
       effects: StateEffect.appendConfig.of(
         listener.of(
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) callback.current(update.state.doc.toString());
+            if (update.transactions.some((tr) => tr.docChanged && !tr.annotation(externalValue)))
+              callback.current(update.state.doc.toString());
             if (update.selectionSet || update.docChanged) notifyPosition();
           }),
         ),
@@ -180,11 +218,7 @@ export function Editor({
         ),
       ],
     });
-    if (instance.state.doc.toString() !== value)
-      instance.dispatch({
-        changes: { from: 0, to: instance.state.doc.length, insert: value },
-        annotations: Transaction.addToHistory.of(false),
-      });
+    syncText(instance, value);
     const position = cached?.position ?? initialView;
     if (position) {
       instance.dispatch({
@@ -207,6 +241,8 @@ export function Editor({
     return () => {
       if (positionTimer) clearTimeout(positionTimer);
       instance.scrollDOM.removeEventListener('scroll', notifyPosition);
+      instance.dispatch({ effects: listener.reconfigure([]) });
+      clearReveal(instance);
       if (sessionKey) {
         const position = {
           anchor: instance.state.selection.main.anchor,
@@ -214,7 +250,6 @@ export function Editor({
           scrollTop: instance.scrollDOM.scrollTop,
         };
         saveSessionPosition?.(position);
-        instance.dispatch({ effects: listener.reconfigure([]) });
         sessions.set(sessionKey, {
           state: instance.state,
           position,
@@ -250,11 +285,29 @@ export function Editor({
   }, [readOnly, label, path, minHeight]);
   useEffect(() => {
     const instance = view.current;
-    if (instance && instance.state.doc.toString() !== value)
+    if (instance) syncText(instance, value);
+  }, [value]);
+  useEffect(() => {
+    const instance = view.current;
+    if (!instance || !reveal || reveal.path !== path || !reveal.valid()) return;
+    const range = reveal.range;
+    if (
+      range &&
+      range.from >= 0 &&
+      range.to >= range.from &&
+      range.to <= instance.state.doc.length
+    ) {
       instance.dispatch({
-        changes: { from: 0, to: instance.state.doc.length, insert: value },
+        selection: { anchor: range.from, head: range.to },
+        scrollIntoView: true,
         annotations: Transaction.addToHistory.of(false),
       });
-  }, [value]);
+      revealedSelection.current = instance.state.selection;
+    } else instance.dispatch({ effects: EditorView.scrollIntoView(instance.state.selection.main) });
+    instance.focus();
+    return () => {
+      if (view.current === instance) clearReveal(instance);
+    };
+  }, [path, sessionKey, reveal]);
   return <div className="code-editor" ref={container} style={{ minHeight }} />;
 }

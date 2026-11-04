@@ -176,6 +176,15 @@ for (const course of courses) {
       await expect(restoredPage.locator('.course-step-select select')).toHaveValue(first.key);
       await expect(editor(restoredPage)).toContainText(marker);
       expect(new URL(restoredPage.url()).searchParams.get('proba')).toBe(beforeBackup.id);
+      if (course.guide.id === firmaGuide.id) {
+        await editor(restoredPage).fill(source.replace('lang="pl"', 'lang="en"'));
+        await restoredPage.getByRole('button', { name: 'Sprawdź ten krok', exact: true }).click();
+        await restoredPage.getByRole('button', { name: 'Pokaż w kodzie', exact: true }).click();
+        await expect(editor(restoredPage)).toBeFocused();
+        await expect
+          .poll(() => restoredPage.evaluate(() => window.getSelection()?.toString()))
+          .toBe('lang="en"');
+      }
       expect(restoredGuideRequests).toBe(0);
     } finally {
       await restoredContext.close();

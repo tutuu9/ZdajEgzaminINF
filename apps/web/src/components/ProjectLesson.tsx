@@ -10,18 +10,34 @@ import {
   Plus,
 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import type { StudyCheckResponse, StudyCheckResult } from '@zdaj/shared';
+import type { AttemptSnapshot, StudyCheckResponse, StudyCheckResult } from '@zdaj/shared';
 import { api, ApiError, errorMessage } from '../api';
+import { diagnoseFirmaChecks, type FirmaDiagnostic } from '../firma-diagnostics';
 import { checkProjectLocally, filesHash } from '../project-checks';
 import type { ProjectStore } from '../project-store';
 import { ErrorNotice, Loading, Notice } from './common';
 import { Editor } from './Editor';
+
+export type RevealCode = (
+  path: string,
+  range: FirmaDiagnostic['range'],
+  isCurrent: () => boolean,
+) => void;
+
+interface CheckedStep {
+  activityId: string;
+  files: AttemptSnapshot['files'];
+  hash: string;
+  results: StudyCheckResult[];
+  diagnostics: (FirmaDiagnostic | undefined)[];
+}
 
 export function ProjectLesson({
   store,
   editor,
   preview,
   onOpenFile,
+  onRevealCode,
   onOpenSheet,
   reference,
 }: {
@@ -30,14 +46,14 @@ export function ProjectLesson({
   preview: ReactNode;
   reference: ReactNode;
   onOpenFile: (path: string) => void;
+  onRevealCode: RevealCode;
   onOpenSheet: (page: number) => void;
 }) {
   const { project, saving, error: saveError } = useSyncExternalStore(store.subscribe, store.get);
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [manual, setManual] = useState(false),
-    [results, setResults] = useState<StudyCheckResult[]>([]),
-    [checkedHash, setCheckedHash] = useState(''),
+    [checked, setChecked] = useState<CheckedStep>(),
     [hash, setHash] = useState('');
   const panel = project.workspace?.studyPanel ?? 'lesson';
   const setPanel = (studyPanel: 'lesson' | 'code' | 'preview') => {
@@ -71,6 +87,11 @@ export function ProjectLesson({
   }, [store]);
   useEffect(() => {
     let active = true;
+    setChecked((previous) =>
+      previous?.files && previous.files !== project.files
+        ? { ...previous, files: undefined, diagnostics: [] }
+        : previous,
+    );
     void filesHash(project.files ?? []).then((value) => {
       if (active) setHash(value);
     });
@@ -89,9 +110,8 @@ export function ProjectLesson({
     ) ?? [];
   const current = positions.find((item) => item.id === project.study?.current) ?? positions[0];
   useEffect(() => {
-    setResults([]);
+    setChecked(undefined);
     setManual(false);
-    setCheckedHash('');
     setError('');
   }, [current?.id]);
   if (!guide || !current || !project.study)
@@ -110,7 +130,17 @@ export function ProjectLesson({
     progress = project.study;
   const index = positions.indexOf(current),
     checkpoint = progress.completed[current.id];
-  const fresh = checkedHash === hash && !!hash;
+  const coachEnabled =
+    project.taskId === 'inf03-01-24-01-sg' &&
+    guide.version === 1 &&
+    project.mode === 'nauka' &&
+    !project.submittedAt;
+  const currentReport = checked?.activityId === current.id ? checked : undefined;
+  const results = currentReport?.results ?? [];
+  const fresh =
+    !!currentReport &&
+    currentReport.hash === hash &&
+    (!coachEnabled || currentReport.files === project.files);
   const manualNeeded = results.some((item) =>
     ['manual', 'unsupported', 'error'].includes(item.status),
   );
@@ -122,6 +152,23 @@ export function ProjectLesson({
   const completedFresh = checkpoint?.filesHash === hash;
   const navigationBlocked = busy || saving || !!saveError;
   const blocked = navigationBlocked || !!project.submittedAt;
+  const reveal = (diagnostic: FirmaDiagnostic) => {
+    const isCurrent = () => {
+      const { project: latest, error: storageError } = store.get();
+      return (
+        mounted.current &&
+        !latest.submittedAt &&
+        latest.mode === 'nauka' &&
+        latest.id === project.id &&
+        latest.study?.current === current.id &&
+        latest.files === currentReport?.files &&
+        !storageError
+      );
+    };
+    if (!fresh || !isCurrent()) return;
+    setPanel('code');
+    onRevealCode(diagnostic.path, diagnostic.range, isCurrent);
+  };
   const navigate = async (target: typeof current) => {
     try {
       await store.patch((latest) => ({
@@ -147,9 +194,9 @@ export function ProjectLesson({
     setError('');
     setManual(false);
     const source = store.get().project,
-      sourceHash = await filesHash(source.files ?? []),
       activityId = current.id;
     try {
+      const sourceHash = await filesHash(source.files ?? []);
       await store.flush();
       let report = await checkProjectLocally(
         source.files ?? [],
@@ -228,17 +275,22 @@ export function ProjectLesson({
         }
       }
       if (!mounted.current) return;
-      if (
-        store.get().project.study?.current !== activityId ||
-        (await filesHash(store.get().project.files ?? [])) !== sourceHash
-      ) {
+      const latest = store.get().project;
+      if (latest.study?.current !== activityId || latest.files !== source.files) {
         setError(
           'Kod zmienił się podczas sprawdzania. Sprawdź aktualną wersję; żaden plik nie został cofnięty.',
         );
         return;
       }
-      setResults(report);
-      setCheckedHash(sourceHash);
+      setChecked({
+        activityId,
+        files: coachEnabled ? source.files : undefined,
+        hash: sourceHash,
+        results: report,
+        diagnostics: coachEnabled
+          ? diagnoseFirmaChecks(source.files ?? [], activity.checks ?? [], report, activityId)
+          : [],
+      });
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
     } finally {
@@ -395,20 +447,48 @@ export function ProjectLesson({
           )}
           <button className="button primary full" disabled={blocked} onClick={() => void check()}>
             {busy ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
-            {busy ? 'Sprawdzanie…' : 'Sprawdź ten krok'}
+            {busy
+              ? 'Sprawdzanie…'
+              : coachEnabled && currentReport
+                ? 'Sprawdź ponownie'
+                : 'Sprawdź ten krok'}
           </button>
           {results.length > 0 && (
             <div className="course-check-results" aria-live="polite">
-              {results.map((item) => (
-                <div className={`course-check ${item.status}`} key={item.id}>
-                  <strong>
-                    {item.status === 'passed' ? '✓ ' : ''}
-                    {item.title}
-                  </strong>
-                  <p>{item.evidence}</p>
-                  {item.recommendation && <p>{item.recommendation}</p>}
-                </div>
-              ))}
+              {results.map((item, ordinal) => {
+                const diagnostic =
+                  coachEnabled && fresh ? currentReport?.diagnostics[ordinal] : undefined;
+                return (
+                  <div className={`course-check ${item.status}`} key={`${ordinal}:${item.id}`}>
+                    <strong>
+                      {item.status === 'passed' ? '✓ ' : ''}
+                      {diagnostic && !diagnostic.warning
+                        ? `Do poprawy w pliku ${diagnostic.path}`
+                        : item.title}
+                    </strong>
+                    {(!diagnostic || diagnostic.warning) && (
+                      <>
+                        <p>{item.evidence}</p>
+                        {item.recommendation && <p>{item.recommendation}</p>}
+                      </>
+                    )}
+                    {diagnostic && (
+                      <div className={diagnostic.warning ? 'course-file-warning' : undefined}>
+                        {diagnostic.warning && <strong>Brakuje pliku w projekcie</strong>}
+                        <p>{diagnostic.explanation}</p>
+                        <button
+                          type="button"
+                          className="button secondary small course-reveal"
+                          disabled={blocked}
+                          onClick={() => reveal(diagnostic)}
+                        >
+                          {diagnostic.range ? 'Pokaż w kodzie' : 'Otwórz plik'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {!fresh && <p>Kod zmienił się — sprawdź ponownie.</p>}
               {manualNeeded && fresh && (
                 <label className="checkbox-field">
