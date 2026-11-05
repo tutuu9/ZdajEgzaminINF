@@ -10,9 +10,16 @@ import {
   Plus,
 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import type { AttemptSnapshot, StudyCheckResponse, StudyCheckResult } from '@zdaj/shared';
+import type {
+  AttemptSnapshot,
+  StudyCheckResponse,
+  StudyCheckResult,
+  StudyCheckSpec,
+} from '@zdaj/shared';
 import { api, ApiError, errorMessage } from '../api';
-import { diagnoseFirmaChecks, type FirmaDiagnostic } from '../firma-diagnostics';
+import type { CodeDiagnostic } from '../code-diagnostic';
+import { diagnoseCourseChecks } from '../course-diagnostics';
+import { diagnoseFirmaChecks } from '../firma-diagnostics';
 import { checkProjectLocally, filesHash } from '../project-checks';
 import type { ProjectStore } from '../project-store';
 import { ErrorNotice, Loading, Notice } from './common';
@@ -20,7 +27,7 @@ import { Editor } from './Editor';
 
 export type RevealCode = (
   path: string,
-  range: FirmaDiagnostic['range'],
+  range: CodeDiagnostic['range'],
   isCurrent: () => boolean,
 ) => void;
 
@@ -29,7 +36,7 @@ interface CheckedStep {
   files: AttemptSnapshot['files'];
   hash: string;
   results: StudyCheckResult[];
-  diagnostics: (FirmaDiagnostic | undefined)[];
+  diagnostics: (CodeDiagnostic | undefined)[];
 }
 
 export function ProjectLesson({
@@ -130,11 +137,7 @@ export function ProjectLesson({
     progress = project.study;
   const index = positions.indexOf(current),
     checkpoint = progress.completed[current.id];
-  const coachEnabled =
-    project.taskId === 'inf03-01-24-01-sg' &&
-    guide.version === 1 &&
-    project.mode === 'nauka' &&
-    !project.submittedAt;
+  const coachEnabled = !!guide.project && project.mode === 'nauka' && !project.submittedAt;
   const currentReport = checked?.activityId === current.id ? checked : undefined;
   const results = currentReport?.results ?? [];
   const fresh =
@@ -152,7 +155,7 @@ export function ProjectLesson({
   const completedFresh = checkpoint?.filesHash === hash;
   const navigationBlocked = busy || saving || !!saveError;
   const blocked = busy || !!saveError || !!project.submittedAt;
-  const reveal = (diagnostic: FirmaDiagnostic) => {
+  const reveal = (diagnostic: CodeDiagnostic) => {
     const isCurrent = () => {
       const { project: latest, error: storageError } = store.get();
       return (
@@ -198,18 +201,16 @@ export function ProjectLesson({
     try {
       const sourceHash = await filesHash(source.files ?? []);
       await store.flush();
-      let report = await checkProjectLocally(
-        source.files ?? [],
-        activity.checks ?? [
-          {
-            id: 'manual',
-            title: 'Sprawdzenie własne',
-            kind: 'manual',
-            prompt: activity.check.prompt,
-          },
-        ],
-      );
-      if (activity.checks?.some((item) => item.kind === 'runtime')) {
+      const checks: StudyCheckSpec[] = activity.checks ?? [
+        {
+          id: 'manual',
+          title: 'Sprawdzenie własne',
+          kind: 'manual',
+          prompt: activity.check.prompt,
+        },
+      ];
+      let report = await checkProjectLocally(source.files ?? [], checks);
+      if (checks.some((item) => item.kind === 'runtime')) {
         try {
           const job = await store.request((latest) =>
             api<{ id: string; token: string }>(`/attempts/${latest.ticket.id}/study/checks`, {
@@ -236,15 +237,12 @@ export function ProjectLesson({
                 response.report.inputHash !== sourceHash
               )
                 throw new Error('Raport nie pasuje do wysłanej wersji plików.');
-              report = [
-                ...report.filter(
-                  (item) =>
-                    !activity.checks?.some(
-                      (check) => check.kind === 'runtime' && check.id === item.id,
-                    ),
-                ),
-                ...response.report.results,
-              ];
+              const runtimeResults = response.report.results;
+              report = report.map((item, i) =>
+                checks[i]?.kind === 'runtime'
+                  ? (runtimeResults.find((result) => result.id === item.id) ?? item)
+                  : item,
+              );
               await api(`/study/checks/${job.id}/ack`, {
                 method: 'POST',
                 body: { token: job.token },
@@ -282,14 +280,25 @@ export function ProjectLesson({
         );
         return;
       }
+      let diagnostics: CheckedStep['diagnostics'] = [];
+      if (coachEnabled) {
+        diagnostics =
+          project.taskId === 'inf03-01-24-01-sg' && guide.version === 1
+            ? diagnoseFirmaChecks(source.files ?? [], checks, report, activityId)
+            : diagnoseCourseChecks(
+                source.files ?? [],
+                checks,
+                report,
+                activity.targetFiles ?? [current.step.fileName],
+                positions.slice(0, index).flatMap(({ activity: prior }) => prior.checks ?? []),
+              );
+      }
       setChecked({
         activityId,
         files: coachEnabled ? source.files : undefined,
         hash: sourceHash,
         results: report,
-        diagnostics: coachEnabled
-          ? diagnoseFirmaChecks(source.files ?? [], activity.checks ?? [], report, activityId)
-          : [],
+        diagnostics,
       });
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
@@ -468,11 +477,13 @@ export function ProjectLesson({
                   <div className={`course-check ${item.status}`} key={`${ordinal}:${item.id}`}>
                     <strong>
                       {item.status === 'passed' ? '✓ ' : ''}
-                      {diagnostic && !diagnostic.warning
+                      {diagnostic && item.status === 'failed'
                         ? `Do poprawy w pliku ${diagnostic.path}`
                         : item.title}
                     </strong>
-                    {(!diagnostic || diagnostic.warning) && (
+                    {(!diagnostic ||
+                      item.status !== 'failed' ||
+                      activity.checks?.[ordinal]?.kind === 'runtime') && (
                       <>
                         <p>{item.evidence}</p>
                         {item.recommendation && <p>{item.recommendation}</p>}

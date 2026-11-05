@@ -1,13 +1,7 @@
 import type { ProjectFile, StudyCheckResult, StudyCheckSpec } from '@zdaj/shared';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { attributeMatches } from './project-checks';
-
-export interface FirmaDiagnostic {
-  explanation: string;
-  path: string;
-  range?: { from: number; to: number };
-  warning?: 'missing-file' | 'menu-target';
-}
+import type { CodeDiagnostic } from './code-diagnostic';
 
 type Element = DefaultTreeAdapterMap['element'];
 type Node = DefaultTreeAdapterMap['node'];
@@ -47,7 +41,7 @@ function attribute(element: Element, name: string) {
   return element.attrs.find((attr) => attr.name === name)?.value;
 }
 
-function sourceRange(element: Element | undefined, name: string): FirmaDiagnostic['range'] {
+function sourceRange(element: Element | undefined, name: string): CodeDiagnostic['range'] {
   const location = element?.sourceCodeLocation;
   const span =
     element && attribute(element, name) !== undefined
@@ -98,7 +92,7 @@ function menuLink(links: Element[], label: string) {
   );
 }
 
-function languageDiagnostic(path: string, elements: Element[]): FirmaDiagnostic {
+function languageDiagnostic(path: string, elements: Element[]): CodeDiagnostic {
   const html = elements.find((element) => element.tagName === 'html');
   const actual = html && attribute(html, 'lang');
   if (actual === undefined && !html?.sourceCodeLocation?.startTag) {
@@ -121,7 +115,7 @@ function linkDiagnostic(
   label: string | undefined,
   targetExists: boolean,
   passed: boolean,
-): FirmaDiagnostic | undefined {
+): CodeDiagnostic | undefined {
   const links = label
     ? elements.filter((element) => element.tagName === 'a')
     : elements.filter(
@@ -168,7 +162,7 @@ export function diagnoseFirmaChecks(
   checks: StudyCheckSpec[],
   results: StudyCheckResult[],
   activityId: string,
-): (FirmaDiagnostic | undefined)[] {
+): (CodeDiagnostic | undefined)[] {
   const path = lessonFiles.get(activityId);
   const file = files.find((item) => item.path === path);
   let elements: Element[] | undefined;
