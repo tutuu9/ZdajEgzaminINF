@@ -17,6 +17,7 @@ import {
   showPanel,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
 import {
   bracketMatching,
   foldGutter,
@@ -29,7 +30,11 @@ import { javascript } from '@codemirror/lang-javascript';
 import { php } from '@codemirror/lang-php';
 import { sql } from '@codemirror/lang-sql';
 import { oneDarkTheme, oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
-import { expandHtmlAbbreviation, supportsHtmlAbbreviation } from './editor-abbreviation';
+import {
+  expandHtmlAbbreviation,
+  htmlAbbreviationCompletions,
+  supportsHtmlAbbreviation,
+} from './editor-abbreviation';
 
 const readableHighlightStyle = HighlightStyle.define(
   oneDarkHighlightStyle.specs.map((spec) => ({
@@ -47,6 +52,26 @@ type SavedEditor = {
   size: Compartment;
 };
 const sessions = new Map<string, SavedEditor>();
+
+const abbreviationTools = [
+  autocompletion({ override: [htmlAbbreviationCompletions], interactionDelay: 0 }),
+  EditorState.phrases.of({ Completions: 'Podpowiedzi kodu' }),
+  showPanel.of(() => {
+    const dom = document.createElement('div');
+    dom.className = 'cm-html-abbreviation-hint';
+    dom.textContent =
+      'Skróty HTML: wpisz div lub ul>li*3 i naciśnij Tab. Skrót ! w osobnym wierszu tworzy szkielet strony.';
+    return { dom, bottom: true };
+  }),
+];
+
+function accessSettings(readOnly: boolean, path: string) {
+  return [
+    EditorState.readOnly.of(readOnly),
+    EditorView.editable.of(!readOnly),
+    !readOnly && supportsHtmlAbbreviation(path) ? abbreviationTools : [],
+  ];
+}
 
 export type EditorReveal = {
   path: string;
@@ -151,6 +176,7 @@ export function Editor({
             foldGutter(),
             syntaxHighlighting(readableHighlightStyle),
             keymap.of([
+              { key: 'Tab', run: acceptCompletion },
               { key: 'Tab', run: expandHtmlAbbreviation(path) },
               indentWithTab,
               ...defaultKeymap,
@@ -159,18 +185,9 @@ export function Editor({
             oneDarkTheme,
             language,
             EditorView.lineWrapping,
-            readonly.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+            readonly.of(accessSettings(readOnly, path)),
             labelConfig.of(EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` })),
             size.of(EditorView.theme({ '.cm-scroller': { minHeight: `${minHeight}px` } })),
-            !readOnly && supportsHtmlAbbreviation(path)
-              ? showPanel.of(() => {
-                  const dom = document.createElement('div');
-                  dom.className = 'cm-html-abbreviation-hint';
-                  dom.textContent = `Szkielet HTML: wpisz ! w osobnym wierszu i naciśnij Tab.${/\.php$/i.test(path) ? ' Działa poza kodem PHP.' : ''}`;
-                  return { dom, bottom: true };
-                })
-              : [],
-
             EditorView.theme({
               '&': { fontSize: '13px', height: '100%' },
               '.cm-scroller': {
@@ -181,6 +198,11 @@ export function Editor({
               '.cm-content': { padding: '16px 0' },
               '.cm-gutters': { backgroundColor: '#192434', color: '#a4aec1', border: 'none' },
               '&.cm-editor.cm-focused': { outline: '2px solid #75aaff', outlineOffset: '-2px' },
+              '.cm-completionInfo': {
+                whiteSpace: 'pre-wrap',
+                maxHeight: '10rem',
+                overflow: 'auto',
+              },
               '.cm-html-abbreviation-hint': {
                 padding: '7px 12px',
                 color: '#c2cede',
@@ -209,10 +231,7 @@ export function Editor({
     });
     instance.dispatch({
       effects: [
-        readonly.reconfigure([
-          EditorState.readOnly.of(readOnly),
-          EditorView.editable.of(!readOnly),
-        ]),
+        readonly.reconfigure(accessSettings(readOnly, path)),
         labelConfig.reconfigure(
           EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` }),
         ),
@@ -270,10 +289,7 @@ export function Editor({
     if (instance && config)
       instance.dispatch({
         effects: [
-          config.readonly.reconfigure([
-            EditorState.readOnly.of(readOnly),
-            EditorView.editable.of(!readOnly),
-          ]),
+          config.readonly.reconfigure(accessSettings(readOnly, path)),
           config.label.reconfigure(
             EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` }),
           ),

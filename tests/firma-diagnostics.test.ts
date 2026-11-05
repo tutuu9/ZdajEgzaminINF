@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { StudyCheckResult } from '@zdaj/shared';
 import { firmaGuide } from '../packages/content/src/study-project-firma';
-import { diagnoseFirmaChecks, type FirmaDiagnostic } from '../apps/web/src/firma-diagnostics';
+import { diagnoseFirmaChecks } from '../apps/web/src/firma-diagnostics';
+import type { CodeDiagnostic } from '../apps/web/src/code-diagnostic';
 
 function check(
   activity: string,
@@ -24,7 +25,7 @@ function check(
   return diagnoseFirmaChecks(files, checks, results, activity);
 }
 
-function selected(html: string, advice: FirmaDiagnostic | undefined) {
+function selected(html: string, advice: CodeDiagnostic | undefined) {
   const range = advice?.range;
   return range && html.replace(/\r\n?/g, '\n').slice(range.from, range.to);
 }

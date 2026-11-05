@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { EditorSelection, EditorState, type Extension, type Transaction } from '@codemirror/state';
 import { history, indentMore, undo } from '@codemirror/commands';
+import { CompletionContext } from '@codemirror/autocomplete';
 import { html } from '@codemirror/lang-html';
 import { php } from '@codemirror/lang-php';
 import {
   expandHtmlAbbreviation,
+  htmlAbbreviationCompletions,
   supportsHtmlAbbreviation,
 } from '../apps/web/src/components/editor-abbreviation';
 
@@ -148,5 +150,81 @@ describe('HTML boilerplate abbreviation', () => {
       },
     };
     expect(expandHtmlAbbreviation('index.html')(target)).toBe(false);
+  });
+});
+
+describe('Emmet HTML shortcuts', () => {
+  it('expands all requested cells and list items within the repeat budget', () => {
+    for (const [shortcut, tag, count] of [
+      ['tr*8>td*8', '<td>', 64],
+      ['li*65', '<li>', 65],
+    ] as const) {
+      const target = editor(shortcut);
+      expect(expandHtmlAbbreviation('index.html')(target)).toBe(true);
+      expect(target.state.doc.toString().split(tag).length - 1).toBe(count);
+    }
+  });
+
+  it.each(['li*9999999999', '(tr*64>td*64)*10', ' '.repeat(4096) + 'div'])(
+    'declines oversized expansions instead of inserting partial markup',
+    async (doc) => {
+      const target = editor(doc);
+      expect(
+        await htmlAbbreviationCompletions(new CompletionContext(target.state, doc.length, false)),
+      ).toBeNull();
+      expect(expandHtmlAbbreviation('index.html')(target)).toBe(false);
+      expect(target.state.doc.toString()).toBe(doc);
+    },
+  );
+
+  it.each(['projekt.html', 'STRONA.HTM', 'kontakt.php'])(
+    'suggests and expands a tag in %s with the cursor between the tags',
+    async (path) => {
+      const target = editor('<main>div</main>', path, '<main>div'.length);
+      const context = new CompletionContext(target.state, target.state.selection.main.head, false);
+      const result = await htmlAbbreviationCompletions(context);
+      expect(result?.options).toContainEqual(
+        expect.objectContaining({ label: 'div', info: '<div></div>' }),
+      );
+      expect(expandHtmlAbbreviation(path)(target)).toBe(true);
+      expect(target.state.doc.toString()).toBe('<main><div></div></main>');
+      expect(target.state.selection.main.anchor).toBe('<main><div>'.length);
+      expect(undo(target)).toBe(true);
+      expect(target.state.doc.toString()).toBe('<main>div</main>');
+    },
+  );
+
+  it('suggests real tags for a prefix and expands classes, IDs and nested repeated elements', async () => {
+    const partial = editor('di');
+    const result = await htmlAbbreviationCompletions(
+      new CompletionContext(partial.state, 2, false),
+    );
+    expect(result?.options.map(({ label }) => label)).toContain('div');
+    const shortcut = 'ul#oferta.lista>li*3';
+    const target = editor('  ' + shortcut);
+    expect(expandHtmlAbbreviation('index.html')(target)).toBe(true);
+    const text = target.state.doc.toString();
+    expect(text).toBe(
+      '  <ul id="oferta" class="lista">\n    <li></li>\n    <li></li>\n    <li></li>\n  </ul>',
+    );
+    expect(target.state.selection.main.head).toBe(text.indexOf('</li>'));
+  });
+
+  it.each([
+    ['<style>div</style>', 'projekt.html'],
+    ['<script>div</script>', 'projekt.html'],
+    ['<?php echo "div"; ?>', 'index.php'],
+    ['<main title="div">', 'projekt.html'],
+    ['<!-- div -->', 'projekt.html'],
+    ['Wpisz tutaj div', 'projekt.html'],
+    ['division', 'projekt.html'],
+  ])('keeps normal editing in %s', async (doc, path) => {
+    const pos = doc.indexOf('div') + 3;
+    const target = editor(doc, path, pos);
+    expect(
+      await htmlAbbreviationCompletions(new CompletionContext(target.state, pos, false)),
+    ).toBeNull();
+    expect(expandHtmlAbbreviation(path)(target)).toBe(false);
+    expect(target.state.doc.toString()).toBe(doc);
   });
 });

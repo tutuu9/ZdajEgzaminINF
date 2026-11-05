@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "6.20.4",
     "@codemirror/commands": "^6.10.0",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.11",
@@ -22,10 +23,14 @@
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/source-sans-3": "^5.2.8",
     "@zdaj/shared": "*",
+    "css-select": "5.2.2",
+    "css-what": "6.2.2",
+    "emmet": "2.4.11",
     "fflate": "^0.8.2",
     "idb": "^8.0.3",
     "lucide-react": "^0.563.0",
     "parse5": "7.3.0",
+    "parse5-htmlparser2-tree-adapter": "7.1.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
