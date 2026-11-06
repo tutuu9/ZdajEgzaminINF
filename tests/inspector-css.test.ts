@@ -140,4 +140,38 @@ describe('preview inspector CSS source index', () => {
       indexInspectorCss({ path: 'styl.css', css: 'p{color:red}', offset: -1, idPrefix: 'bad' }),
     ).toEqual([]);
   });
+
+  it('reports exceeded limits separately from an empty stylesheet', () => {
+    for (const css of [
+      'x'.repeat(1_000_001),
+      'p{color:red}'.repeat(2_001),
+      'p{' + 'color:red;'.repeat(10_001) + '}',
+      '@media screen{'.repeat(33) + 'p{color:red}' + '}'.repeat(33),
+    ]) {
+      let notices = 0;
+      expect(
+        indexInspectorCss({
+          path: 'styl.css',
+          css,
+          idPrefix: 'limited',
+          onLimit: () => {
+            notices++;
+          },
+        }),
+      ).toEqual([]);
+      expect(notices).toBe(1);
+    }
+    let limited = false;
+    expect(
+      indexInspectorCss({
+        path: 'styl.css',
+        css: '/* empty */',
+        idPrefix: 'empty',
+        onLimit: () => {
+          limited = true;
+        },
+      }),
+    ).toEqual([]);
+    expect(limited).toBe(false);
+  });
 });

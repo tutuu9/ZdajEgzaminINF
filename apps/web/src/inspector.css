@@ -6,6 +6,10 @@
   font-size: 13px;
   line-height: 1.55;
   overflow-wrap: anywhere;
+  max-height: min(32vh, 320px);
+  min-height: 180px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .page-inspector-card > header,
 .inspector-actions,
@@ -53,9 +57,7 @@
   color: var(--muted);
 }
 .inspector-rule-list {
-  max-height: 240px;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  min-width: 0;
 }
 .inspector-rule {
   padding: 10px 2px;
@@ -96,8 +98,6 @@
 }
 .inspector-values {
   margin: 8px 0;
-  max-height: 210px;
-  overflow-y: auto;
 }
 .inspector-values > div {
   display: grid;
@@ -206,9 +206,6 @@
 @media (max-width: 900px) {
   .page-inspector-card {
     padding: 14px;
-  }
-  .inspector-rule-list {
-    max-height: 180px;
   }
   .inspector-actions {
     gap: 8px;

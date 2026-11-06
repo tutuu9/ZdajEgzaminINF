@@ -21,6 +21,8 @@ export interface InspectorCssInput {
   inlineElementId?: string;
   conditions?: InspectionCondition[];
   idPrefix: string;
+  /** Distinguish skipped input from a stylesheet that has no element rules. */
+  onLimit?: () => void;
 }
 
 const maxSourceLength = 1_000_000;
@@ -62,7 +64,10 @@ function enclosingConditions(node: CssNode, source: string) {
  * candidates, not cascade winners; only the preview can measure computed values.
  */
 export function indexInspectorCss(input: InspectorCssInput): InspectionRule[] {
-  if (input.css.length > maxSourceLength) return [];
+  if (input.css.length > maxSourceLength) {
+    input.onLimit?.();
+    return [];
+  }
   const offset = input.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0) return [];
   if (
@@ -170,5 +175,9 @@ export function indexInspectorCss(input: InspectorCssInput): InspectionRule[] {
       }
     },
   });
-  return exceeded ? [] : result;
+  if (exceeded) {
+    input.onLimit?.();
+    return [];
+  }
+  return result;
 }

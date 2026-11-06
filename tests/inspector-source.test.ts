@@ -128,6 +128,38 @@ describe('inspection source mapping', () => {
     expect(index.note).toContain('Pseudoelementy');
   });
 
+  it('explains skipped oversized CSS and still indexes another available stylesheet', () => {
+    const { index } = prepareInspection(
+      [
+        {
+          path: 'a.html',
+          content:
+            '<link rel="stylesheet" href="large.css"><style>h1{padding:2px}</style><h1>A</h1>',
+        },
+        { path: 'large.css', content: 'h1{color:red}'.repeat(2_001) },
+      ],
+      'a.html',
+    );
+    expect(index.rules).toHaveLength(1);
+    expect(index.rules[0]!.declarations[0]!.property).toBe('padding');
+    expect(index.note).toContain('Część CSS pominięto z powodu rozmiaru lub złożoności');
+  });
+
+  it('reports inline declaration and nested style-block limits', () => {
+    for (const content of [
+      '<h1 style="' + 'color:red;'.repeat(10_001) + '">A</h1>',
+      '<style>' +
+        '@media screen{'.repeat(33) +
+        'h1{color:red}' +
+        '}'.repeat(33) +
+        '</style><h1>A</h1>',
+    ]) {
+      const { index } = prepareInspection([{ path: 'a.html', content }], 'a.html');
+      expect(index.rules).toEqual([]);
+      expect(index.note).toContain('Część CSS pominięto');
+    }
+  });
+
   it('serializes hostile CSS selectors as data, never as executable script markup', () => {
     const { index } = prepareInspection([{ path: 'a.html', content: '<p>A</p>' }], 'a.html');
     index.rules.push({

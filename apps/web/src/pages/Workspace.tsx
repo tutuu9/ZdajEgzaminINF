@@ -223,10 +223,27 @@ export function Workspace() {
     toggleButton: inspectorToggleRef,
     onReveal: (source, valid) => {
       if (!valid()) return;
-      setInspectChoice(undefined);
-      setSelected(source.path);
-      remember({ studyPanel: 'code' });
-      setEditorReveal({ path: source.path, range: source.range, valid });
+      const controller = storeRef.current;
+      if (!controller) return;
+      void controller
+        .patch((latest) => ({
+          ...latest,
+          workspace: {
+            view: 'study',
+            previewEntry,
+            editors: {},
+            ...latest.workspace,
+            activeFile: source.path,
+            studyPanel: 'code',
+          },
+        }))
+        .then(() => {
+          if (!valid()) return;
+          setInspectChoice(undefined);
+          setSelectedState(source.path);
+          setEditorReveal({ path: source.path, range: source.range, valid, scrollIntoView: true });
+        })
+        .catch((cause) => setError(errorMessage(cause)));
     },
     onExit: () => {
       setEditorReveal(undefined);

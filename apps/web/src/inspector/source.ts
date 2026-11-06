@@ -1,7 +1,7 @@
 import { phpLanguage } from '@codemirror/lang-php';
 import type { ProjectFile } from '@zdaj/shared';
 import { parse, serialize, type DefaultTreeAdapterMap } from 'parse5';
-import { indexInspectorCss } from './css-index';
+import { indexInspectorCss, type InspectorCssInput } from './css-index';
 import type { InspectionCondition, InspectionIndex, InspectionSource } from './types';
 
 type Node = DefaultTreeAdapterMap['node'];
@@ -111,6 +111,16 @@ export function prepareInspection(files: ProjectFile[], entry: string) {
   let cssBudget = 2_000_000;
   let cssLimited = false;
   let complexCss = false;
+  const addCss = (input: InspectorCssInput) => {
+    index.rules.push(
+      ...indexInspectorCss({
+        ...input,
+        onLimit: () => {
+          cssLimited = true;
+        },
+      }),
+    );
+  };
   const canIndexCss = (text: string) => {
     if (/@(?:import|container|layer)\b|::[\w-]+|:(?:before|after)\b/i.test(text)) complexCss = true;
     if (text.length > MAX_SOURCE || text.length > cssBudget || index.rules.length >= MAX_RULES) {
@@ -156,14 +166,12 @@ export function prepareInspection(files: ProjectFile[], entry: string) {
       if (stylesheet && canIndexCss(stylesheet.content)) {
         if (attr('disabled') !== undefined || /(?:^|\s)alternate(?:\s|$)/i.test(attr('rel') ?? ''))
           conditions.push({ kind: 'unsupported', text: 'Arkusz wyłączony lub alternatywny' });
-        index.rules.push(
-          ...indexInspectorCss({
-            path: stylesheet.path,
-            css: stylesheet.content.replace(/\r\n?/g, '\n'),
-            idPrefix: `r${ruleGroup++}`,
-            conditions,
-          }),
-        );
+        addCss({
+          path: stylesheet.path,
+          css: stylesheet.content.replace(/\r\n?/g, '\n'),
+          idPrefix: `r${ruleGroup++}`,
+          conditions,
+        });
       }
     }
     if (node.tagName === 'style' && location?.startTag) {
@@ -172,34 +180,28 @@ export function prepareInspection(files: ProjectFile[], entry: string) {
       const contentRange = mapping.range({ startOffset: start, endOffset: end });
       const css = mapping.markup.slice(start, end);
       if (canIndexCss(css))
-        index.rules.push(
-          ...indexInspectorCss({
-            path: entry,
-            css,
-            offset: contentRange?.from,
-            fallbackRange: contentRange ? undefined : opening,
-            omitRanges: !contentRange && !opening,
-            sourceNote: !contentRange ? 'Styl zawiera PHP; sprawdź jego treść w pliku.' : undefined,
-            idPrefix: `r${ruleGroup++}`,
-            conditions,
-          }),
-        );
+        addCss({
+          path: entry,
+          css,
+          offset: contentRange?.from,
+          fallbackRange: contentRange ? undefined : opening,
+          omitRanges: !contentRange && !opening,
+          sourceNote: !contentRange ? 'Styl zawiera PHP; sprawdź jego treść w pliku.' : undefined,
+          idPrefix: `r${ruleGroup++}`,
+          conditions,
+        });
     }
     if (id && attr('style') !== undefined && canIndexCss(attr('style')!)) {
       const attributeRange = mapping.range(location?.attrs?.style);
-      index.rules.push(
-        ...indexInspectorCss({
-          path: entry,
-          css: attr('style')!,
-          fallbackRange: attributeRange,
-          omitRanges: !attributeRange,
-          sourceNote: !attributeRange
-            ? 'Atrybut style zawiera PHP; sprawdź go w pliku.'
-            : undefined,
-          inlineElementId: id,
-          idPrefix: `r${ruleGroup++}`,
-        }),
-      );
+      addCss({
+        path: entry,
+        css: attr('style')!,
+        fallbackRange: attributeRange,
+        omitRanges: !attributeRange,
+        sourceNote: !attributeRange ? 'Atrybut style zawiera PHP; sprawdź go w pliku.' : undefined,
+        inlineElementId: id,
+        idPrefix: `r${ruleGroup++}`,
+      });
     }
     if (!['template', 'iframe', 'object', 'embed'].includes(node.tagName))
       for (const child of [...node.childNodes].reverse())
@@ -207,6 +209,7 @@ export function prepareInspection(files: ProjectFile[], entry: string) {
   }
   if (index.elements.length >= MAX_ELEMENTS || index.rules.length > MAX_RULES || cssLimited)
     index.note = 'Duży dokument: pokazujemy do 2000 elementów i 1000 reguł CSS.';
+  if (cssLimited) index.note += ' Część CSS pominięto z powodu rozmiaru lub złożoności.';
   if (
     complexCss ||
     index.rules.some((rule) =>
