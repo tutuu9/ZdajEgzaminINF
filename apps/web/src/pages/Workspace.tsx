@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   Code2,
+  MousePointer2,
   Download,
   File,
   FilePlus2,
@@ -38,7 +39,9 @@ import type {
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
-import { createPreview } from '../preview';
+import { useProjectPreview } from '../inspector/use-project-preview';
+import { InspectorOverlay, PageInspector } from '../components/PageInspector';
+import '../inspector.css';
 import { Editor, type EditorReveal } from '../components/Editor';
 import { ProjectStore, projectStore, recoverySnapshot, type ProjectPatch } from '../project-store';
 import '../cumulative.css';
@@ -126,8 +129,8 @@ export function Workspace() {
     [showSheet, setShowSheet] = useState(false),
     [sheetPage, setSheetPageState] = useState(1);
   const [previewEntry, setPreviewEntryState] = useState(''),
-    [preview, setPreview] = useState(''),
-    [previewScripts, setPreviewScripts] = useState(false),
+    [inspectSpacing, setInspectSpacing] = useState(false),
+    [inspectChoice, setInspectChoice] = useState<{ generation: string; id: string }>(),
     [checkStatus, setCheckStatus] = useState(''),
     [hintBusy, setHintBusy] = useState(false),
     [aiBusy, setAiBusy] = useState(false),
@@ -136,6 +139,7 @@ export function Workspace() {
     [aiText, setAiText] = useState('');
   const uploadRef = useRef<HTMLInputElement>(null),
     iframeRef = useRef<HTMLIFrameElement>(null),
+    inspectorToggleRef = useRef<HTMLButtonElement>(null),
     attemptRef = useRef<AttemptSnapshot | null>(null),
     autoSubmitted = useRef<string | null>(null);
   const storeRef = useRef<ProjectStore | null>(null);
@@ -206,6 +210,29 @@ export function Workspace() {
     setPreviewEntryState(path);
     remember({ previewEntry: path });
   };
+  const inspectorEnabled =
+    tab === 'study' &&
+    attempt?.mode === 'nauka' &&
+    !attempt.submittedAt &&
+    !!attempt.study?.guide?.project;
+  const projectPreview = useProjectPreview({
+    project: attempt,
+    entry: previewEntry,
+    enabled: inspectorEnabled,
+    iframe: iframeRef,
+    toggleButton: inspectorToggleRef,
+    onReveal: (source, valid) => {
+      if (!valid()) return;
+      setInspectChoice(undefined);
+      setSelected(source.path);
+      remember({ studyPanel: 'code' });
+      setEditorReveal({ path: source.path, range: source.range, valid });
+    },
+    onExit: () => {
+      setEditorReveal(undefined);
+      remember({ studyPanel: 'preview' });
+    },
+  });
   const setSheetPage = (page: number) => {
     if (!Number.isSafeInteger(page) || page < 1) return;
     setSheetPageState(page);
@@ -480,16 +507,6 @@ export function Workspace() {
     const path = attempt.files.find((item) => /\.(?:html?|php)$/i.test(item.path))?.path;
     if (path) setPreviewEntry(path);
   }, [attempt?.files, previewEntry]);
-  useEffect(() => {
-    if (!attempt?.files || !previewEntry) {
-      setPreview('');
-      return;
-    }
-    const document = createPreview(attempt.files, previewEntry, { scripts: false });
-    setPreviewScripts(false);
-    setPreview(document.html);
-    return document.dispose;
-  }, [attempt?.files, previewEntry]);
   const getHint = async () => {
     if (!attempt) return;
     setHintBusy(true);
@@ -702,6 +719,10 @@ export function Workspace() {
   const closed = !!attempt.submittedAt;
   const manual = task.supportStatus === 'catalog-only';
   const overtime = !!attempt.deadlineAt && Date.now() > Date.parse(attempt.deadlineAt);
+  const inspectionChoice =
+    inspectChoice?.generation === projectPreview.index?.generation
+      ? (inspectChoice?.id ?? '')
+      : (projectPreview.selection?.elementId ?? '');
   const editorPanel = (
     <div className="editor-shell">
       <div className="file-tree">
@@ -787,6 +808,17 @@ export function Workspace() {
         )}
       </div>
       <div className="editor-pane">
+        {projectPreview.index && projectPreview.selection && (
+          <PageInspector
+            index={projectPreview.index}
+            selection={projectPreview.selection}
+            spacing={inspectSpacing}
+            onSpacing={setInspectSpacing}
+            onReveal={projectPreview.reveal}
+            onBack={() => remember({ studyPanel: 'preview' })}
+            onClose={projectPreview.stop}
+          />
+        )}
         <div className="editor-filebar">
           <span>{selected || 'Wybierz plik'}</span>
           {closed ? (
@@ -934,24 +966,75 @@ export function Workspace() {
             </span>
             <button
               className="button secondary small"
-              onClick={() => {
-                const document = createPreview(attempt.files ?? [], previewEntry);
-                setPreview(document.html);
-                setPreviewScripts(true);
-              }}
-              disabled={previewScripts}
+              onClick={projectPreview.runScripts}
+              disabled={projectPreview.scriptsRunning}
             >
               <Play size={14} />
-              {previewScripts ? 'JS uruchomiony' : 'Uruchom JS'}
+              {projectPreview.scriptsRunning ? 'JS uruchomiony' : 'Uruchom JS'}
             </button>
+            {inspectorEnabled && (
+              <button
+                ref={inspectorToggleRef}
+                className="button secondary small inspector-toggle"
+                aria-pressed={projectPreview.inspecting}
+                onClick={projectPreview.toggle}
+              >
+                <MousePointer2 size={16} aria-hidden="true" />
+                Zbadaj stronę
+              </button>
+            )}
           </div>
-          <iframe
-            ref={iframeRef}
-            title="Podgląd projektu"
-            sandbox="allow-scripts allow-forms"
-            referrerPolicy="no-referrer"
-            srcDoc={preview}
-          />
+          {projectPreview.inspecting && projectPreview.index && (
+            <div className="inspector-controls">
+              <label>
+                Element strony
+                <select
+                  disabled={!projectPreview.ready}
+                  value={inspectionChoice}
+                  onChange={(event) =>
+                    setInspectChoice({
+                      generation: projectPreview.index!.generation,
+                      id: event.target.value,
+                    })
+                  }
+                >
+                  <option value="" disabled>
+                    Wybierz element lub kliknij w podglądzie
+                  </option>
+                  {projectPreview.index.elements.map((element) => (
+                    <option value={element.id} key={element.id}>
+                      {element.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="button secondary small"
+                disabled={!projectPreview.ready || !inspectionChoice}
+                onClick={() => projectPreview.choose(inspectionChoice)}
+              >
+                Pokaż element
+              </button>
+              <p>
+                Kliknij element, aby otworzyć jego HTML. JavaScript jest wyłączony podczas badania.
+                Escape kończy badanie.
+              </p>
+            </div>
+          )}
+          {projectPreview.problem && <Notice>{projectPreview.problem}</Notice>}
+          <div className="inspector-frame">
+            <iframe
+              ref={iframeRef}
+              title="Podgląd projektu"
+              sandbox="allow-scripts allow-forms"
+              referrerPolicy="no-referrer"
+              srcDoc={projectPreview.html}
+              onLoad={projectPreview.loaded}
+            />
+            {projectPreview.selection && (
+              <InspectorOverlay box={projectPreview.selection.box} spacing={inspectSpacing} />
+            )}
+          </div>
           <p className="fine-print">
             HTML i CSS odświeżają się po zmianie pliku. JavaScript uruchom przyciskiem. Zewnętrzne
             zasoby, połączenia sieciowe i wysyłanie formularzy są zablokowane. Moduły z importami

@@ -1,6 +1,9 @@
 import type { ProjectFile } from '@zdaj/shared';
 import { parse, serialize, type DefaultTreeAdapterMap } from 'parse5';
 import { phpLanguage } from '@codemirror/lang-php';
+import { prepareInspection } from './inspector/source';
+import { createInspectionBridge } from './inspector/bridge';
+import type { InspectionIndex } from './inspector/types';
 
 /** Retain only literal HTML outside PHP blocks. PHP is never evaluated in a preview. */
 export function staticPhpMarkup(source: string) {
@@ -89,13 +92,18 @@ function resolvePath(from: string, to: string): string | null {
 export function createPreview(
   files: ProjectFile[],
   entry: string,
-  options: { scripts?: boolean; preserveResourceAttributes?: boolean } = {},
-): { html: string; dispose: () => void } {
+  options: { scripts?: boolean; preserveResourceAttributes?: boolean; inspection?: boolean } = {},
+): { html: string; dispose: () => void; inspection?: InspectionIndex } {
   const map = new Map(files.map((file) => [file.path, file]));
   const source = map.get(entry);
   if (!source || source.encoding === 'base64' || !/\.(?:html?|php)$/i.test(entry))
     return { html: '', dispose: () => undefined };
   const nonce = previewNonce();
+  // Inspection owns its trusted bridge; learner JavaScript stays disabled. Measurement
+  // frames never get instrumentation or a script, even if inspection is requested.
+  const inspecting = options.inspection && !options.preserveResourceAttributes;
+  const scripts = !inspecting && options.scripts !== false;
+  const prepared = inspecting ? prepareInspection(files, entry) : undefined;
   // Used only by the hidden, script-free style measurement frame. CSP blocks
   // original URLs, while attribute selectors retain their actual meaning.
   const preserveAttributes = options.scripts === false && options.preserveResourceAttributes;
@@ -111,9 +119,12 @@ export function createPreview(
       .replace(
         /url\(\s*['"]?([^)'"\s]+)['"]?\s*\)/gi,
         (_all: string, url: string) => `url("${asset(path, url)}")`,
-      );
+      )
+      // Stylesheets become raw-text <style> nodes in srcdoc. Keep external CSS
+      // strings from escaping that node when the browser reparses outerHTML.
+      .replace(/<\/style/gi, '<\\/style');
   const { doc, root, head, body } = inertDocument(
-    /\.php$/i.test(entry) ? staticPhpMarkup(source.content) : source.content,
+    prepared?.markup ?? (/\.php$/i.test(entry) ? staticPhpMarkup(source.content) : source.content),
   );
   root
     .querySelectorAll(
@@ -123,11 +134,14 @@ export function createPreview(
   root.querySelectorAll('style').forEach((style) => {
     style.textContent = css(style.textContent || '', entry);
   });
-  root.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]').forEach((link) => {
+  root.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"]').forEach((link) => {
     const path = resolvePath(entry, link.getAttribute('href') || '');
     const file = path ? map.get(path) : undefined;
     const style = doc.createElement('style');
     style.textContent = file ? css(file.content, file.path) : '';
+    if (link.hasAttribute('media')) style.setAttribute('media', link.getAttribute('media')!);
+    if (link.hasAttribute('disabled') || /(?:^|\s)alternate(?:\s|$)/i.test(link.rel))
+      style.setAttribute('media', 'not all');
     link.replaceWith(style);
   });
   root
@@ -137,7 +151,7 @@ export function createPreview(
     );
   const deferredScripts: HTMLScriptElement[] = [];
   root.querySelectorAll<HTMLScriptElement>('script').forEach((script) => {
-    if (options.scripts === false) {
+    if (!scripts) {
       script.remove();
       return;
     }
@@ -179,7 +193,7 @@ export function createPreview(
     element.removeAttribute('data-preview-event');
     for (const attribute of [...element.attributes]) {
       if (!/^on[a-z]+$/i.test(attribute.name)) continue;
-      if (options.scripts === false) {
+      if (!scripts) {
         element.removeAttribute(attribute.name);
         continue;
       }
@@ -213,6 +227,23 @@ export function createPreview(
   bridge.textContent = scriptText(
     `${handlers.join('\n')}\ndocument.addEventListener('click',function(event){var link=event.target instanceof Element?event.target.closest('a'):null;if(link){event.preventDefault();var path=link.getAttribute('data-preview-path');if(path)parent.postMessage({type:'zdaj-preview-navigate',path:path},'*');}},true);document.addEventListener('submit',function(event){event.preventDefault();},true);`,
   );
-  if (options.scripts !== false) body.append(bridge);
-  return { html: '<!doctype html>' + root.outerHTML, dispose: () => undefined };
+  if (scripts) body.append(bridge);
+  if (prepared) {
+    const attribute = prepared.index.attribute;
+    const present = new Set(
+      [root, ...root.querySelectorAll(`[${attribute}]`)]
+        .map((element) => element.getAttribute(attribute))
+        .filter((id): id is string => !!id),
+    );
+    prepared.index.elements = prepared.index.elements.filter((element) => present.has(element.id));
+    const inspector = doc.createElement('script');
+    inspector.setAttribute('nonce', nonce);
+    inspector.textContent = scriptText(createInspectionBridge(prepared.index));
+    body.append(inspector);
+  }
+  return {
+    html: '<!doctype html>' + root.outerHTML,
+    dispose: () => undefined,
+    inspection: prepared?.index,
+  };
 }
