@@ -82,7 +82,13 @@ jobs:
           npm run db:migrate
           npm run db:seed
       - name: Install CI browser and operating system dependencies
-        run: npm exec -- playwright install --with-deps chromium
+        run: |
+          # The hosted runner's Azure mirror can stall font downloads for minutes.
+          # Use Ubuntu's signed HTTPS archive on this disposable runner only.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npm exec -- playwright install --with-deps chromium
       - name: Browser learning journeys
         run: npm run test:e2e
       - name: Preserve synthetic test reports

@@ -77,6 +77,7 @@ export type EditorReveal = {
   path: string;
   range?: { from: number; to: number };
   valid: () => boolean;
+  scrollIntoView?: boolean;
 };
 const externalValue = Annotation.define<boolean>();
 
@@ -321,7 +322,18 @@ export function Editor({
       revealedSelection.current = instance.state.selection;
     } else instance.dispatch({ effects: EditorView.scrollIntoView(instance.state.selection.main) });
     instance.focus();
+    const frame = reveal.scrollIntoView
+      ? requestAnimationFrame(() => {
+          if (reveal.valid() && view.current === instance && instance.dom.getClientRects().length)
+            instance.dom.scrollIntoView({
+              block: 'nearest',
+              inline: 'nearest',
+              behavior: 'instant',
+            });
+        })
+      : undefined;
     return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
       if (view.current === instance) clearReveal(instance);
     };
   }, [path, sessionKey, reveal]);
