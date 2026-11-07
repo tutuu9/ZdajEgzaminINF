@@ -28,6 +28,7 @@ import { useChangeUnderstand } from '../change-understand/use-change-understand'
 import type { InspectionSource } from '../inspector/types';
 import { ChangeUnderstand, ChangeDiff, ChangeRestoreNotice } from './ChangeUnderstand';
 import { ChangePreview } from './ChangePreview';
+import { EmmetLearning } from './EmmetLearning';
 
 export type RevealCode = (
   path: string,
@@ -480,6 +481,14 @@ export function ProjectLesson({
               </button>
             ))}
           </div>
+          {coachEnabled && (
+            <EmmetLearning
+              key={`${project.id}:${guide.version}:${current.id}`}
+              guide={guide}
+              step={current.step}
+              activity={activity}
+            />
+          )}
           <ChangeUnderstand
             model={learning}
             project={project}

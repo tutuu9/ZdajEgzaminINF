@@ -6,6 +6,7 @@ import { html } from '@codemirror/lang-html';
 import { php } from '@codemirror/lang-php';
 import {
   expandHtmlAbbreviation,
+  expandHtmlShortcut,
   htmlAbbreviationCompletions,
   supportsHtmlAbbreviation,
 } from '../apps/web/src/components/editor-abbreviation';
@@ -154,6 +155,83 @@ describe('HTML boilerplate abbreviation', () => {
 });
 
 describe('Emmet HTML shortcuts', () => {
+  it('connects a stylesheet and lets the learner replace only its filename before undoing', async () => {
+    const original = '<head>\n  <title>Kurs</title>\n  link:css\n</head>';
+    const target = editor(original, 'index.html', original.indexOf('link:css') + 8);
+    const suggestions = await htmlAbbreviationCompletions(
+      new CompletionContext(target.state, target.state.selection.main.head, false),
+    );
+    expect(suggestions?.options).toContainEqual(
+      expect.objectContaining({
+        label: 'link:css',
+        info: '<link rel="stylesheet" href="style.css">',
+      }),
+    );
+    expect(expandHtmlAbbreviation('index.html')(target)).toBe(true);
+    const selection = target.state.selection.main;
+    expect(target.state.sliceDoc(selection.from, selection.to)).toBe('style');
+    target.dispatch(
+      target.state.update({
+        changes: { from: selection.from, to: selection.to, insert: 'styl' },
+        selection: { anchor: selection.from + 4 },
+        userEvent: 'input.type',
+      }),
+    );
+    expect(target.state.doc.toString()).toBe(
+      '<head>\n  <title>Kurs</title>\n  <link rel="stylesheet" href="styl.css">\n</head>',
+    );
+    expect(undo(target)).toBe(true);
+    expect(target.state.doc.toString()).toContain('href="style.css"');
+    expect(undo(target)).toBe(true);
+    expect(target.state.doc.toString()).toBe(original);
+  });
+
+  it('keeps climb-up levels in a complete Polish structural expression', () => {
+    const shortcut =
+      'header>h1{Zwiedzaj Islandię}^aside>h3{Do zwiedzania}+ul>li{Wodospady}+li{Siedliska zwierząt}^^main>h2{Galeria}+section^footer>hr+p{Autor: 0123456789}';
+    const target = editor('<body>\n  ' + shortcut + '\n</body>', 'index.html', 9 + shortcut.length);
+    expect(expandHtmlAbbreviation('index.html')(target)).toBe(true);
+    expect(target.state.doc.toString()).toBe(
+      [
+        '<body>',
+        '  <header>',
+        '    <h1>Zwiedzaj Islandię</h1>',
+        '  </header>',
+        '  <aside>',
+        '    <h3>Do zwiedzania</h3>',
+        '    <ul>',
+        '      <li>Wodospady</li>',
+        '      <li>Siedliska zwierząt</li>',
+        '    </ul>',
+        '  </aside>',
+        '  <main>',
+        '    <h2>Galeria</h2>',
+        '    <section></section>',
+        '  </main>',
+        '  <footer>',
+        '    <hr>',
+        '    <p>Autor: 0123456789</p>',
+        '  </footer>',
+        '</body>',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps correct field offsets after Polish text and CRLF input in HTML after PHP', () => {
+    const original =
+      '<?php $title = "Zażółć gęślą jaźń"; ?>\r\n<head>\r\n  <title>Łódź</title>\r\n  link:css\r\n</head>';
+    const normalized = original.replace(/\r\n/g, '\n');
+    const target = editor(original, 'strona.php', normalized.indexOf('link:css') + 8);
+    expect(expandHtmlAbbreviation('strona.php')(target)).toBe(true);
+    const { from, to } = target.state.selection.main;
+    expect(target.state.sliceDoc(from, to)).toBe('style');
+    expect(target.state.doc.toString()).toBe(
+      normalized.replace('link:css', '<link rel="stylesheet" href="style.css">'),
+    );
+    expect(undo(target)).toBe(true);
+    expect(target.state.doc.toString()).toBe(normalized);
+  });
+
   it('expands all requested cells and list items within the repeat budget', () => {
     for (const [shortcut, tag, count] of [
       ['tr*8>td*8', '<td>', 64],
@@ -226,5 +304,79 @@ describe('Emmet HTML shortcuts', () => {
     ).toBeNull();
     expect(expandHtmlAbbreviation(path)(target)).toBe(false);
     expect(target.state.doc.toString()).toBe(doc);
+  });
+
+  it.each([
+    ['<style>link:css</style>', 'projekt.html'],
+    ['<script>link:css</script>', 'projekt.html'],
+    ['<?php echo "link:css"; ?>', 'index.php'],
+    ['<main title="link:css">', 'projekt.html'],
+    ['<!-- link:css -->', 'projekt.html'],
+    ['Wpisz tutaj link:css', 'projekt.html'],
+  ])('does not expand stylesheet shortcuts outside HTML text: %s', async (doc, path) => {
+    const pos = doc.indexOf('link:css') + 8;
+    const target = editor(doc, path, pos);
+    expect(
+      await htmlAbbreviationCompletions(new CompletionContext(target.state, pos, false)),
+    ).toBeNull();
+    expect(expandHtmlAbbreviation(path)(target)).toBe(false);
+    expect(target.state.doc.toString()).toBe(doc);
+  });
+});
+
+describe('shared HTML shortcut expansion for teaching', () => {
+  it.each([
+    [
+      '(header>h1{Tytuł})+main+footer',
+      '<header>\n  <h1>Tytuł</h1>\n</header>\n<main></main>\n<footer></footer>',
+    ],
+    ['a[href="kontakt.html"]{Kontakt}', '<a href="kontakt.html">Kontakt</a>'],
+    [
+      'ul>li.punkt$*3',
+      '<ul>\n  <li class="punkt1"></li>\n  <li class="punkt2"></li>\n  <li class="punkt3"></li>\n</ul>',
+    ],
+  ])('shows the exact expansion used by the editor for %s', (shortcut, expected) => {
+    const expansion = expandHtmlShortcut(shortcut);
+    expect(expansion?.text).toBe(expected);
+    const target = editor(shortcut);
+    expect(expandHtmlAbbreviation('index.html')(target)).toBe(true);
+    expect(target.state.doc.toString()).toBe(expected);
+    expect(target.state.selection.main.anchor).toBe(expansion?.anchor);
+    expect(target.state.selection.main.head).toBe(expansion?.head);
+  });
+
+  it('preserves the Polish boilerplate and bounded indentation', () => {
+    const expansion = expandHtmlShortcut('!', '  ');
+    expect(expansion?.text).toContain('\n  <html lang="pl">');
+    expect(expansion?.text.slice(0, expansion.anchor)).toMatch(/<body>\n {4}$/);
+    expect(expandHtmlShortcut('ul>li', ' '.repeat(128))?.text).toContain('<li>');
+  });
+
+  it.each([
+    '',
+    'div'.repeat(86),
+    'div\np',
+    'p{tekst\r\nciąg dalszy}',
+    'napisz tutaj div',
+    'div ',
+    'lorem999999999',
+    'div>lorem999999999',
+    'li*9999999999',
+    '(tr*64>td*64)*10',
+    'div[',
+    'm10',
+    'division',
+  ])(
+    'rejects unsupported or unbounded direct input without returning partial HTML: %s',
+    (shortcut) => {
+      expect(expandHtmlShortcut(shortcut)).toBeNull();
+    },
+  );
+
+  it('rejects excessive output and invalid indentation before returning an expansion', () => {
+    expect(expandHtmlShortcut('div', ' '.repeat(129))).toBeNull();
+    expect(expandHtmlShortcut('div', '\n')).toBeNull();
+    expect(expandHtmlShortcut('div', '<script>')).toBeNull();
+    expect(expandHtmlShortcut('div>'.repeat(60) + 'div*128', ' '.repeat(128))).toBeNull();
   });
 });
