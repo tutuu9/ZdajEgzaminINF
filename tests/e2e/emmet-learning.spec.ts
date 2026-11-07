@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import type { AttemptSnapshot, ExamStudyGuide } from '@zdaj/shared';
-// Node-only returning-learner fixture. The eight course journeys start through the API.
-import { firmaGuide } from '../../packages/content/src/study-project-firma.js';
+// Node-only published guides seed returning learners without consuming the shared
+// attempt-creation rate budget. Bootstrap/task requests and UI stay real; existing
+// suites cover starting all eight courses through the API.
+import { examStudyGuides } from '../../packages/content/src/exam-study.js';
 
 const courses = [
   ['Wędkowanie', 'cke-wedkowanie'],
@@ -108,40 +110,34 @@ async function prepare(
   } = {},
 ) {
   await page.setViewportSize({ width: 1700, height: 1050 });
-  let project: AttemptSnapshot;
-  if (options.taskId) {
-    await page.goto(`/praktyka/${options.taskId}?tryb=nauka&widok=nauka`);
-    await page.getByRole('button', { name: 'Rozpocznij naukę', exact: true }).click();
-    await expect(page.locator('.course-step-select select')).toBeAttached();
-    await saved(page);
-    project = await storedProject(page);
-    await page.goto('/moje-prace');
-  } else {
-    await page.goto('/moje-prace');
-    await expect(page.getByRole('heading', { name: 'Twoje prace są tutaj.' })).toBeVisible();
-    const now = new Date().toISOString();
-    project = {
-      id: randomUUID(),
-      taskId: firmaGuide.taskId,
-      taskVersion: firmaGuide.taskVersion,
-      title: 'Firma IT — zachowana praca',
-      kind: 'practice',
-      mode: options.mode ?? 'nauka',
-      level: options.level ?? 'beginner',
-      createdAt: now,
-      updatedAt: now,
-      deadlineAt: null,
-      ticket: { id: randomUUID(), token: randomUUID(), deadlineAt: null },
-      hintCount: 0,
-      files: structuredClone(firmaGuide.project!.starterFiles),
-      study: {
-        guide: structuredClone(firmaGuide),
-        current: '',
-        completed: {},
-        viewedExamples: [],
-      },
-    };
-  }
+  await page.goto('/moje-prace');
+  await expect(page.getByRole('heading', { name: 'Twoje prace są tutaj.' })).toBeVisible();
+  const guide = examStudyGuides.find(
+    (item) => item.taskId === (options.taskId ?? 'inf03-01-24-01-sg'),
+  );
+  expect(guide).toBeDefined();
+  const now = new Date().toISOString();
+  const project: AttemptSnapshot = {
+    id: randomUUID(),
+    taskId: guide!.taskId,
+    taskVersion: guide!.taskVersion,
+    title: `${guide!.title} — zachowana praca`,
+    kind: 'practice',
+    mode: options.mode ?? 'nauka',
+    level: options.level ?? 'beginner',
+    createdAt: now,
+    updatedAt: now,
+    deadlineAt: null,
+    ticket: { id: randomUUID(), token: randomUUID(), deadlineAt: null },
+    hintCount: 0,
+    files: structuredClone(guide!.project!.starterFiles),
+    study: {
+      guide: structuredClone(guide!),
+      current: '',
+      completed: {},
+      viewedExamples: [],
+    },
+  };
   const position = stylesheetPosition(project.study!.guide);
   const files = new Map(project.files!.map((file) => [file.path, file]));
   files.set(position.path, { path: position.path, content: source });
@@ -170,32 +166,36 @@ async function prepare(
 }
 
 test.describe('Pisz szybciej', () => {
-  for (const [index, [title, taskId]] of courses.entries()) {
-    test(`${title}: the pinned stylesheet step teaches the real abbreviation without replacing work`, async ({
-      page,
-    }) => {
-      const setup = await prepare(page, {
-        taskId,
-        level: (['beginner', 'intermediate', 'advanced'] as const)[index % 3],
+  test('all eight pinned courses teach the stylesheet abbreviation without replacing work', async ({
+    page,
+  }) => {
+    // Share the guest session while keeping a separate saved project for each course.
+    for (const [index, [title, taskId]] of courses.entries()) {
+      await test.step(title, async () => {
+        const setup = await prepare(page, {
+          taskId,
+          level: (['beginner', 'intermediate', 'advanced'] as const)[index % 3],
+        });
+        const before = await storedProject(page);
+        expect(before.study?.guide.version).toBe(index < 3 ? 3 : 1);
+        await expect(tip(page)).toContainText('link:css');
+        await expect(tip(page)).toContainText(setup.position.cssPath);
+        await tip(page).getByText('Zobacz HTML', { exact: true }).click();
+        await expect(tip(page).locator('pre')).toContainText(
+          '<link rel="stylesheet" href="style.css">',
+        );
+        await expect(editor(page)).toContainText(keptText);
+        await reference(page).getByText('Skróty HTML — podręczna ściąga', { exact: true }).click();
+        await page.reload();
+        await expect(tip(page)).toContainText('link:css');
+        const after = await storedProject(page);
+        expect(after.files).toEqual(before.files);
+        expect(after.study?.guide).toEqual(before.study?.guide);
+        expect(after.study?.completed).toEqual(before.study?.completed);
+        expect(after.hintCount).toBe(before.hintCount);
       });
-      const before = await storedProject(page);
-      await expect(tip(page)).toContainText('link:css');
-      await expect(tip(page)).toContainText(setup.position.cssPath);
-      await tip(page).getByText('Zobacz HTML', { exact: true }).click();
-      await expect(tip(page).locator('pre')).toContainText(
-        '<link rel="stylesheet" href="style.css">',
-      );
-      await expect(editor(page)).toContainText(keptText);
-      await reference(page).getByText('Skróty HTML — podręczna ściąga', { exact: true }).click();
-      await page.reload();
-      await expect(tip(page)).toContainText('link:css');
-      const after = await storedProject(page);
-      expect(after.files).toEqual(before.files);
-      expect(after.study?.guide).toEqual(before.study?.guide);
-      expect(after.study?.completed).toEqual(before.study?.completed);
-      expect(after.hintCount).toBe(before.hintCount);
-    });
-  }
+    }
+  });
 
   test('link:css is expanded in the existing head, corrected by the learner, checked and saved', async ({
     page,
@@ -213,7 +213,7 @@ test.describe('Pisz szybciej', () => {
     await editor(page).press('ControlOrMeta+z');
     await expect(editor(page)).toContainText('link:css');
     await expect(editor(page)).toContainText(keptText);
-    await editor(page).press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');
+    await editor(page).press('Tab');
     await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('style');
     await page.keyboard.insertText(position.cssPath.replace(/\.css$/, ''));
     await saved(page);
