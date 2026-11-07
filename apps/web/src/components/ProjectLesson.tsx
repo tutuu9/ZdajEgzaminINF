@@ -483,7 +483,7 @@ export function ProjectLesson({
           <ChangeUnderstand
             model={learning}
             project={project}
-            blocked={blocked || saving}
+            blocked={blocked}
             saving={saving}
             saveError={saveError}
             onReveal={revealChange}

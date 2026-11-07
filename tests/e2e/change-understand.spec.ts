@@ -323,6 +323,71 @@ test.describe('Zmień i zrozum', () => {
     await expect(page.getByRole('heading', { name: /kopia przed przywróceniem/ })).toBeVisible();
   });
 
+  test('comparison stays available while local autosave is pending and never replaces the edited files', async ({
+    page,
+  }) => {
+    const setup = await prepareProject(page);
+    const before = (await storedProject(page)).files!.find(
+      (file) => file.path === setup.path,
+    )!.content;
+    const changed = edited(before);
+    await page.evaluate(() => {
+      // Hold the storage completion notification, not the learner's typing or DOM.
+      // Releasing it lets the normal ordered save queue finish without fake success.
+      const listen = IDBTransaction.prototype.addEventListener;
+      const pending: Array<() => void> = [];
+      let holding = true;
+      window.addEventListener(
+        'release-comparison-autosave',
+        () => {
+          holding = false;
+          pending.splice(0).forEach((complete) => complete());
+        },
+        { once: true },
+      );
+      IDBTransaction.prototype.addEventListener = function (
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions,
+      ) {
+        if (!listener) return;
+        if (
+          type === 'complete' &&
+          this.mode === 'readwrite' &&
+          this.objectStoreNames.contains('attempts')
+        ) {
+          const complete: EventListener = (event) => {
+            const notify = () =>
+              typeof listener === 'function'
+                ? listener.call(this, event)
+                : listener.handleEvent(event);
+            if (holding) pending.push(notify);
+            else notify();
+          };
+          return listen.call(this, type, complete, options);
+        }
+        return listen.call(this, type, listener, options);
+      };
+    });
+    try {
+      await editor(page).fill(changed);
+      await expect(page.locator('.workspace-meta .save-state')).toHaveText('Zapisywanie…');
+      await expect(lab(page).getByRole('button', { name: 'Pokaż miejsce zmiany' })).toBeEnabled();
+      await expect(lab(page).getByRole('button', { name: 'Porównaj przed i po' })).toBeEnabled();
+      await openComparison(page);
+      await expect(afterFrame(page).locator('h1')).toHaveText(afterText);
+      await comparison(page).getByRole('button', { name: 'Przed', exact: true }).click();
+      await expect(beforeFrame(page).locator('h1')).toHaveText(beforeText);
+      await expect(editor(page)).toContainText(afterText);
+    } finally {
+      await page.evaluate(() => dispatchEvent(new Event('release-comparison-autosave')));
+    }
+    await saved(page);
+    expect(
+      (await storedProject(page)).files?.find((file) => file.path === setup.path)?.content,
+    ).toBe(changed);
+  });
+
   test('backup roundtrip retains before and after, and a legacy backup starts from its existing code', async ({
     page,
     browser,

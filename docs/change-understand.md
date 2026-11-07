@@ -30,6 +30,6 @@ Before and after are static HTML/CSS previews in opaque sandboxed iframes. Learn
 
 ## Verification
 
-Focused browser coverage exercises all eight courses, own-source edits, retained checkpoints, Przed/Po navigation, reload and backup import, predictions, explicit restoration, quota/conflicting-tab failures, keyboard/mobile navigation, themes and unavailable modes. Unit tests cover checkpoint/restore transactions and bounded source analysis. Run the browser suite with `npm run test:e2e -- tests/e2e/change-understand.spec.ts`; prerequisites are in [local development](local-development.md).
+Focused browser coverage exercises all eight courses, own-source edits, retained checkpoints, Przed/Po navigation during autosave, reload and backup import, predictions, explicit restoration, quota/conflicting-tab failures, oversized-checkpoint recovery, keyboard/mobile navigation, themes and unavailable modes. Unit tests cover checkpoint/restore transactions and bounded source analysis. Run the browser suite with `npm run test:e2e -- tests/e2e/change-understand.spec.ts`; prerequisites are in [local development](local-development.md).
 
 Release publication and production deployment remain separately authorized operations.
