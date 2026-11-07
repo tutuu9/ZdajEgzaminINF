@@ -456,6 +456,15 @@ test.describe('Zmień i zrozum', () => {
       await compare.focus();
       await page.keyboard.press('Enter');
       await expect(comparison(page)).toBeVisible();
+      await expect
+        .poll(async () => {
+          const heading = await comparison(page)
+            .getByRole('heading', { name: 'Porównaj swoją zmianę', exact: true })
+            .boundingBox();
+          const tabs = await page.locator('.course-mobile-tabs').boundingBox();
+          return heading && tabs ? heading.y - tabs.y - tabs.height : -1;
+        })
+        .toBeGreaterThanOrEqual(0);
       await expect(afterFrame(page).locator('h1')).toHaveText(afterText);
       const prior = comparison(page).getByRole('button', { name: 'Przed', exact: true });
       await prior.focus();
@@ -463,6 +472,12 @@ test.describe('Zmień i zrozum', () => {
       await expect(prior).toHaveAttribute('aria-pressed', 'true');
       await expect(beforeFrame(page).locator('h1')).toHaveText(beforeText);
       await expect(beforeFrame(page).locator('h1')).toBeVisible();
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );

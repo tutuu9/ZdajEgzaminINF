@@ -235,6 +235,7 @@
 .change-preview h3 {
   font-size: 18px;
   margin: 0;
+  scroll-margin-top: 140px;
 }
 .change-preview .button {
   min-height: 44px;
