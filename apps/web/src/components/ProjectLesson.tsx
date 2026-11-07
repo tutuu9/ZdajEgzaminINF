@@ -24,11 +24,16 @@ import { checkProjectLocally, filesHash } from '../project-checks';
 import type { ProjectStore } from '../project-store';
 import { ErrorNotice, Loading, Notice } from './common';
 import { Editor } from './Editor';
+import { useChangeUnderstand } from '../change-understand/use-change-understand';
+import type { InspectionSource } from '../inspector/types';
+import { ChangeUnderstand, ChangeDiff, ChangeRestoreNotice } from './ChangeUnderstand';
+import { ChangePreview } from './ChangePreview';
 
 export type RevealCode = (
   path: string,
   range: CodeDiagnostic['range'],
   isCurrent: () => boolean,
+  scrollIntoView?: boolean,
 ) => void;
 
 interface CheckedStep {
@@ -46,6 +51,7 @@ export function ProjectLesson({
   onOpenFile,
   onRevealCode,
   onOpenSheet,
+  onCompareStart,
   reference,
 }: {
   store: ProjectStore;
@@ -55,6 +61,7 @@ export function ProjectLesson({
   onOpenFile: (path: string) => void;
   onRevealCode: RevealCode;
   onOpenSheet: (page: number) => void;
+  onCompareStart: () => void;
 }) {
   const { project, saving, error: saveError } = useSyncExternalStore(store.subscribe, store.get);
   const [error, setError] = useState(''),
@@ -83,6 +90,7 @@ export function ProjectLesson({
       .catch((cause) => setError(errorMessage(cause)));
   };
   const mounted = useRef(true);
+  const previewRegion = useRef<HTMLElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -116,6 +124,7 @@ export function ProjectLesson({
       })),
     ) ?? [];
   const current = positions.find((item) => item.id === project.study?.current) ?? positions[0];
+  const learning = useChangeUnderstand(store, project, current);
   useEffect(() => {
     setChecked(undefined);
     setManual(false);
@@ -155,6 +164,24 @@ export function ProjectLesson({
   const completedFresh = checkpoint?.filesHash === hash;
   const navigationBlocked = busy || saving || !!saveError;
   const blocked = busy || !!saveError || !!project.submittedAt;
+  const revealChange = (source: InspectionSource) => {
+    const sourceFiles = project.files;
+    const valid = () => {
+      const latest = store.get();
+      return (
+        mounted.current &&
+        !latest.error &&
+        !latest.project.submittedAt &&
+        latest.project.mode === 'nauka' &&
+        latest.project.id === project.id &&
+        latest.project.study?.current === current.id &&
+        latest.project.files === sourceFiles
+      );
+    };
+    if (!valid()) return;
+    setPanel('code');
+    onRevealCode(source.path, source.range, valid, true);
+  };
   const reveal = (diagnostic: CodeDiagnostic) => {
     const isCurrent = () => {
       const { project: latest, error: storageError } = store.get();
@@ -383,6 +410,7 @@ export function ProjectLesson({
           </button>
         </Notice>
       )}
+      <ChangeRestoreNotice model={learning} taskId={project.taskId} />
       <div className="course-mobile-tabs" role="tablist" aria-label="Panele nauki">
         {(
           [
@@ -452,6 +480,19 @@ export function ProjectLesson({
               </button>
             ))}
           </div>
+          <ChangeUnderstand
+            model={learning}
+            project={project}
+            blocked={blocked || saving}
+            saving={saving}
+            saveError={saveError}
+            onReveal={revealChange}
+            onCompare={() => {
+              onCompareStart();
+              learning.setComparisonOpen(true);
+              setPanel('preview');
+            }}
+          />
           <ErrorNotice message={error} />
           {checkpoint && !completedFresh && (
             <p className="course-stale">
@@ -596,8 +637,32 @@ export function ProjectLesson({
             </Notice>
           )}
         </aside>
-        <section className="course-editor">{editor}</section>
-        <section className="course-preview">{preview}</section>
+        <section className="course-editor">
+          <ChangeDiff model={learning} onReveal={revealChange} />
+          {editor}
+        </section>
+        <section className="course-preview" ref={previewRegion}>
+          {learning.lesson && learning.checkpoint && learning.comparisonOpen ? (
+            <ChangePreview
+              key={learning.checkpoint.id}
+              before={learning.checkpoint.files}
+              after={project.files ?? []}
+              preferredEntry={
+                learning.lesson.entry ??
+                project.workspace?.previewEntry ??
+                learning.checkpoint.previewEntry
+              }
+              onClose={() => {
+                learning.setComparisonOpen(false);
+                requestAnimationFrame(() =>
+                  previewRegion.current?.querySelector<HTMLElement>('select, button')?.focus(),
+                );
+              }}
+            />
+          ) : (
+            preview
+          )}
+        </section>
       </div>
       {reference}
     </div>

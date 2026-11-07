@@ -3,9 +3,16 @@ import type {
   AttemptTicket,
   ExamStudyGuide,
   ExamStudyResponse,
+  ProjectFile,
 } from '@zdaj/shared';
 import { api, ApiError } from './api';
-import { readAttempt, saveProjectRevision } from './storage';
+import { readAttempt, saveProjectRevision, saveStudyCheckpointRestore } from './storage';
+import {
+  findStudyCheckpoint,
+  getStudyComparisonActivity,
+  prepareStudyRestore,
+  withStudyCheckpoint,
+} from './study-comparison-state';
 
 export type ProjectPatch = (current: AttemptSnapshot) => AttemptSnapshot;
 export interface ProjectState {
@@ -21,6 +28,7 @@ export class ProjectStore {
   private renewing?: Promise<void>;
   private guideLoading?: Promise<ExamStudyGuide>;
   private retrying?: Promise<void>;
+  private restoring?: AbortController;
   constructor(project: AttemptSnapshot) {
     this.state = { project, saving: false, error: '' };
     this.persistedRevision = project.revision ?? 0;
@@ -50,9 +58,14 @@ export class ProjectStore {
     const previous = this.state.project;
     const changed = change(previous);
     if (changed === previous) return this.tail;
+    // Typing and navigation win over a pending explicit restore, never the reverse.
+    const restoring = this.restoring;
+    this.restoring?.abort();
     const next = {
       ...changed,
-      revision: (previous.revision ?? 0) + 1,
+      // Reserve the restore's revision even when its transaction is being cancelled.
+      // A late completion can then never make a subsequent edit reuse that revision.
+      revision: (previous.revision ?? 0) + (restoring ? 2 : 1),
       updatedAt: new Date().toISOString(),
     };
     // Keep accepting local edits after a failed write so the emergency download
@@ -96,6 +109,66 @@ export class ProjectStore {
     this.tail.then(() => {
       if (this.state.error) throw new Error(this.state.error);
     });
+  ensureStudyCheckpoint = async (activityId: string) => {
+    await this.patch((project) => withStudyCheckpoint(project, activityId));
+    await this.flush();
+    return findStudyCheckpoint(this.state.project, activityId);
+  };
+  setStudyPrediction = async (checkpointId: string, questionId: string, choiceId: string) => {
+    if (![questionId, choiceId].every((value) => /^[a-z0-9][a-z0-9._-]{0,127}$/i.test(value)))
+      throw new Error('Nieprawidłowy wybór przewidywania.');
+    await this.patch((project) => {
+      const checkpoint = findStudyCheckpoint(project);
+      if (!getStudyComparisonActivity(project) || checkpoint?.id !== checkpointId)
+        throw new Error('Krok zmienił się. Wybierz ponownie.');
+      if (
+        checkpoint.prediction?.questionId === questionId &&
+        checkpoint.prediction?.choiceId === choiceId
+      )
+        return project;
+      return {
+        ...project,
+        studyComparison: {
+          ...project.studyComparison!,
+          checkpoints: project.studyComparison!.checkpoints.map((item) =>
+            item.id === checkpointId ? { ...item, prediction: { questionId, choiceId } } : item,
+          ),
+        },
+      };
+    });
+  };
+  restoreStudyCheckpoint = async (checkpointId: string, expectedFiles: ProjectFile[]) => {
+    if (this.restoring) throw new Error('Przywracanie już trwa.');
+    await this.flush();
+    if (this.restoring) throw new Error('Przywracanie już trwa.');
+    const source = this.state.project;
+    if (source.files !== expectedFiles)
+      throw new Error('Kod zmienił się od wyboru punktu. Sprawdź go przed przywróceniem.');
+    const { restored, copy } = prepareStudyRestore(source, checkpointId);
+    const controller = new AbortController();
+    this.restoring = controller;
+    this.emit({ ...this.state, saving: true });
+    const operation = this.tail
+      .then(async () => {
+        await saveStudyCheckpointRestore(restored, copy, this.persistedRevision, controller.signal);
+        this.persistedRevision = restored.revision ?? 0;
+        if (this.state.project !== source)
+          throw new Error(
+            'Projekt zmienił się podczas przywracania. Zachowano bieżący kod. Spróbuj ponownie.',
+          );
+        this.emit({ project: restored, saving: false, error: '' });
+      })
+      .catch((cause: unknown) => {
+        if (this.state.project === source) this.emit({ ...this.state, saving: false });
+        throw cause;
+      })
+      .finally(() => {
+        if (this.restoring === controller) this.restoring = undefined;
+      });
+    this.tail = operation.catch(() => undefined);
+    await operation;
+    return copy.id;
+  };
   retry = async () => {
     if (this.retrying) return this.retrying;
     this.retrying = (async () => {

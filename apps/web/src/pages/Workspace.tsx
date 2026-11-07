@@ -163,6 +163,13 @@ export function Workspace() {
     return store.subscribe(sync);
   }, [store]);
   useEffect(() => {
+    if (!attempt?.studyComparison?.restorationId) return;
+    setSelectedState(attempt.workspace?.activeFile ?? attempt.files?.[0]?.path ?? '');
+    setPreviewEntryState(attempt.workspace?.previewEntry ?? '');
+    setEditorReveal(undefined);
+    void refreshProgress();
+  }, [attempt?.studyComparison?.restorationId]);
+  useEffect(() => {
     if (saved) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener('beforeunload', warn);
@@ -880,11 +887,16 @@ export function Workspace() {
             <Editor
               path={file.path}
               reveal={tab === 'study' && !closed ? currentReveal : undefined}
-              sessionKey={`${attempt.id}/${file.path}`}
+              sessionKey={`${attempt.id}/${attempt.studyComparison?.restorationId ?? 'original'}/${file.path}`}
               initialView={attempt.workspace?.editors[file.path]}
               onViewChange={(view) => {
                 const controller = storeRef.current;
                 if (!controller || controller.get().project.id !== attempt.id) return;
+                if (
+                  controller.get().project.studyComparison?.restorationId !==
+                  attempt.studyComparison?.restorationId
+                )
+                  return;
                 void controller
                   .patch((latest) =>
                     JSON.stringify(latest.workspace?.editors[file.path]) === JSON.stringify(view)
@@ -1312,10 +1324,11 @@ export function Workspace() {
                 editor={editorPanel}
                 preview={previewPanel}
                 onOpenFile={setSelected}
-                onRevealCode={(path, range, valid) => {
+                onCompareStart={projectPreview.pause}
+                onRevealCode={(path, range, valid, scrollIntoView) => {
                   if (!valid()) return;
                   setSelected(path);
-                  setEditorReveal({ path, range, valid });
+                  setEditorReveal({ path, range, valid, scrollIntoView });
                 }}
                 onOpenSheet={(page) => {
                   setSheetPage(page);

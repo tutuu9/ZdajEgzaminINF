@@ -1,4 +1,10 @@
-import { MAX_EXTRACTED_BYTES, MAX_PROJECT_FILES, type ExamStudyGuide } from '@zdaj/shared';
+import {
+  MAX_EXTRACTED_BYTES,
+  MAX_PROJECT_FILES,
+  MAX_STUDY_CHECKPOINT_BYTES,
+  MAX_STUDY_CHECKPOINTS,
+  type ExamStudyGuide,
+} from '@zdaj/shared';
 import { safePath } from './safe-zip';
 
 const fail = (): never => {
@@ -52,7 +58,7 @@ const https = (value: unknown) => {
   }
 };
 
-export function validateProjectFiles(value: unknown): void {
+export function validateProjectFiles(value: unknown): number {
   const paths = new Set<string>();
   let bytes = 0;
   for (const raw of list(value, MAX_PROJECT_FILES)) {
@@ -69,6 +75,7 @@ export function validateProjectFiles(value: unknown): void {
     } else bytes += new TextEncoder().encode(content).length;
     if (bytes > MAX_EXTRACTED_BYTES) fail();
   }
+  return bytes;
 }
 
 /** Only declarative built-in checks survive import. No executable checker payloads. */
@@ -330,4 +337,48 @@ export function validateProjectState(item: Record<string, unknown>): void {
       text(recovery.reason);
       validateProjectFiles(recovery.files);
     }
+  if (item.studyComparison !== undefined) {
+    if (item.kind !== 'practice' || item.mode !== 'nauka' || item.study === undefined) fail();
+    const comparison = record(item.studyComparison);
+    fields(comparison, ['checkpoints', 'restorationId']);
+    if (comparison.restorationId !== undefined) id(comparison.restorationId);
+    const { guide, activityIds } = validateCachedGuide(record(item.study).guide);
+    if (!guide.project) fail();
+    const checkpointIds = new Set<string>();
+    const checkpointActivities = new Set<string>();
+    let bytes = 0;
+    for (const raw of list(comparison.checkpoints, MAX_STUDY_CHECKPOINTS)) {
+      const checkpoint = record(raw);
+      fields(checkpoint, [
+        'id',
+        'guideId',
+        'guideVersion',
+        'activityId',
+        'createdAt',
+        'files',
+        'activeFile',
+        'previewEntry',
+        'prediction',
+      ]);
+      const checkpointId = id(checkpoint.id);
+      if (checkpointIds.has(checkpointId)) fail();
+      checkpointIds.add(checkpointId);
+      if (id(checkpoint.guideId) !== guide.id || integer(checkpoint.guideVersion) !== guide.version)
+        fail();
+      const activityId = text(checkpoint.activityId, 257);
+      if (!activityIds.has(activityId) || checkpointActivities.has(activityId)) fail();
+      checkpointActivities.add(activityId);
+      date(checkpoint.createdAt);
+      bytes += validateProjectFiles(checkpoint.files);
+      if (bytes > MAX_STUDY_CHECKPOINT_BYTES) fail();
+      if (checkpoint.activeFile !== '') path(checkpoint.activeFile);
+      if (checkpoint.previewEntry !== '') path(checkpoint.previewEntry);
+      if (checkpoint.prediction !== undefined) {
+        const prediction = record(checkpoint.prediction);
+        fields(prediction, ['questionId', 'choiceId']);
+        id(prediction.questionId);
+        id(prediction.choiceId);
+      }
+    }
+  }
 }

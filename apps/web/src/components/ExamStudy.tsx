@@ -184,6 +184,7 @@ export function ExamStudy({
   onOpenFile,
   onRevealCode,
   onOpenSheet,
+  onCompareStart,
   editor,
   preview,
 }: {
@@ -191,6 +192,7 @@ export function ExamStudy({
   onOpenFile: (path: string) => void;
   onRevealCode: RevealCode;
   onOpenSheet: (page: number) => void;
+  onCompareStart: () => void;
   editor: ReactNode;
   preview: ReactNode;
 }) {
@@ -223,6 +225,7 @@ export function ExamStudy({
       onOpenFile={onOpenFile}
       onRevealCode={onRevealCode}
       onOpenSheet={onOpenSheet}
+      onCompareStart={onCompareStart}
       editor={editor}
       preview={preview}
       reference={reference}

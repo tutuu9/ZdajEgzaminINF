@@ -1,0 +1,315 @@
+.change-understand {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: 16px;
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.change-restored {
+  padding: 14px 18px;
+  border: 1px solid var(--positive-border);
+  background: var(--positive-bg);
+  border-radius: 14px;
+  line-height: 1.6;
+}
+.change-understand > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+}
+.change-understand h4 {
+  margin: 0;
+  font-size: 16px;
+}
+.change-understand p {
+  margin: 10px 0;
+}
+.change-actions {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.change-understand .button {
+  min-height: 44px;
+  white-space: normal;
+  text-align: center;
+}
+.change-understand summary,
+.change-diff > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  font-weight: 600;
+}
+.change-understand summary span {
+  font-weight: 400;
+  color: var(--muted);
+}
+.change-understand :is(button, input, summary, a):focus-visible,
+.change-preview :is(button, select, h3):focus-visible,
+.change-diff :is(button, summary):focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+.change-prediction {
+  border-top: 1px solid var(--line);
+}
+.change-prediction fieldset {
+  border: 0;
+  padding: 8px 0;
+  margin: 0;
+  min-width: 0;
+}
+.change-prediction legend {
+  font-weight: 600;
+}
+.change-prediction label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  cursor: pointer;
+  min-height: 44px;
+}
+.change-prediction input {
+  margin-top: 4px;
+  flex-shrink: 0;
+  accent-color: var(--blue);
+  width: 18px;
+  height: 18px;
+}
+.change-feedback {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+.change-checkpoint {
+  border-top: 1px solid var(--line);
+}
+.change-checkpoint summary svg {
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+.change-confirm {
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.change-confirm .button {
+  width: 100%;
+  margin-top: 8px;
+}
+.change-diagram {
+  padding: 9px;
+  border: 1px dashed var(--control-border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.change-diagram > div {
+  border: 2px solid var(--accent-ink);
+  padding: 5px;
+  margin-top: 5px;
+}
+.change-diagram > div > div {
+  background: var(--accent-soft);
+  padding: 8px;
+}
+.change-diagram strong {
+  display: block;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 4px;
+  margin-top: 4px;
+}
+.change-flow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.change-flow > span {
+  padding: 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.change-flow small {
+  color: var(--accent-ink);
+}
+.change-html code {
+  color: var(--accent-ink);
+  font-size: 12px;
+}
+.change-diff {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  margin-bottom: 12px;
+  font-size: 13px;
+  overflow: hidden;
+}
+.change-diff > summary {
+  padding: 12px 16px;
+}
+.change-diff-content {
+  padding: 0 16px 16px;
+  max-height: min(38vh, 380px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+}
+.change-diff-content p {
+  line-height: 1.6;
+}
+.change-file {
+  margin-top: 14px;
+}
+.change-file > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.change-file > header > span {
+  color: var(--muted);
+}
+.change-lines {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.change-line {
+  display: grid;
+  grid-template-columns: 16px 32px minmax(0, 1fr);
+  align-items: baseline;
+  padding: 3px 7px;
+  line-height: 1.65;
+}
+.change-line.added {
+  background: var(--positive-bg);
+  color: var(--green);
+}
+.change-line.removed {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.change-line.gap {
+  color: var(--muted);
+}
+.change-line-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  text-align: right;
+  padding-right: 6px;
+}
+.change-line code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px/1.65 'IBM Plex Mono',
+    monospace;
+}
+.change-preview {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+}
+.change-preview > header {
+  display: grid;
+  gap: 8px;
+}
+.change-preview h3 {
+  font-size: 18px;
+  margin: 0;
+}
+.change-preview .button {
+  min-height: 44px;
+  justify-self: start;
+}
+.change-entry {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+  font-size: 13px;
+}
+.change-entry select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--control-border);
+  background: var(--surface-subtle);
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 8px;
+}
+.change-phases {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: var(--surface-subtle);
+  border-radius: 12px;
+}
+.change-phases button {
+  flex: 1;
+  border: 0;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 600;
+}
+.change-phases button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.change-caption {
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 40px;
+  line-height: 1.5;
+}
+.change-preview iframe {
+  width: 100%;
+  height: 440px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: block;
+  color-scheme: light;
+}
+.change-preview .fine-print {
+  margin-bottom: 0;
+  line-height: 1.6;
+}
+.change-preview .fine-print svg {
+  vertical-align: -2px;
+}
+@media (max-width: 700px) {
+  .change-understand {
+    padding: 14px;
+  }
+  .change-preview {
+    padding: 12px;
+  }
+  .change-preview iframe {
+    height: 360px;
+  }
+  .change-diff-content {
+    max-height: 32vh;
+  }
+}

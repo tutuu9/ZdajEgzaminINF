@@ -401,7 +401,26 @@ export interface AttemptSnapshot {
     viewedExamples: string[];
   };
   recovery?: { id: string; createdAt: string; reason: string; files: ProjectFile[] }[];
+  /** Browser-local teaching checkpoints, separate from submitted solutions and scores. */
+  studyComparison?: {
+    checkpoints: StudyComparisonCheckpoint[];
+    /** Changes only after an explicit restore; editors start a fresh undo session. */
+    restorationId?: string;
+  };
 }
+export interface StudyComparisonCheckpoint {
+  id: string;
+  guideId: string;
+  guideVersion: number;
+  activityId: string;
+  createdAt: string;
+  files: ProjectFile[];
+  activeFile: string;
+  previewEntry: string;
+  prediction?: { questionId: string; choiceId: string };
+}
+export const MAX_STUDY_CHECKPOINTS = 8;
+export const MAX_STUDY_CHECKPOINT_BYTES = 20 * 1024 * 1024;
 export interface ContentDraft {
   id: string;
   kind: string;
