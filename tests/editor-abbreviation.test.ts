@@ -348,7 +348,7 @@ describe('shared HTML shortcut expansion for teaching', () => {
   it('preserves the Polish boilerplate and bounded indentation', () => {
     const expansion = expandHtmlShortcut('!', '  ');
     expect(expansion?.text).toContain('\n  <html lang="pl">');
-    expect(expansion?.text.slice(0, expansion.anchor)).toMatch(/<body>\n    $/);
+    expect(expansion?.text.slice(0, expansion.anchor)).toMatch(/<body>\n {4}$/);
     expect(expandHtmlShortcut('ul>li', ' '.repeat(128))?.text).toContain('<li>');
   });
 

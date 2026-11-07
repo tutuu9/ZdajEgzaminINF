@@ -1,0 +1,115 @@
+.emmet-learning {
+  margin: 16px 0;
+  border-block: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.emmet-context {
+  padding: 14px 0;
+}
+.emmet-context > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-ink);
+}
+.emmet-context h4 {
+  margin: 0;
+  font-size: 16px;
+}
+.emmet-context > header > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.emmet-learning p {
+  margin: 10px 0;
+}
+.emmet-example h5 {
+  margin: 14px 0 8px;
+  font-size: 14px;
+}
+.emmet-shortcut {
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+}
+.emmet-learning code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.93em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.emmet-shortcut code {
+  color: var(--accent-ink);
+}
+.emmet-learning .emmet-output {
+  padding: 12px;
+  margin: 8px 0 12px;
+  background: var(--surface-subtle);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.emmet-caution {
+  border-left: 3px solid var(--accent-border);
+  padding-left: 10px;
+}
+.emmet-footnote {
+  color: var(--muted);
+}
+.emmet-learning summary {
+  padding: 10px 0;
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.emmet-learning summary svg {
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+.emmet-reference {
+  border-top: 1px solid var(--line);
+}
+.emmet-reference:first-child {
+  border-top: 0;
+}
+.emmet-reference > a {
+  display: inline-block;
+  padding: 12px 0;
+}
+.emmet-topic,
+.emmet-chain {
+  border-top: 1px solid var(--line);
+}
+.emmet-topic .emmet-example + .emmet-example {
+  border-top: 1px dashed var(--line);
+}
+.emmet-chain ol {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.emmet-chain li {
+  padding: 8px 0;
+}
+.emmet-chain-code {
+  display: block;
+  color: var(--accent-ink);
+}
+.emmet-learning .button {
+  min-height: 44px;
+  white-space: normal;
+}
+.emmet-learning :is(button, summary, a):focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+.emmet-learning [role='alert'] {
+  color: var(--danger);
+}
