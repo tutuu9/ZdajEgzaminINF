@@ -45,6 +45,22 @@ function withinRepeatBudget(token: string) {
   return upperBound <= repeatLimit;
 }
 
+function validShortcut(token: string, indentation: string) {
+  if (
+    !token ||
+    token.length > 256 ||
+    /[\r\n]/.test(token) ||
+    indentation.length > 128 ||
+    !/^[\t ]*$/.test(indentation)
+  )
+    return false;
+  if (token === '!') return true;
+  // Reject unbounded lorem generation before passing user input to Emmet.
+  if (!/^[a-z.#(]/i.test(token) || /!|lorem/i.test(token) || !withinRepeatBudget(token))
+    return false;
+  return extract(token, token.length, { lookAhead: false })?.abbreviation === token;
+}
+
 function abbreviationAt(state: EditorState) {
   const { main, ranges } = state.selection;
   if (state.readOnly || ranges.length !== 1 || !main.empty) return null;
@@ -70,20 +86,20 @@ function abbreviationAt(state: EditorState) {
 
   const token = match.abbreviation;
   const indentation = /^\s*/.exec(line.text)![0];
-  if (indentation.length > 128) return null;
+  if (!validShortcut(token, indentation)) return null;
   if (token === '!') {
     if (line.text.trim() !== '!') return null;
     return { token, indentation, from, to: line.to };
   }
-  // Only structural HTML shortcuts are useful here. A lorem word count is
-  // unbounded in Emmet and would run synchronously while the learner types.
-  if (!/^[a-z.#(]/i.test(token) || /!|lorem/i.test(token) || !withinRepeatBudget(token))
-    return null;
   return { token, indentation, from, to: cursor };
 }
 
 type Abbreviation = NonNullable<ReturnType<typeof abbreviationAt>>;
-function expandedText(label: string, indentation: string) {
+export function expandHtmlShortcut(
+  label: string,
+  indentation = '',
+): { text: string; anchor: number; head: number } | null {
+  if (!validShortcut(label, indentation) || !candidates(label).includes(label)) return null;
   if (label === '!') {
     const lines = htmlLines.map((line, index) => (index ? indentation + line : line));
     const anchor = lines.slice(0, 9).join('\n').length;
@@ -116,7 +132,7 @@ function insert(
   label: string,
   completion?: Completion,
 ) {
-  const expansion = expandedText(label, abbr.indentation);
+  const expansion = expandHtmlShortcut(label, abbr.indentation);
   if (!expansion) return false;
   dispatch(
     state.update({
@@ -143,7 +159,7 @@ export const htmlAbbreviationCompletions: CompletionSource = ({ state }) => {
   if (!abbr) return null;
   const options: Completion[] = [];
   for (const label of candidates(abbr.token)) {
-    const result = expandedText(label, abbr.indentation);
+    const result = expandHtmlShortcut(label, abbr.indentation);
     if (!result) continue;
     options.push({
       label,
