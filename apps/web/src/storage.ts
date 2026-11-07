@@ -56,6 +56,54 @@ export async function saveProjectRevision(
   await tx.store.put(structuredClone(attempt));
   await tx.done;
 }
+/** Preserve the current project as a separate copy and restore its files in one commit. */
+export async function saveStudyCheckpointRestore(
+  restored: AttemptSnapshot,
+  copy: AttemptSnapshot,
+  expectedRevision: number,
+  signal: AbortSignal,
+): Promise<void> {
+  const cancelled = () =>
+    new Error('Projekt zmienił się podczas przywracania. Zachowano bieżący kod. Spróbuj ponownie.');
+  const db = await database();
+  if (signal.aborted) throw cancelled();
+  if (restored.id === copy.id) throw new Error('Kopia musi mieć oddzielny identyfikator.');
+  const tx = db.transaction('attempts', 'readwrite');
+  // Attach a rejection handler immediately, including when a pending read is aborted.
+  void tx.done.catch(() => undefined);
+  const abort = () => {
+    try {
+      tx.abort();
+    } catch {
+      /* A failed request may have already ended this transaction. */
+    }
+  };
+  signal.addEventListener('abort', abort, { once: true });
+  try {
+    const saved = (await tx.store.get(restored.id)) as AttemptSnapshot | undefined;
+    if (!saved || (saved.revision ?? 0) !== expectedRevision)
+      throw new Error(
+        'Projekt zmienił się w innej karcie. Nie przywrócono plików. Pobierz bieżący kod przed wczytaniem nowszego zapisu.',
+      );
+    if (await tx.store.get(copy.id))
+      throw new Error('Nie udało się utworzyć oddzielnej kopii pracy.');
+    if (signal.aborted) throw cancelled();
+    await tx.store.add(structuredClone(copy));
+    await tx.store.put(structuredClone(restored));
+    await tx.done;
+  } catch (cause) {
+    abort();
+    await tx.done.catch(() => undefined);
+    if (signal.aborted) throw cancelled();
+    if (!(cause instanceof Error) || cause instanceof DOMException)
+      throw new Error(
+        'Nie udało się zapisać kopii przed przywróceniem. Bieżące pliki nie zostały zmienione. Sprawdź wolne miejsce i pobierz swoją pracę.',
+      );
+    throw cause;
+  } finally {
+    signal.removeEventListener('abort', abort);
+  }
+}
 export async function removeAttempt(id: string): Promise<void> {
   await (await database()).delete('attempts', id);
 }

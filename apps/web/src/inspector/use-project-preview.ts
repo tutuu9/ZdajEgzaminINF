@@ -197,6 +197,12 @@ export function useProjectPreview({
       else setRequested(true);
     },
     stop,
+    pause: () => {
+      activeRef.current = false;
+      setRequested(false);
+      setSelection(undefined);
+      setScriptRequest(undefined);
+    },
     runScripts: () => {
       activeRef.current = false;
       setRequested(false);
