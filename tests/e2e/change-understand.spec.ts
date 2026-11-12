@@ -183,6 +183,7 @@ async function prepareProject(
   const url = `/praktyka/${course[1]}?proba=${project.id}&widok=${project.mode === 'egzamin' ? 'code' : 'nauka'}`;
   await page.goto(url);
   if (project.mode === 'nauka' && !project.submittedAt) {
+    await page.getByRole('tab', { name: 'Eksperyment', exact: true }).click();
     await expect(lab(page)).toBeVisible();
     await expect
       .poll(async () => (await storedProject(page)).studyComparison?.checkpoints.length ?? 0)
@@ -192,7 +193,14 @@ async function prepareProject(
   return { id: project.id, path: entry, cssPath, activityId: position!.key, source: project.files };
 }
 
+async function openExperiment(page: Page) {
+  if (!(await page.getByRole('tab', { name: 'Eksperyment', exact: true }).isVisible()))
+    await page.getByRole('tab', { name: 'Lekcja', exact: true }).click();
+  await page.getByRole('tab', { name: 'Eksperyment', exact: true }).click();
+}
+
 async function openComparison(page: Page) {
+  await openExperiment(page);
   await lab(page).getByRole('button', { name: 'Porównaj przed i po', exact: true }).click();
   await expect(comparison(page)).toBeVisible();
 }
@@ -204,6 +212,7 @@ async function showChanges(page: Page) {
 }
 
 async function openRestore(page: Page) {
+  await openExperiment(page);
   await lab(page).locator('summary').filter({ hasText: 'Punkt sprzed kroku' }).click();
   await lab(page).getByRole('button', { name: 'Przywróć punkt sprzed kroku', exact: true }).click();
   await expect(button(page, 'Zachowaj kopię i przywróć')).toBeVisible();
@@ -516,6 +525,7 @@ test.describe('Zmień i zrozum', () => {
       await page.locator('.workspace-heading .theme-picker summary').click();
       await button(page, label).click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await page.keyboard.press('Escape');
       await page.getByRole('tab', { name: 'Lekcja', exact: true }).click();
       const compare = lab(page).getByRole('button', { name: 'Porównaj przed i po', exact: true });
       await compare.focus();
@@ -578,6 +588,7 @@ test.describe('Zmień i zrozum', () => {
     await page.goto('/moje-prace');
     await putProject(page, project);
     await page.goto(resume);
+    await openExperiment(page);
     await expect(lab(page).getByRole('alert')).toContainText('większy niż 20 MiB');
     await expect(editor(page)).toContainText(afterText);
     await expect(button(page, 'Porównaj przed i po')).toBeDisabled();

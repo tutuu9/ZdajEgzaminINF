@@ -6,6 +6,8 @@ The panel uses the existing pinned guide's current activity and its declared HTM
 
 ## Learner workflow
 
+Open **Eksperyment** in the **Nauka** lesson sidebar to use this aid where the current step supports it. **Krok** contains the ordinary instruction and check; **Pomoc** contains examples and Emmet. Section changes do not replace files, editor state or checkpoints.
+
 1. Read the small conceptual explanation next to the current requirement. **Pokaż miejsce zmiany** opens the relevant own source when it can be located; uncertain locations use file-level guidance.
 2. For selected concepts, optionally answer **Jak myślisz, co się zmieni?** and read the explanation. This is a learning prompt, not a completion gate or an examination question.
 3. Write a change in the existing editor. **Co zmieniłem?** lists changed HTML/CSS source lines with textual addition/removal labels. Large inputs have explicit bounds; the interface does not claim a complete diff when analysis is truncated.
