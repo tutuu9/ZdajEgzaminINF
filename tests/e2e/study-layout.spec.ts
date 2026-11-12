@@ -108,6 +108,7 @@ test('Nauka fits laptop, Full HD and QHD viewports with reachable checking and a
   await page.setViewportSize({ width: 1366, height: 768 });
   await prepare(page);
   for (const [width, height] of [
+    [1366, 650],
     [1366, 768],
     [1536, 864],
     [1920, 1080],
@@ -137,7 +138,7 @@ test('Nauka fits laptop, Full HD and QHD viewports with reachable checking and a
         );
         await expect(page.locator('.course-preview')).toBeHidden();
       } else await expect(page.locator('.course-preview')).toBeVisible();
-      await page.screenshot({ path: test.info().outputPath(`study-${width}.png`) });
+      await page.screenshot({ path: test.info().outputPath(`study-${width}-${height}.png`) });
     });
   }
 });
