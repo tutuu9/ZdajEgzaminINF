@@ -194,8 +194,9 @@ async function prepareProject(
 }
 
 async function openExperiment(page: Page) {
-  if (!(await page.getByRole('tab', { name: 'Eksperyment', exact: true }).isVisible()))
-    await page.getByRole('tab', { name: 'Lekcja', exact: true }).click();
+  await expect(page.locator('.course-instruction')).toBeAttached();
+  const lesson = page.getByRole('tab', { name: 'Lekcja', exact: true });
+  if (await lesson.isVisible()) await lesson.click();
   await page.getByRole('tab', { name: 'Eksperyment', exact: true }).click();
 }
 
@@ -299,6 +300,7 @@ test.describe('Zmień i zrozum', () => {
     await expect(editor(page)).toContainText('padding-top: 5px');
     await saved(page);
     await page.reload();
+    await openExperiment(page);
     await lab(page).locator('summary').filter({ hasText: 'Najpierw przewidź wynik' }).click();
     await expect(lab(page).getByRole('radio').first()).toBeChecked();
     await expect(editor(page)).toContainText('padding-top: 5px');
