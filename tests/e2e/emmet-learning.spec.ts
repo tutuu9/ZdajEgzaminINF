@@ -159,6 +159,7 @@ async function prepare(
     `/praktyka/${project.taskId}?proba=${project.id}&widok=${project.mode === 'nauka' ? 'nauka' : 'code'}`,
   );
   if (project.mode === 'nauka' && !project.submittedAt) {
+    await page.getByRole('tab', { name: 'Pomoc', exact: true }).click();
     await expect(tip(page)).toBeVisible();
     await saved(page);
   }
@@ -187,6 +188,7 @@ test.describe('Pisz szybciej', () => {
         await expect(editor(page)).toContainText(keptText);
         await reference(page).getByText('Skróty HTML — podręczna ściąga', { exact: true }).click();
         await page.reload();
+        await page.getByRole('tab', { name: 'Pomoc', exact: true }).click();
         await expect(tip(page)).toContainText('link:css');
         const after = await storedProject(page);
         expect(after.files).toEqual(before.files);
@@ -217,6 +219,7 @@ test.describe('Pisz szybciej', () => {
     await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('style');
     await page.keyboard.insertText(position.cssPath.replace(/\.css$/, ''));
     await saved(page);
+    await page.getByRole('tab', { name: 'Krok', exact: true }).click();
     await page.getByRole('button', { name: 'Sprawdź ten krok', exact: true }).click();
     await expect(page.locator('.course-check.passed')).toHaveCount(1);
     await expect(page.locator('.course-check.failed')).toHaveCount(0);
@@ -288,6 +291,7 @@ test.describe('Pisz szybciej', () => {
     project.revision = (project.revision ?? 0) + 1;
     await putProject(page, project);
     await page.goto(resume);
+    await page.getByRole('tab', { name: 'Pomoc', exact: true }).click();
     await expect(reference(page)).toBeVisible();
     await expect(tip(page)).toHaveCount(0);
     await reference(page).getByText('Skróty HTML — podręczna ściąga', { exact: true }).click();
@@ -322,6 +326,7 @@ test.describe('Pisz szybciej', () => {
       });
       await expect(restored.getByRole('status')).toContainText('Wczytano kopię');
       await restored.goto(resume);
+      await restored.getByRole('tab', { name: 'Pomoc', exact: true }).click();
       await expect(tip(restored)).toContainText('link:css');
       await expect(editor(restored)).toContainText(keptText);
       const imported = await storedProject(restored);
@@ -342,6 +347,7 @@ test.describe('Pisz szybciej', () => {
       await page.locator('.workspace-heading .theme-picker summary').click();
       await page.getByRole('button', { name: label, exact: true }).click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await page.keyboard.press('Escape');
       await page.getByRole('tab', { name: 'Lekcja', exact: true }).click();
       const summary = reference(page).getByText('Skróty HTML — podręczna ściąga', { exact: true });
       await summary.focus();

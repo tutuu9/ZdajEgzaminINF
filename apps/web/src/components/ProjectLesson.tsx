@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -71,6 +71,17 @@ export function ProjectLesson({
     [checked, setChecked] = useState<CheckedStep>(),
     [hash, setHash] = useState('');
   const panel = project.workspace?.studyPanel ?? 'lesson';
+  const [section, setSection] = useState<'step' | 'help' | 'experiment'>('step');
+  const sectionId = useId();
+  const sidebarBody = useRef<HTMLDivElement>(null);
+  const feedback = useRef<HTMLDivElement>(null);
+  const [phone, setPhone] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)');
+    const update = () => setPhone(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const setPanel = (studyPanel: 'lesson' | 'code' | 'preview') => {
     void store
       .patch((latest) =>
@@ -127,9 +138,13 @@ export function ProjectLesson({
   const current = positions.find((item) => item.id === project.study?.current) ?? positions[0];
   const learning = useChangeUnderstand(store, project, current);
   useEffect(() => {
+    sidebarBody.current?.scrollTo(0, 0);
+  }, [section, current?.id]);
+  useEffect(() => {
     setChecked(undefined);
     setManual(false);
     setError('');
+    setSection('step');
   }, [current?.id]);
   if (!guide || !current || !project.study)
     return error ? (
@@ -148,6 +163,12 @@ export function ProjectLesson({
   const index = positions.indexOf(current),
     checkpoint = progress.completed[current.id];
   const coachEnabled = !!guide.project && project.mode === 'nauka' && !project.submittedAt;
+  const sections = [
+    { key: 'step', label: 'Krok' },
+    { key: 'help', label: 'Pomoc' },
+    ...(learning.lesson ? [{ key: 'experiment', label: 'Eksperyment' } as const] : []),
+  ] as const;
+  const activeSection = sections.some((item) => item.key === section) ? section : 'step';
   const currentReport = checked?.activityId === current.id ? checked : undefined;
   const results = currentReport?.results ?? [];
   const fresh =
@@ -328,6 +349,14 @@ export function ProjectLesson({
         results: report,
         diagnostics,
       });
+      requestAnimationFrame(() => {
+        // Reveal the report inside the lesson, without moving the editor or page.
+        const body = sidebarBody.current;
+        const report = feedback.current;
+        if (body && report && store.get().project.study?.current === activityId) {
+          body.scrollTop += report.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        }
+      });
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
     } finally {
@@ -377,14 +406,38 @@ export function ProjectLesson({
   };
   return (
     <div className="cumulative-course">
-      <div className="course-heading">
-        <div>
-          <span className="course-kicker">Twój projekt rośnie z każdym krokiem</span>
-          <h2>{guide.title}</h2>
+      <div className="course-overview">
+        <div className="course-heading">
+          <div>
+            <h2>Nauka krok po kroku</h2>
+            <span className="course-kicker">
+              Krok {index + 1} z {positions.length}
+            </span>
+          </div>
+          <label className="course-progress">
+            <span>{Object.keys(progress.completed).length} ukończonych</span>
+            <progress value={Object.keys(progress.completed).length} max={positions.length} />
+          </label>
         </div>
-        <span>
-          {Object.keys(progress.completed).length} / {positions.length} kroków
-        </span>
+        <div className="course-mobile-tabs" role="tablist" aria-label="Panele nauki">
+          {(
+            [
+              ['lesson', 'Lekcja'],
+              ['code', 'Kod'],
+              ['preview', 'Podgląd'],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              role="tab"
+              key={key}
+              data-panel={key}
+              aria-selected={(phone ? panel : panel === 'preview' ? 'preview' : 'code') === key}
+              onClick={() => setPanel(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {!project.files?.length && (
         <Notice>
@@ -412,205 +465,276 @@ export function ProjectLesson({
         </Notice>
       )}
       <ChangeRestoreNotice model={learning} taskId={project.taskId} />
-      <div className="course-mobile-tabs" role="tablist" aria-label="Panele nauki">
-        {(
-          [
-            ['lesson', 'Lekcja'],
-            ['code', 'Kod'],
-            ['preview', 'Podgląd'],
-          ] as const
-        ).map(([key, label]) => (
-          <button role="tab" key={key} aria-selected={panel === key} onClick={() => setPanel(key)}>
-            {label}
-          </button>
-        ))}
-      </div>
       <div className={`cumulative-grid show-${panel}`}>
         <aside className="course-instruction">
-          <label className="course-step-select">
-            Twój krok
-            <select
-              value={current.id}
-              disabled={navigationBlocked}
-              onChange={(event) => {
-                const target = positions.find((item) => item.id === event.target.value);
-                if (target) void navigate(target);
-              }}
-            >
-              {positions.map((item, at) => (
-                <option
-                  key={item.id}
-                  value={item.id}
-                  disabled={
-                    !project.submittedAt &&
-                    at > 0 &&
-                    !positions.slice(0, at).every((previous) => progress.completed[previous.id])
-                  }
-                >
-                  {at + 1}. {item.activity.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="course-location">
-            <span>{current.step.title.replace(/^\d+[.)]\s*/, '')}</span>
-            <button className="text-button" onClick={() => onOpenSheet(current.step.page ?? 1)}>
-              <FileText size={15} />
-              PDF · {current.step.page ?? 1}
-            </button>
-          </div>
-          <h3>{activity.title}</h3>
-          <div className="prose">
-            <Markdown>{activity.explanation}</Markdown>
-          </div>
-          <div className="course-task">
-            <strong>Teraz zmień tylko to</strong>
-            <Markdown>{activity.instruction}</Markdown>
-            {activity.placement && <p>{activity.placement}</p>}
-          </div>
-          <div className="course-targets">
-            {(activity.targetFiles ?? [current.step.fileName]).map((path) => (
-              <button
-                key={path}
-                onClick={() => {
-                  onOpenFile(path);
-                  setPanel('code');
+          <div className="course-sidebar-heading">
+            <label className="course-step-select">
+              <span className="visually-hidden">Twój krok</span>
+              <select
+                value={current.id}
+                disabled={navigationBlocked}
+                onChange={(event) => {
+                  const target = positions.find((item) => item.id === event.target.value);
+                  if (target) void navigate(target);
                 }}
               >
-                {path}
+                {positions.map((item, at) => (
+                  <option
+                    key={item.id}
+                    value={item.id}
+                    disabled={
+                      !project.submittedAt &&
+                      at > 0 &&
+                      !positions.slice(0, at).every((previous) => progress.completed[previous.id])
+                    }
+                  >
+                    {at + 1}. {item.activity.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="course-location">
+              <span>{current.step.title.replace(/^\d+[.)]\s*/, '')}</span>
+              <button className="text-button" onClick={() => onOpenSheet(current.step.page ?? 1)}>
+                <FileText size={15} />
+                PDF · {current.step.page ?? 1}
               </button>
-            ))}
+            </div>
+            <div className="course-section-tabs" role="tablist" aria-label="Materiały do kroku">
+              {sections.map(({ key, label }, at) => (
+                <button
+                  key={key}
+                  id={`${sectionId}-${key}-tab`}
+                  role="tab"
+                  aria-selected={activeSection === key}
+                  aria-controls={`${sectionId}-${key}-panel`}
+                  tabIndex={activeSection === key ? 0 : -1}
+                  onClick={() => setSection(key)}
+                  onKeyDown={(event) => {
+                    const next =
+                      event.key === 'ArrowRight'
+                        ? (at + 1) % sections.length
+                        : event.key === 'ArrowLeft'
+                          ? (at + sections.length - 1) % sections.length
+                          : event.key === 'Home'
+                            ? 0
+                            : event.key === 'End'
+                              ? sections.length - 1
+                              : undefined;
+                    if (next === undefined) return;
+                    event.preventDefault();
+                    setSection(sections[next]!.key);
+                    document.getElementById(`${sectionId}-${sections[next]!.key}-tab`)?.focus();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          {coachEnabled && (
-            <EmmetLearning
-              key={`${project.id}:${guide.version}:${current.id}`}
-              guide={guide}
-              step={current.step}
-              activity={activity}
-            />
-          )}
-          <ChangeUnderstand
-            model={learning}
-            project={project}
-            blocked={blocked}
-            saving={saving}
-            saveError={saveError}
-            onReveal={revealChange}
-            onCompare={() => {
-              onCompareStart();
-              learning.setComparisonOpen(true);
-              setPanel('preview');
-            }}
-          />
-          <ErrorNotice message={error} />
-          {checkpoint && !completedFresh && (
-            <p className="course-stale">
-              Ten krok był ukończony. Pliki zmieniły się od tego czasu — przed ponownym
-              potwierdzeniem sprawdź aktualny kod.
-            </p>
-          )}
-          <button className="button primary full" disabled={blocked} onClick={() => void check()}>
-            {busy ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
-            {busy
-              ? 'Sprawdzanie…'
-              : coachEnabled && currentReport
-                ? 'Sprawdź ponownie'
-                : 'Sprawdź ten krok'}
-          </button>
-          {results.length > 0 && (
-            <div className="course-check-results" aria-live="polite">
-              {results.map((item, ordinal) => {
-                const diagnostic =
-                  coachEnabled && fresh ? currentReport?.diagnostics[ordinal] : undefined;
-                const explanationId = `study-feedback-${current.id}-${ordinal}`;
-                return (
-                  <div className={`course-check ${item.status}`} key={`${ordinal}:${item.id}`}>
-                    <strong>
-                      {item.status === 'passed' ? '✓ ' : ''}
-                      {diagnostic && item.status === 'failed'
-                        ? `Do poprawy w pliku ${diagnostic.path}`
-                        : item.title}
-                    </strong>
-                    {(!diagnostic ||
-                      item.status !== 'failed' ||
-                      activity.checks?.[ordinal]?.kind === 'runtime') && (
-                      <>
-                        <p>{item.evidence}</p>
-                        {item.recommendation && <p>{item.recommendation}</p>}
-                      </>
-                    )}
-                    {diagnostic && (
-                      <div className={diagnostic.warning ? 'course-file-warning' : undefined}>
-                        {diagnostic.warning && (
-                          <strong>
-                            {diagnostic.warning === 'missing-file'
-                              ? 'Brakuje pliku w projekcie'
-                              : 'Sprawdź cel odnośnika w menu'}
-                          </strong>
+          <div className="course-sidebar-body" ref={sidebarBody}>
+            <div
+              role="tabpanel"
+              id={`${sectionId}-step-panel`}
+              aria-labelledby={`${sectionId}-step-tab`}
+              hidden={activeSection !== 'step'}
+            >
+              <h3>{activity.title}</h3>
+              <div className="prose">
+                <Markdown>{activity.explanation}</Markdown>
+              </div>
+              <div className="course-task">
+                <strong>Teraz zmień tylko to</strong>
+                <Markdown>{activity.instruction}</Markdown>
+                {activity.placement && <p>{activity.placement}</p>}
+              </div>
+              <div className="course-targets">
+                {(activity.targetFiles ?? [current.step.fileName]).map((path) => (
+                  <button
+                    key={path}
+                    onClick={() => {
+                      onOpenFile(path);
+                      setPanel('code');
+                    }}
+                  >
+                    {path}
+                  </button>
+                ))}
+              </div>
+              <ErrorNotice message={error} />
+              {checkpoint && !completedFresh && (
+                <p className="course-stale">
+                  Ten krok był ukończony. Pliki zmieniły się od tego czasu — przed ponownym
+                  potwierdzeniem sprawdź aktualny kod.
+                </p>
+              )}
+              {results.length > 0 && (
+                <div className="course-check-results" aria-live="polite" ref={feedback}>
+                  {results.map((item, ordinal) => {
+                    const diagnostic =
+                      coachEnabled && fresh ? currentReport?.diagnostics[ordinal] : undefined;
+                    const explanationId = `study-feedback-${current.id}-${ordinal}`;
+                    return (
+                      <div className={`course-check ${item.status}`} key={`${ordinal}:${item.id}`}>
+                        <strong>
+                          {item.status === 'passed' ? '✓ ' : ''}
+                          {diagnostic && item.status === 'failed'
+                            ? `Do poprawy w pliku ${diagnostic.path}`
+                            : item.title}
+                        </strong>
+                        {(!diagnostic ||
+                          item.status !== 'failed' ||
+                          activity.checks?.[ordinal]?.kind === 'runtime') && (
+                          <>
+                            <p>{item.evidence}</p>
+                            {item.recommendation && <p>{item.recommendation}</p>}
+                          </>
                         )}
-                        <p id={explanationId}>{diagnostic.explanation}</p>
-                        <button
-                          type="button"
-                          className="button secondary small course-reveal"
-                          aria-describedby={explanationId}
-                          disabled={blocked}
-                          onClick={() => reveal(diagnostic)}
-                        >
-                          {diagnostic.range ? 'Pokaż w kodzie' : 'Otwórz plik'}
-                        </button>
+                        {diagnostic && (
+                          <div className={diagnostic.warning ? 'course-file-warning' : undefined}>
+                            {diagnostic.warning && (
+                              <strong>
+                                {diagnostic.warning === 'missing-file'
+                                  ? 'Brakuje pliku w projekcie'
+                                  : 'Sprawdź cel odnośnika w menu'}
+                              </strong>
+                            )}
+                            <p id={explanationId}>{diagnostic.explanation}</p>
+                            <button
+                              type="button"
+                              className="button secondary small course-reveal"
+                              aria-describedby={explanationId}
+                              disabled={blocked}
+                              onClick={() => reveal(diagnostic)}
+                            >
+                              {diagnostic.range ? 'Pokaż w kodzie' : 'Otwórz plik'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-              {!fresh && <p>Kod zmienił się — sprawdź ponownie.</p>}
-              {manualNeeded && fresh && (
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={manual}
-                    onChange={(event) => setManual(event.target.checked)}
-                  />
-                  <span>Potwierdzam kontrolę ręczną: {activity.check.prompt}</span>
-                </label>
+                    );
+                  })}
+                  {!fresh && <p>Kod zmienił się — sprawdź ponownie.</p>}
+                  {manualNeeded && fresh && (
+                    <label className="checkbox-field">
+                      <input
+                        type="checkbox"
+                        checked={manual}
+                        onChange={(event) => setManual(event.target.checked)}
+                      />
+                      <span>Potwierdzam kontrolę ręczną: {activity.check.prompt}</span>
+                    </label>
+                  )}
+                </div>
               )}
             </div>
+            <div
+              role="tabpanel"
+              id={`${sectionId}-help-panel`}
+              aria-labelledby={`${sectionId}-help-tab`}
+              hidden={activeSection !== 'help'}
+            >
+              <h3>Pomoc do tego kroku</h3>
+              <p className="course-section-intro">
+                Zajrzyj do przykładu lub skrótów, potem wróć do własnego kodu.
+              </p>
+              {coachEnabled && (
+                <EmmetLearning
+                  key={`${project.id}:${guide.version}:${current.id}`}
+                  guide={guide}
+                  step={current.step}
+                  activity={activity}
+                />
+              )}
+              <details
+                className="course-example"
+                onToggle={(event) => {
+                  if (event.currentTarget.open && !progress.viewedExamples.includes(current.id))
+                    void store
+                      .patch((latest) => ({
+                        ...latest,
+                        study: {
+                          ...latest.study!,
+                          viewedExamples: [
+                            ...new Set([...latest.study!.viewedExamples, current.id]),
+                          ],
+                        },
+                      }))
+                      .catch((cause) => setError(errorMessage(cause)));
+                }}
+              >
+                <summary>
+                  <BookOpen size={16} />
+                  Wyjaśnienie i mały przykład
+                </summary>
+                <Editor
+                  value={activity.exampleCode}
+                  path={activity.targetFiles?.[0] ?? current.step.fileName}
+                  readOnly
+                  minHeight={110}
+                  onChange={() => undefined}
+                  label="Przykład do porównania"
+                />
+                <ul>
+                  {activity.why.map((why) => (
+                    <li key={why}>{why}</li>
+                  ))}
+                </ul>
+                <p>Przykład nie zastępuje Twojego kodu.</p>
+              </details>
+            </div>
+            {learning.lesson && (
+              <div
+                role="tabpanel"
+                id={`${sectionId}-experiment-panel`}
+                aria-labelledby={`${sectionId}-experiment-tab`}
+                hidden={activeSection !== 'experiment'}
+              >
+                <ChangeUnderstand
+                  model={learning}
+                  project={project}
+                  blocked={blocked}
+                  saving={saving}
+                  saveError={saveError}
+                  onReveal={revealChange}
+                  onCompare={() => {
+                    onCompareStart();
+                    learning.setComparisonOpen(true);
+                    setPanel('preview');
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          {activeSection === 'step' && (
+            <div className="course-check-action">
+              {' '}
+              <button
+                className="button primary full"
+                disabled={blocked}
+                onClick={() => void check()}
+              >
+                {busy ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
+                {busy
+                  ? 'Sprawdzanie…'
+                  : coachEnabled && currentReport
+                    ? 'Sprawdź ponownie'
+                    : 'Sprawdź ten krok'}
+              </button>
+            </div>
           )}
-          <details
-            className="course-example"
-            onToggle={(event) => {
-              if (event.currentTarget.open && !progress.viewedExamples.includes(current.id))
-                void store
-                  .patch((latest) => ({
-                    ...latest,
-                    study: {
-                      ...latest.study!,
-                      viewedExamples: [...new Set([...latest.study!.viewedExamples, current.id])],
-                    },
-                  }))
-                  .catch((cause) => setError(errorMessage(cause)));
-            }}
-          >
-            <summary>
-              <BookOpen size={16} />
-              Wyjaśnienie i mały przykład
-            </summary>
-            <Editor
-              value={activity.exampleCode}
-              path={activity.targetFiles?.[0] ?? current.step.fileName}
-              readOnly
-              minHeight={110}
-              onChange={() => undefined}
-              label="Przykład do porównania"
-            />
-            <ul>
-              {activity.why.map((why) => (
-                <li key={why}>{why}</li>
-              ))}
-            </ul>
-            <p>Przykład nie zastępuje Twojego kodu.</p>
-          </details>
-          <div className="course-next glass-panel">
+          {activeSection !== 'step' && (
+            <button
+              className="button secondary course-back-to-step"
+              onClick={() => {
+                setSection('step');
+                document.getElementById(`${sectionId}-step-tab`)?.focus();
+              }}
+            >
+              <ArrowLeft size={15} /> Wróć do kroku
+            </button>
+          )}
+          <div className="course-next glass-panel" hidden={activeSection !== 'step'}>
             <button
               className="icon-button"
               aria-label="Poprzedni krok"

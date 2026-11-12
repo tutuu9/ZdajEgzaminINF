@@ -4,6 +4,8 @@
 
 ## Learner workflow
 
+Open **Pomoc** in the lesson sidebar for the contextual tip and **Skróty HTML** reference. **Krok** contains the current instruction and step check. Switching between these sections keeps the editor mounted and does not change project files.
+
 1. Read the current instruction and the short, optional shortcut explanation. The tip identifies the file and insertion context; it never tells learners to replace their whole project.
 2. Expand **Zobacz HTML** to inspect what the abbreviation actually generates. Examples are illustrative teaching commentary, not an alternative examination paper or complete model solution.
 3. Type the abbreviation at the appropriate HTML insertion point and press Tab. **Kopiuj skrót** only copies the abbreviation to the clipboard; it does not open, insert into or change a project file. Clipboard denial has a visible manual-copy fallback.
