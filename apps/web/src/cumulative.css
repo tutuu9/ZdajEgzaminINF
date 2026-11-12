@@ -465,6 +465,9 @@
 .course-next .icon-button {
   min-width: 40px;
 }
+.course-next[hidden] {
+  display: none;
+}
 .course-materials {
   margin-top: 28px;
   display: grid;

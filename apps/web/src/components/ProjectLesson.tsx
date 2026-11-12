@@ -74,6 +74,7 @@ export function ProjectLesson({
   const [section, setSection] = useState<'step' | 'help' | 'experiment'>('step');
   const sectionId = useId();
   const sidebarBody = useRef<HTMLDivElement>(null);
+  const feedback = useRef<HTMLDivElement>(null);
   const [phone, setPhone] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 900px)');
@@ -348,6 +349,14 @@ export function ProjectLesson({
         results: report,
         diagnostics,
       });
+      requestAnimationFrame(() => {
+        // Reveal the report inside the lesson, without moving the editor or page.
+        const body = sidebarBody.current;
+        const report = feedback.current;
+        if (body && report && store.get().project.study?.current === activityId) {
+          body.scrollTop += report.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        }
+      });
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
     } finally {
@@ -560,7 +569,7 @@ export function ProjectLesson({
                 </p>
               )}
               {results.length > 0 && (
-                <div className="course-check-results" aria-live="polite">
+                <div className="course-check-results" aria-live="polite" ref={feedback}>
                   {results.map((item, ordinal) => {
                     const diagnostic =
                       coachEnabled && fresh ? currentReport?.diagnostics[ordinal] : undefined;
@@ -717,12 +726,15 @@ export function ProjectLesson({
           {activeSection !== 'step' && (
             <button
               className="button secondary course-back-to-step"
-              onClick={() => setSection('step')}
+              onClick={() => {
+                setSection('step');
+                document.getElementById(`${sectionId}-step-tab`)?.focus();
+              }}
             >
               <ArrowLeft size={15} /> Wróć do kroku
             </button>
           )}
-          <div className="course-next glass-panel">
+          <div className="course-next glass-panel" hidden={activeSection !== 'step'}>
             <button
               className="icon-button"
               aria-label="Poprzedni krok"

@@ -173,6 +173,13 @@ test('separate help and experiment preserve code, Undo, checking and reload on a
   await page.getByRole('button', { name: 'Wróć do kroku', exact: true }).click();
   await page.getByRole('button', { name: 'Sprawdź ten krok', exact: true }).click();
   await expect(page.locator('.course-check.passed')).toHaveCount(1);
+  await expect
+    .poll(async () => {
+      const report = await page.locator('.course-check.passed').boundingBox();
+      const body = await page.locator('.course-sidebar-body').boundingBox();
+      return !!report && !!body && report.y >= body.y && report.y < body.y + body.height;
+    })
+    .toBe(true);
   await page.getByRole('button', { name: 'Zapisz i przejdź dalej', exact: true }).click();
   await saved(page);
   await page.reload();
