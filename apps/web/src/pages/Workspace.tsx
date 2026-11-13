@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   Code2,
+  Database,
   MousePointer2,
   Download,
   File,
@@ -38,6 +39,7 @@ import type {
 } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
+import { DatabaseRunner } from '../components/DatabaseRunner';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
 import { InspectorOverlay, PageInspector } from '../components/PageInspector';
@@ -107,6 +109,9 @@ function TaskPdfPanel({
   return <PdfSheet task={task} requestedPage={requestedPage} onPageChange={onPageChange} />;
 }
 
+const usesDatabase = (task: PublicTask) =>
+  task.technologies.some((technology) => technology === 'SQL' || technology === 'PHP');
+
 export function Workspace() {
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
@@ -125,7 +130,9 @@ export function Workspace() {
     [editorReveal, setEditorReveal] = useState<EditorReveal>(),
     [newPath, setNewPath] = useState(''),
     [adding, setAdding] = useState(false),
-    [tab, setTabState] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study'>('code'),
+    [tab, setTabState] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study' | 'database'>(
+      'code',
+    ),
     [showSheet, setShowSheet] = useState(false),
     [sheetPage, setSheetPageState] = useState(1);
   const [previewEntry, setPreviewEntryState] = useState(''),
@@ -213,6 +220,20 @@ export function Workspace() {
     },
     [remember, setParams],
   );
+  // The database view is a tool, not a place in the paper: it is reachable by URL but is
+  // not stored as the project's last view, so older backups stay compatible.
+  const openDatabase = () => {
+    setEditorReveal(undefined);
+    setTabState('database');
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set('widok', 'baza');
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const setPreviewEntry = (path: string) => {
     setPreviewEntryState(path);
     remember({ previewEntry: path });
@@ -313,7 +334,9 @@ export function Workspace() {
           (active?.mode === 'nauka' ? 'study' : current.sourceCatalogId ? 'sheet' : 'code');
         if (active?.mode === 'egzamin' && !active.submittedAt && initialView === 'study')
           initialView = 'sheet';
-        setTabState(initialView);
+        setTabState(
+          requestedView === 'baza' && active && usesDatabase(current) ? 'database' : initialView,
+        );
         setAttempt(active ?? null);
         setMode(
           stored?.mode ??
@@ -904,7 +927,7 @@ export function Workspace() {
                       : {
                           ...latest,
                           workspace: {
-                            view: tab,
+                            view: tab === 'database' ? 'code' : tab,
                             activeFile: file.path,
                             previewEntry,
                             ...latest.workspace,
@@ -1276,6 +1299,12 @@ export function Workspace() {
               <Code2 size={17} />
               Projekt
             </button>
+            {usesDatabase(task) && (
+              <button role="tab" aria-selected={tab === 'database'} onClick={openDatabase}>
+                <Database size={17} />
+                Baza i SQL
+              </button>
+            )}
             {task.sourceCatalogId && (
               <button
                 role="tab"
@@ -1336,6 +1365,23 @@ export function Workspace() {
                 }}
               />
             </Suspense>
+          )}
+          {tab === 'database' && store && (
+            <DatabaseRunner
+              store={store}
+              files={attempt.files ?? []}
+              available={Boolean(data?.features.runsAvailable)}
+              readOnly={closed}
+              onAddFile={(added) =>
+                update((latest) => ({
+                  ...latest,
+                  files: [
+                    ...(latest.files ?? []).filter((item) => item.path !== added.path),
+                    added,
+                  ],
+                }))
+              }
+            />
           )}
           {(tab === 'code' || tab === 'preview') && (
             <div className="project-workbench">

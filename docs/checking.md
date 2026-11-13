@@ -65,7 +65,7 @@ The worker removes the container and temporary source tree in cleanup paths. It 
 
 ## Learner-initiated runs
 
-`runPlayground` in `packages/checker` executes a learner's own database and code. It is not a check: the result has no criterion, points or percentage, and nothing is compared with an expected answer. The interface does not use it yet.
+`runPlayground` in `packages/checker` executes a learner's own database and code. It is not a check: the result has no criterion, points or percentage, and nothing is compared with an expected answer. The workspace offers it as the "Baza i SQL" view for papers whose technologies include SQL or PHP; requesting a PHP page from the interface is a later step.
 
 One run is one throwaway container. The controller (`infra/sandbox/run.mjs`) creates the database under the name the learner chose, imports the learner's own `.sql` project file, executes their statements in order and optionally requests one PHP page with `GET` or `POST` fields. The platform does not ship examination dumps; tests use a dump authored for them. Runs keep no state: each one imports the file again.
 
@@ -86,6 +86,8 @@ A run needs a valid attempt secret for a practical paper whose technologies incl
 Runs are off by default. They require the `runtimeRunsEnabled` setting in addition to `checkingEnabled` and a live worker heartbeat; the bootstrap reports this as `features.runsAvailable`. Site-only initialization forces the setting off. When unavailable, the API answers 503 without creating a job.
 
 `SandboxRunJob` is a third job table sharing the queue limit, the single worker slot and the execution profile with both kinds of check. One run per attempt may be in flight; an identical repeated request recovers the existing job. Its input is stored in the job row rather than in the shared data directory, so the worker does not need the API's filesystem. Only text files are kept, at most 4 MiB in total; images are dropped because they are not needed to execute SQL or PHP. The worker clears the input when the run ends, successfully or not. Results expire after 15 minutes or on acknowledgment, and API maintenance removes expired rows while the worker is offline. Submissions are limited to 30 per hour for one address. Metrics record counts and durations only; statements, pages, dumps and results are never written to logs or events.
+
+In the interface the learner chooses the database name, picks or loads a `.sql` file into the local project and writes statements; the platform suggests neither the name nor a dump. A loaded file that is not valid UTF-8 is decoded as Windows-1250 and the learner is told. Only text files are sent. The form draft is kept in browser storage for that attempt; results are shown once and not stored. The view is addressable (`widok=baza`) but is not recorded as the project's last view, so existing backups keep their format. When `features.runsAvailable` is false the view explains the manual fallback and cannot start a run.
 
 ## Local and public profiles
 
