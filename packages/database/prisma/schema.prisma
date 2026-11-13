@@ -103,6 +103,32 @@ model StudyCheckJob {
   @@index([expiresAt])
 }
 
+/// One learner-initiated SQL/PHP run. The input lives in the row, not on a shared
+/// filesystem, so the worker may run on another host. It is cleared when the run ends.
+model SandboxRunJob {
+  id               String   @id @default(uuid())
+  secretHash       String
+  attemptId        String
+  taskId           String
+  taskVersion      Int
+  projectRevision  Int
+  inputHash        String
+  executionProfile String   @default("local-development")
+  status           String   @default("queued")
+  input            Json?
+  result           Json?
+  error            String?
+  leaseUntil       DateTime?
+  createdAt        DateTime @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  expiresAt        DateTime
+  @@unique([attemptId, inputHash], map: "SandboxRunJob_request_key")
+  @@index([executionProfile, status, createdAt])
+  @@index([attemptId, status])
+  @@index([expiresAt])
+}
+
 model Setting {
   id        String   @id
   value     Json

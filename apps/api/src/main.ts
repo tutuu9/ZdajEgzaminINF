@@ -18,6 +18,7 @@ import type { Response } from 'express';
 import { db } from '@zdaj/database';
 import { ApiController } from './controller.js';
 import { cleanupExpiredStudyChecks } from './study-checks.js';
+import { cleanupExpiredSandboxRuns } from './sandbox-runs.js';
 import { config, DAY_MS, projectRoot } from './config.js';
 
 @Module({ controllers: [ApiController] })
@@ -132,6 +133,7 @@ async function cleanup() {
   const now = new Date();
   await Promise.all([
     cleanupExpiredStudyChecks(now),
+    cleanupExpiredSandboxRuns(now),
     db.session.deleteMany({ where: { expiresAt: { lt: now } } }),
     db.rateLimit.deleteMany({ where: { expiresAt: { lt: now } } }),
     db.attemptTicket.deleteMany({ where: { expiresAt: { lt: now } } }),

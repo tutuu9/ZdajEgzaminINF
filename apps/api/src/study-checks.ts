@@ -124,7 +124,8 @@ export async function submitStudyCheck(attemptId: string, body: unknown, req: Re
       if (duplicate) return duplicate;
       const waiting =
         (await tx.checkJob.count({ where: { status: 'queued' } })) +
-        (await tx.studyCheckJob.count({ where: { status: 'queued' } }));
+        (await tx.studyCheckJob.count({ where: { status: 'queued' } })) +
+        (await tx.sandboxRunJob.count({ where: { status: 'queued' } }));
       if (waiting >= options.queueLimit)
         throw new HttpException(
           'Kolejka jest pełna. Kod pozostał zapisany lokalnie; spróbuj ponownie później.',

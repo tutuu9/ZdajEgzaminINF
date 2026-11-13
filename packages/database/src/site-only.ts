@@ -47,7 +47,7 @@ export function validateSiteEnvironment(env: NodeJS.ProcessEnv): void {
 export async function disableServerFeatures(db: Pick<PrismaClient, '$executeRaw'>): Promise<void> {
   const changed = await db.$executeRaw`
     UPDATE "Setting"
-    SET "value" = "value" || '{"aiEnabled":false,"checkingEnabled":false}'::jsonb,
+    SET "value" = "value" || '{"aiEnabled":false,"checkingEnabled":false,"runtimeRunsEnabled":false}'::jsonb,
         "updatedAt" = NOW()
     WHERE "id" = 'site'
   `;

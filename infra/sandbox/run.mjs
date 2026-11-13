@@ -310,6 +310,9 @@ try {
     ['/tmp/no-files', 0, 0o555],
   ]);
   const server = await startDatabase([
+    // Dumps often omit a table character set; Polish text must import either way.
+    '--character-set-server=utf8mb4',
+    '--collation-server=utf8mb4_unicode_ci',
     '--max-statement-time=5',
     '--local-infile=0',
     '--secure-file-priv=/tmp/no-files',
@@ -317,7 +320,7 @@ try {
     '--innodb-log-file-size=16M',
   ]);
   await sql(
-    `CREATE DATABASE ${quoteIdentifier(request.database)};
+    `CREATE DATABASE ${quoteIdentifier(request.database)} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'check_reader'@'localhost' IDENTIFIED BY '';
 GRANT SELECT ON ${quoteIdentifier(request.database.replaceAll('_', '\\_'))}.* TO 'check_reader'@'localhost';`,
   );

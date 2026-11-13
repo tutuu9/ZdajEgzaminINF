@@ -65,15 +65,27 @@ The worker removes the container and temporary source tree in cleanup paths. It 
 
 ## Learner-initiated runs
 
-`runPlayground` in `packages/checker` executes a learner's own database and code. It is not a check: the result has no criterion, points or percentage, and nothing is compared with an expected answer. It is not yet reachable from the API or the interface.
+`runPlayground` in `packages/checker` executes a learner's own database and code. It is not a check: the result has no criterion, points or percentage, and nothing is compared with an expected answer. The interface does not use it yet.
 
 One run is one throwaway container. The controller (`infra/sandbox/run.mjs`) creates the database under the name the learner chose, imports the learner's own `.sql` project file, executes their statements in order and optionally requests one PHP page with `GET` or `POST` fields. The platform does not ship examination dumps; tests use a dump authored for them. Runs keep no state: each one imports the file again.
 
-Chromium is not started. Statements go through a protocol connector rather than the command-line client, so client commands are ordinary syntax errors; the dump goes through the confined client described above. A failed import stops the run and reports MariaDB's message. A learner mistake — a syntax error, a wrong database name in PHP, a page that never finishes, a server the learner shut down — is reported as the outcome of that run, not as an infrastructure failure.
+The database and server default to `utf8mb4`, so a dump without an explicit table character set still imports Polish text. Chromium is not started. Statements go through a protocol connector rather than the command-line client, so client commands are ordinary syntax errors; the dump goes through the confined client described above. A failed import stops the run and reports MariaDB's message. A learner mistake — a syntax error, a wrong database name in PHP, a page that never finishes, a server the learner shut down — is reported as the outcome of that run, not as an infrastructure failure.
 
 Bounds: dump 2 MiB; 30 statements of 8192 characters, 15 seconds in total and five seconds each; 200 rows, 50 columns and 4096 characters per cell; one page request of ten seconds with at most three same-origin redirects and 512 KiB of output; `LOAD_FILE`, `INTO OUTFILE` and `LOCAL INFILE` have no usable target. The container has 768 MiB of memory, one CPU, 128 processes, a 384 MiB scratch area and a 60-second host deadline, with the same network, capability and read-only settings as a check. The table summary after an import is read through the `SELECT`-only account, restricted to the learner's database.
 
 Measured on Docker Desktop with runc: about 1.4 seconds for an ordinary run and roughly 155 MiB sampled peak. That is a development measurement, not a figure for the public host or for gVisor.
+
+The API exposes runs through three endpoints:
+
+- `POST /api/v1/attempts/:id/runs` accepts `{token, projectRevision, run, files}` and returns `{id, token, status}`. `run` is `{database, dumpPath, sql, php}`.
+- `GET /api/v1/runs/:id` requires `X-Run-Token` and returns the status and, when ready, the result.
+- `POST /api/v1/runs/:id/ack` with `{token}` deletes a completed or failed run after local receipt.
+
+A run needs a valid attempt secret for a practical paper whose technologies include SQL or PHP. It is allowed in every mode, including an unfinished `Egzamin`: it stands in for the local server of an examination station and reveals neither teaching material nor an assessment. It never submits or closes the attempt.
+
+Runs are off by default. They require the `runtimeRunsEnabled` setting in addition to `checkingEnabled` and a live worker heartbeat; the bootstrap reports this as `features.runsAvailable`. Site-only initialization forces the setting off. When unavailable, the API answers 503 without creating a job.
+
+`SandboxRunJob` is a third job table sharing the queue limit, the single worker slot and the execution profile with both kinds of check. One run per attempt may be in flight; an identical repeated request recovers the existing job. Its input is stored in the job row rather than in the shared data directory, so the worker does not need the API's filesystem. Only text files are kept, at most 4 MiB in total; images are dropped because they are not needed to execute SQL or PHP. The worker clears the input when the run ends, successfully or not. Results expire after 15 minutes or on acknowledgment, and API maintenance removes expired rows while the worker is offline. Submissions are limited to 30 per hour for one address. Metrics record counts and durations only; statements, pages, dumps and results are never written to logs or events.
 
 ## Local and public profiles
 

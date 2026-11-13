@@ -290,7 +290,8 @@ export async function submitCheck(
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(74620401)::text`;
       const count =
         (await tx.checkJob.count({ where: { status: 'queued' } })) +
-        (await tx.studyCheckJob.count({ where: { status: 'queued' } }));
+        (await tx.studyCheckJob.count({ where: { status: 'queued' } })) +
+        (await tx.sandboxRunJob.count({ where: { status: 'queued' } }));
       if (count >= options.queueLimit)
         throw new HttpException(
           'Kolejka jest pełna. Spróbuj ponownie za chwilę; pliki pozostają na urządzeniu.',

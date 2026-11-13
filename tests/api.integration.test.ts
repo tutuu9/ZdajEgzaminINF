@@ -10,6 +10,7 @@ import type {
   Bootstrap,
   CheckResponse,
   ExamStudyResponse,
+  SandboxRunResponse,
   StudyCheckResponse,
   TheoryResult,
   TheoryTicket,
@@ -87,6 +88,22 @@ async function studyPractice(mode: 'nauka' | 'trening' | 'egzamin' = 'nauka') {
   const row = await db.attemptTicket.create({
     data: {
       taskId: 'inf03-01-25-01-sg',
+      taskVersion: 1,
+      mode,
+      level: 'beginner',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      deadlineAt: mode === 'egzamin' ? new Date(Date.now() + 150 * 60_000) : null,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    },
+  });
+  return { id: row.id, token };
+}
+
+async function practice(taskId: string, mode: 'nauka' | 'trening' | 'egzamin' = 'nauka') {
+  const token = randomBytes(32).toString('base64url');
+  const row = await db.attemptTicket.create({
+    data: {
+      taskId,
       taskVersion: 1,
       mode,
       level: 'beginner',
@@ -240,11 +257,17 @@ describe('real Nest API and PostgreSQL boundaries', () => {
       await disableServerFeatures(db);
       await disableServerFeatures(db);
       const updated = await db.setting.findUniqueOrThrow({ where: { id: 'site' } });
-      expect(updated.value).toEqual({ ...configured, aiEnabled: false, checkingEnabled: false });
+      expect(updated.value).toEqual({
+        ...configured,
+        aiEnabled: false,
+        checkingEnabled: false,
+        runtimeRunsEnabled: false,
+      });
       expect(await db.aiBudget.findUniqueOrThrow({ where: { id: 'site' } })).toEqual(budget);
       expect((await learner.request<Bootstrap>('/bootstrap')).data.features).toEqual({
         aiAvailable: false,
         checkingAvailable: false,
+        runsAvailable: false,
       });
       await db.setting.delete({ where: { id: 'site' } });
       await expect(disableServerFeatures(db)).rejects.toThrow('settings are missing');
@@ -554,6 +577,249 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     expect(await db.studyCheckJob.findUnique({ where: { id } })).toBeNull();
     expect(await readFile(inputPath).catch(() => null)).toBeNull();
   });
+  it('queues a learner SQL/PHP run in an open exam, keeps its input in the row and returns the result once', async () => {
+    await enableStudyWorker();
+    await owner.request('/admin/settings', 'PATCH', { runtimeRunsEnabled: true });
+    await db.sandboxRunJob.deleteMany();
+    try {
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features.runsAvailable).toBe(
+        true,
+      );
+      const ticket = await practice('inf03-01-24-06-sg', 'egzamin');
+      const path = `/attempts/${ticket.id}/runs`;
+      const request = {
+        token: ticket.token,
+        projectRevision: 4,
+        run: {
+          database: 'motory',
+          dumpPath: 'baza.sql',
+          sql: 'SELECT 1;',
+          php: { entry: 'motor.php', method: 'GET', fields: [['id', '2']] },
+          ignored: true,
+        },
+        files: [
+          { path: 'baza.sql', content: 'CREATE TABLE a (id INT);' },
+          { path: 'motor.php', content: '<?php echo 1;' },
+          { path: 'motor.png', content: 'iVBORw0KGgo=', encoding: 'base64' },
+        ],
+      };
+      type Queued = { id: string; token: string; status: string };
+      const responses = await Promise.all([
+        learner.request<Queued>(path, 'POST', request),
+        learner.request<Queued>(path, 'POST', request),
+      ]);
+      expect(responses.map((response) => response.status)).toEqual([201, 201]);
+      expect(responses[0]!.data).toEqual(responses[1]!.data);
+      const job = responses[0]!.data;
+      expect(job.status).toBe('queued');
+      expect(await db.sandboxRunJob.count({ where: { attemptId: ticket.id } })).toBe(1);
+      // Running the code neither submits nor closes the exam attempt.
+      expect(
+        (await db.attemptTicket.findUniqueOrThrow({ where: { id: ticket.id } })).submittedAt,
+      ).toBeNull();
+      const row = await db.sandboxRunJob.findUniqueOrThrow({ where: { id: job.id } });
+      // Images are dropped and unknown request fields do not reach the worker.
+      expect(row.input).toEqual({
+        run: {
+          database: 'motory',
+          dumpPath: 'baza.sql',
+          sql: 'SELECT 1;',
+          php: { entry: 'motor.php', method: 'GET', fields: [['id', '2']] },
+        },
+        files: [
+          { path: 'baza.sql', content: 'CREATE TABLE a (id INT);', encoding: 'utf8' },
+          { path: 'motor.php', content: '<?php echo 1;', encoding: 'utf8' },
+        ],
+      });
+      expect(row.secretHash).not.toContain(job.token);
+      expect(await readdir(resolve(dataDir, 'jobs', job.id)).catch(() => null)).toBeNull();
+
+      expect((await learner.request(`/runs/${job.id}`)).status).toBe(404);
+      expect(
+        (await learner.request(`/runs/${job.id}`, 'GET', undefined, { 'X-Run-Token': 'wrong' }))
+          .status,
+      ).toBe(404);
+      expect(
+        (await learner.request(`/runs/${job.id}/ack`, 'POST', { token: job.token })).status,
+      ).toBe(409);
+      expect(
+        (
+          await learner.request(path, 'POST', {
+            ...request,
+            run: { ...request.run, sql: 'SELECT 2;' },
+          })
+        ).status,
+      ).toBe(409);
+
+      const { claimJob } = await import('../apps/worker/src/queue.js');
+      const claims = await Promise.all([claimJob(db), claimJob(db)]);
+      expect(claims.filter(Boolean)).toHaveLength(1);
+      expect(claims.find(Boolean)).toMatchObject({ id: job.id, kind: 'run', status: 'running' });
+      const result = {
+        database: 'motory',
+        import: { ok: true, tables: [{ name: 'a', rows: 0 }] },
+        statements: [{ index: 0, text: 'SELECT 1', status: 'rows', columns: ['1'], rows: [['1']] }],
+        omittedStatements: 0,
+        php: null,
+        serverStopped: false,
+        runtimeMs: 1400,
+        disclaimer: 'To wynik uruchomienia, nie ocena CKE.',
+      };
+      const { Prisma } = await import('@prisma/client');
+      await db.sandboxRunJob.update({
+        where: { id: job.id },
+        data: { status: 'completed', result, input: Prisma.DbNull, leaseUntil: null },
+      });
+      const ready = await learner.request<SandboxRunResponse>(`/runs/${job.id}`, 'GET', undefined, {
+        'X-Run-Token': job.token,
+      });
+      expect(ready.data).toEqual({ id: job.id, status: 'completed', result });
+      expect(
+        (await learner.request(`/runs/${job.id}/ack`, 'POST', { token: job.token })).status,
+      ).toBe(201);
+      expect(await db.sandboxRunJob.findUnique({ where: { id: job.id } })).toBeNull();
+    } finally {
+      await db.sandboxRunJob.deleteMany();
+      await owner.request('/admin/settings', 'PATCH', { runtimeRunsEnabled: false });
+    }
+  });
+
+  it('stores a worker run result and clears the learner input in every outcome', async () => {
+    const { executeRunJob, RUN_FAILED } = await import('../apps/worker/src/run-job.js');
+    const options = { dataDir, profile: 'local-development' as const };
+    const input = {
+      run: { database: 'motory', dumpPath: null, sql: 'SELECT 1;', php: null },
+      files: [{ path: 'kwerendy.txt', content: 'SELECT 1;' }],
+    };
+    const create = () =>
+      db.sandboxRunJob.create({
+        data: {
+          secretHash: 'test',
+          attemptId: randomUUID(),
+          taskId: 'inf03-01-24-06-sg',
+          taskVersion: 1,
+          projectRevision: 0,
+          inputHash: randomUUID(),
+          status: 'running',
+          leaseUntil: new Date(Date.now() + 240_000),
+          input,
+          expiresAt: new Date(Date.now() + 900_000),
+        },
+      });
+    try {
+      const completed = await create();
+      const seen: unknown[] = [];
+      const result = { database: 'motory', statements: [], runtimeMs: 1234 };
+      expect(
+        await executeRunJob(db, completed, options, async (run, files, runner) => {
+          seen.push(run, files, runner.jobId);
+          return result as never;
+        }),
+      ).toBe(1234);
+      expect(seen).toEqual([input.run, input.files, completed.id]);
+      expect(
+        await db.sandboxRunJob.findUniqueOrThrow({ where: { id: completed.id } }),
+      ).toMatchObject({ status: 'completed', result, input: null, leaseUntil: null, error: null });
+
+      const failed = await create();
+      expect(
+        await executeRunJob(db, failed, options, async () => {
+          throw new Error('SELECT secret_from_learner_code');
+        }),
+      ).toBeNull();
+      const row = await db.sandboxRunJob.findUniqueOrThrow({ where: { id: failed.id } });
+      expect(row).toMatchObject({ status: 'failed', error: RUN_FAILED, input: null, result: null });
+      expect(JSON.stringify(row)).not.toContain('secret_from_learner_code');
+
+      const empty = await create();
+      await db.sandboxRunJob.update({ where: { id: empty.id }, data: { input: { files: 'x' } } });
+      expect(
+        await executeRunJob(
+          db,
+          await db.sandboxRunJob.findUniqueOrThrow({ where: { id: empty.id } }),
+          options,
+          async () => {
+            throw new Error('The runner must not start without valid input.');
+          },
+        ),
+      ).toBeNull();
+    } finally {
+      await db.sandboxRunJob.deleteMany();
+    }
+  });
+
+  it('refuses learner runs when disabled, unauthorised, out of scope, oversized or over capacity', async () => {
+    await enableStudyWorker();
+    await db.sandboxRunJob.deleteMany();
+    const ticket = await practice('inf03-01-24-06-sg');
+    const path = `/attempts/${ticket.id}/runs`;
+    const files = [{ path: 'baza.sql', content: 'CREATE TABLE a (id INT);' }];
+    const request = {
+      token: ticket.token,
+      projectRevision: 0,
+      run: { database: 'motory', dumpPath: 'baza.sql', sql: '', php: null },
+      files,
+    };
+    const submit = (override: object = {}, target = path) =>
+      learner.request(target, 'POST', { ...request, ...override }).then(({ status }) => status);
+    try {
+      // The flag is off by default: nothing is queued and the interface is told so.
+      expect(await submit()).toBe(503);
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.features.runsAvailable).toBe(
+        false,
+      );
+      await owner.request('/admin/settings', 'PATCH', {
+        runtimeRunsEnabled: true,
+        checkingEnabled: false,
+      });
+      expect(await submit()).toBe(503);
+      expect(await db.sandboxRunJob.count()).toBe(0);
+      await owner.request('/admin/settings', 'PATCH', { checkingEnabled: true });
+
+      expect(await submit({ token: 'x'.repeat(32) })).toBe(404);
+      const noDatabasePart = await practice('inf03-01-24-01-sg');
+      expect(
+        await submit({ token: noDatabasePart.token }, `/attempts/${noDatabasePart.id}/runs`),
+      ).toBe(400);
+      for (const run of [
+        { ...request.run, database: 'mysql' },
+        { ...request.run, database: 'a`; DROP DATABASE mysql; --' },
+        { ...request.run, dumpPath: 'inna.sql' },
+        { ...request.run, dumpPath: '../baza.sql' },
+        { ...request.run, php: { entry: 'brak.php', method: 'GET', fields: [] } },
+        { database: 'motory', dumpPath: null, sql: '', php: null },
+      ])
+        expect(await submit({ run }), JSON.stringify(run)).toBe(400);
+      expect(
+        await submit({ files: [{ path: 'baza.sql', content: 'x'.repeat(2 * 1024 * 1024 + 1) }] }),
+      ).toBe(400);
+      expect(
+        await submit({
+          files: [...files, { path: 'dane.txt', content: 'x'.repeat(4 * 1024 * 1024 + 1) }],
+        }),
+      ).toBe(413);
+      expect(await db.sandboxRunJob.count()).toBe(0);
+
+      await owner.request('/admin/settings', 'PATCH', { queueLimit: 1 });
+      expect(await submit()).toBe(201);
+      const other = await practice('inf03-03-24-06-sg');
+      expect(await submit({ token: other.token }, `/attempts/${other.id}/runs`)).toBe(429);
+      expect(await db.sandboxRunJob.count()).toBe(1);
+
+      await db.sandboxRunJob.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } });
+      const { cleanupExpiredSandboxRuns } = await import('../apps/api/src/sandbox-runs.js');
+      await cleanupExpiredSandboxRuns();
+      expect(await db.sandboxRunJob.count()).toBe(0);
+    } finally {
+      await db.sandboxRunJob.deleteMany();
+      await owner.request('/admin/settings', 'PATCH', {
+        runtimeRunsEnabled: false,
+        checkingEnabled: true,
+        queueLimit: 20,
+      });
+    }
+  });
+
   it('offers only reviewed CKE practice and theory while withholding authored exercises and private checks', async () => {
     const { status, data } = await learner.request<Bootstrap>('/bootstrap');
     expect(status).toBe(200);

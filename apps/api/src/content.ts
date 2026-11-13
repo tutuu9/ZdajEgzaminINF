@@ -111,6 +111,8 @@ export async function bootstrap(): Promise<Bootstrap> {
     features: {
       aiAvailable: options.aiEnabled && Boolean(config.deepseekKey),
       checkingAvailable: options.checkingEnabled && (await workerAvailable()),
+      runsAvailable:
+        options.checkingEnabled && options.runtimeRunsEnabled && (await workerAvailable()),
     },
   };
 }

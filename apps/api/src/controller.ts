@@ -41,6 +41,7 @@ import { createTaskSheet } from './task-pdf.js';
 import { originalExamSheet } from './exam-pdf.js';
 import { revealStudyGuide } from './study.js';
 import { acknowledgeStudyCheck, getStudyCheck, submitStudyCheck } from './study-checks.js';
+import { acknowledgeSandboxRun, getSandboxRun, submitSandboxRun } from './sandbox-runs.js';
 import {
   contentRows,
   createDraft,
@@ -152,6 +153,20 @@ export class ApiController {
   @Post('study/checks/:id/ack') studyCheckAck(@Param('id') id: string, @Body() body: unknown) {
     const value = parse(z.object({ token: z.string().max(100) }).strict(), body);
     return acknowledgeStudyCheck(id, value.token);
+  }
+  @Post('attempts/:id/runs') async sandboxRun(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    return submitSandboxRun(id, body, req);
+  }
+  @Get('runs/:id') sandboxRunResult(@Param('id') id: string, @Req() req: Request) {
+    return getSandboxRun(id, req.get('x-run-token') ?? '');
+  }
+  @Post('runs/:id/ack') sandboxRunAck(@Param('id') id: string, @Body() body: unknown) {
+    const value = parse(z.object({ token: z.string().max(100) }).strict(), body);
+    return acknowledgeSandboxRun(id, value.token);
   }
   @Post('theory/start') async theoryStart(@Body() body: unknown, @Req() req: Request) {
     await protectMutation(req);

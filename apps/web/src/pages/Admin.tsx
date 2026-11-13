@@ -723,6 +723,20 @@ function Overview() {
               onChange={(e) => setSettings({ ...settings, checkingEnabled: e.target.checked })}
             />
           </label>
+          <label>
+            <div>
+              <strong>Uruchamianie SQL i PHP</strong>
+              <span>
+                Uczeń uruchamia własną bazę i stronę w izolowanym środowisku. Wymaga włączonego
+                sprawdzania i działającego procesu wykonawczego.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.runtimeRunsEnabled ?? false}
+              onChange={(e) => setSettings({ ...settings, runtimeRunsEnabled: e.target.checked })}
+            />
+          </label>
         </div>
         <div className="settings-grid">
           <label className="field">

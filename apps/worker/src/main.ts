@@ -15,6 +15,7 @@ import { type TaskVersion } from '@zdaj/shared';
 import { allExamStudyGuides } from '@zdaj/content';
 import { Prisma } from '@prisma/client';
 import { claimJob } from './queue.js';
+import { executeRunJob } from './run-job.js';
 
 config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
 const dataDir = path.resolve(process.env.DATA_DIR ?? 'data');
@@ -25,7 +26,7 @@ const options: RunnerOptions = {
   dataDir,
   hostDataDir: process.env.SANDBOX_HOST_DATA_DIR,
   profile: profile as RunnerOptions['profile'],
-  image: process.env.SANDBOX_IMAGE ?? 'zdaj-inf-sandbox:0.3.0',
+  image: process.env.SANDBOX_IMAGE ?? 'zdaj-inf-sandbox:0.3.1',
   publicReady: process.env.PUBLIC_SANDBOX_VERIFIED === 'true',
 };
 let stopping = false;
@@ -86,6 +87,24 @@ async function maintain() {
     if (job.kind === 'study') await db.studyCheckJob.update(update);
     else await db.checkJob.update(update);
   }
+  for (const job of await db.sandboxRunJob.findMany({ where: staleWhere, select: { id: true } })) {
+    const containers = await command(['ps', '-aq', '--filter', `label=zdaj.job=${job.id}`]).catch(
+      () => null,
+    );
+    for (const id of containers?.stdout.trim().split(/\s+/).filter(Boolean) ?? [])
+      if (/^[a-f\d]{12,64}$/.test(id)) await command(['rm', '-f', id]).catch(() => undefined);
+    await db.sandboxRunJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'failed',
+        error:
+          'Uruchomienie zostało przerwane. Pliki pozostały lokalnie; uruchom projekt ponownie.',
+        input: Prisma.DbNull,
+        finishedAt: now,
+        leaseUntil: null,
+      },
+    });
+  }
   const expiredWhere = { expiresAt: { lt: now }, status: { not: 'running' } };
   const expired = [
     ...(await db.checkJob.findMany({ where: expiredWhere })).map((job) => ({
@@ -102,6 +121,7 @@ async function maintain() {
     if (job.kind === 'study') await db.studyCheckJob.deleteMany({ where: { id: job.id } });
     else await db.checkJob.deleteMany({ where: { id: job.id } });
   }
+  await db.sandboxRunJob.deleteMany({ where: expiredWhere });
   const sandboxRoot = path.resolve(dataDir, 'sandbox');
   for (const entry of await readdir(sandboxRoot, { withFileTypes: true }).catch(() => [])) {
     if (!entry.isDirectory() || !/^[-a-f\d]{36}$/i.test(entry.name)) continue;
@@ -115,7 +135,8 @@ async function maintain() {
       const activeWhere = { id: marker.jobId, status: 'running', leaseUntil: { gt: new Date() } };
       const active =
         (await db.checkJob.findFirst({ where: activeWhere })) ??
-        (await db.studyCheckJob.findFirst({ where: activeWhere }));
+        (await db.studyCheckJob.findFirst({ where: activeWhere })) ??
+        (await db.sandboxRunJob.findFirst({ where: activeWhere }));
       if (active) continue;
     }
     // Names and paths were resolved and checked above; only this worker's expired scratch directory is removed.
@@ -128,6 +149,17 @@ async function maintain() {
     db.rateLimit.deleteMany({ where: { expiresAt: { lt: now } } }),
     db.event.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
   ]);
+}
+async function executeRun(job: { id: string; input: unknown }) {
+  const runtimeMs = await executeRunJob(db, job, options);
+  if (runtimeMs === null) {
+    await metric('runs.failed');
+    console.error('Run failed; no learner code or data was logged.');
+    return;
+  }
+  await metric('runs.completed');
+  await metric('runs.durationMs', runtimeMs);
+  console.log('Run completed.');
 }
 await mkdir(dataDir, { recursive: true });
 await checkRuntime(options);
@@ -156,6 +188,10 @@ while (!stopping) {
     const job = await claimJob(db, profile);
     if (!job) {
       await pause(1000);
+      continue;
+    }
+    if (job.kind === 'run') {
+      await executeRun(job);
       continue;
     }
     try {

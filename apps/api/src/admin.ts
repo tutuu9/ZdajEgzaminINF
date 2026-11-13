@@ -77,6 +77,7 @@ const settingsSchema = z
   .object({
     aiEnabled: z.boolean(),
     checkingEnabled: z.boolean(),
+    runtimeRunsEnabled: z.boolean(),
     aiBudgetUsd: z.number().finite().min(0).max(1000),
     aiDailyLimit: z.number().int().min(1).max(100),
     aiInputTokenLimit: z.number().int().min(1000).max(12000),
