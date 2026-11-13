@@ -21,7 +21,7 @@
     "test": "vitest run",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm test",
     "test:api": "vitest run --config vitest.integration.config.ts tests/api.integration.test.ts tests/faq.integration.test.ts",
-    "test:checker": "vitest run --config vitest.integration.config.ts tests/checker.integration.test.ts tests/isolation.integration.test.ts tests/study-checker.integration.test.ts tests/new-study-runtime.integration.test.ts",
+    "test:checker": "vitest run --config vitest.integration.config.ts tests/checker.integration.test.ts tests/isolation.integration.test.ts tests/study-checker.integration.test.ts tests/new-study-runtime.integration.test.ts tests/sandbox-run.integration.test.ts",
     "test:integration": "npm run test:api && npm run test:checker",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate --config packages/database/prisma.config.ts",
@@ -29,7 +29,7 @@
     "db:seed": "tsx packages/database/src/seed.ts",
     "site:initialize": "tsx packages/database/src/initialize-site.ts",
     "admin:create": "tsx apps/api/src/create-admin.ts",
-    "sandbox:build": "docker build -t zdaj-inf-sandbox:0.2.0 infra/sandbox",
+    "sandbox:build": "docker build -t zdaj-inf-sandbox:0.3.0 infra/sandbox",
     "worker": "tsx apps/worker/src/main.ts"
   },
   "devDependencies": {

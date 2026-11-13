@@ -96,7 +96,7 @@ export async function checkRuntime(options: RunnerOptions): Promise<void> {
       );
   }
   const image = await command(
-    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.2.0', '--format', '{{.Id}}'],
+    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.3.0', '--format', '{{.Id}}'],
     30000,
   );
   if (image.code !== 0) throw new Error('Brak obrazu środowiska. Uruchom npm run sandbox:build.');
@@ -131,13 +131,23 @@ export function makeReport(
       'To wynik ćwiczenia, nie oficjalna ocena CKE. Niezweryfikowane kryteria nie są zaliczane ani uznawane za błędy.',
   };
 }
-export async function runProject(
-  task: TaskVersion,
-  input: ProjectFile[],
+export interface SandboxLimits {
+  memory: string;
+  pids: number;
+  tmpBytes: number;
+  timeoutMs: number;
+}
+/**
+ * Starts one fixed sandbox container over validated project files and returns the
+ * controller's standard output. Isolation flags are not configurable by callers.
+ */
+export async function runSandbox(
+  files: ProjectFile[],
+  configuration: string,
   options: RunnerOptions,
-): Promise<CheckReport> {
-  validateTaskChecks(task);
-  const files = validateProjectFiles(input);
+  limits: SandboxLimits,
+  failure: string,
+): Promise<{ stdout: string; runtimeMs: number }> {
   await checkRuntime(options);
   const started = Date.now();
   const runId = randomUUID();
@@ -156,15 +166,6 @@ export async function runProject(
       await mkdir(path.dirname(destination), { recursive: true });
       await writeFile(destination, fileBuffer(file));
     }
-    const seed = task.starterFiles.find((file) => file.path === 'baza.sql')?.content ?? '';
-    // Expected results travel on the controller's standard input, not through a mount:
-    // a mounted file would be readable by the learner's PHP process.
-    const configuration = JSON.stringify({
-      taskId: task.id,
-      runtimeProfile: task.runtimeProfile,
-      criteria: task.criteria,
-      seed,
-    });
     const runtime = options.profile === 'public-sandbox' ? 'runsc' : 'runc';
     const hostPath = (localPath: string) =>
       options.hostDataDir
@@ -198,17 +199,17 @@ export async function runProject(
       '--security-opt',
       'no-new-privileges=true',
       '--memory',
-      options.memory ?? '2g',
+      limits.memory,
       '--memory-swap',
-      options.memory ?? '2g',
+      limits.memory,
       '--cpus',
       '1',
       '--pids-limit',
-      '256',
+      String(limits.pids),
       '--ulimit',
       'nofile=1024:1024',
       '--tmpfs',
-      '/tmp:rw,nosuid,nodev,size=536870912',
+      `/tmp:rw,nosuid,nodev,size=${limits.tmpBytes}`,
       '--tmpfs',
       '/run:rw,nosuid,nodev,size=33554432',
       '--shm-size',
@@ -216,7 +217,7 @@ export async function runProject(
       '--mount',
       `type=bind,source=${hostPath(source)},target=/project,readonly`,
       ...(options.diagnostics ? ['--env', 'CHECKER_DEBUG=1'] : []),
-      options.image ?? 'zdaj-inf-sandbox:0.2.0',
+      options.image ?? 'zdaj-inf-sandbox:0.3.0',
     ];
     let sampling = false;
     const sampler = options.onResourceSample
@@ -248,17 +249,47 @@ export async function runProject(
       : undefined;
     let output: CommandResult;
     try {
-      output = await command(args, options.timeoutMs ?? 120000, undefined, configuration);
+      output = await command(args, limits.timeoutMs, undefined, configuration);
     } finally {
       if (sampler) clearInterval(sampler);
     }
-    if (output.code !== 0)
-      throw new Error(
-        options.diagnostics
-          ? output.stderr
-          : 'Środowisko nie ukończyło sprawdzania. Rozwiązanie nie zostało ocenione.',
-      );
-    const payload = JSON.parse(output.stdout) as { results: CriterionResult[] };
+    if (output.code !== 0) throw new Error(options.diagnostics ? output.stderr : failure);
+    return { stdout: output.stdout, runtimeMs: Date.now() - started };
+  } finally {
+    await command(['rm', '--force', containerName], 10000).catch(() => undefined);
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+export async function runProject(
+  task: TaskVersion,
+  input: ProjectFile[],
+  options: RunnerOptions,
+): Promise<CheckReport> {
+  validateTaskChecks(task);
+  const files = validateProjectFiles(input);
+  const seed = task.starterFiles.find((file) => file.path === 'baza.sql')?.content ?? '';
+  // Expected results travel on the controller's standard input, not through a mount:
+  // a mounted file would be readable by the learner's PHP process.
+  const configuration = JSON.stringify({
+    taskId: task.id,
+    runtimeProfile: task.runtimeProfile,
+    criteria: task.criteria,
+    seed,
+  });
+  {
+    const { stdout, runtimeMs } = await runSandbox(
+      files,
+      configuration,
+      options,
+      {
+        memory: options.memory ?? '2g',
+        pids: 256,
+        tmpBytes: 536870912,
+        timeoutMs: options.timeoutMs ?? 120000,
+      },
+      'Środowisko nie ukończyło sprawdzania. Rozwiązanie nie zostało ocenione.',
+    );
+    const payload = JSON.parse(stdout) as { results: CriterionResult[] };
     if (!Array.isArray(payload.results) || payload.results.length !== task.criteria.length)
       throw new Error('Nieprawidłowy raport środowiska.');
     // Grade weights and method metadata always come from the published task, never from a submission.
@@ -277,10 +308,7 @@ export async function runProject(
         recommendation: String(result.recommendation).slice(0, 2000),
       };
     });
-    return makeReport(task, results, Date.now() - started);
-  } finally {
-    await command(['rm', '--force', containerName], 10000).catch(() => undefined);
-    await rm(directory, { recursive: true, force: true });
+    return makeReport(task, results, runtimeMs);
   }
 }
 export async function readProject(filePath: string): Promise<ProjectFile[]> {
