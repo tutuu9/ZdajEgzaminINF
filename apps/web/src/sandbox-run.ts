@@ -1,5 +1,7 @@
 import {
   MAX_RUN_DUMP_BYTES,
+  MAX_RUN_FIELDS,
+  MAX_RUN_FIELD_CHARACTERS,
   MAX_RUN_INPUT_BYTES,
   type ProjectFile,
   type SandboxRunResponse,
@@ -32,6 +34,22 @@ export const sqlFilePaths = (files: ProjectFile[]) =>
   files
     .filter((file) => /\.sql$/i.test(file.path) && (file.encoding ?? 'utf8') !== 'base64')
     .map((file) => file.path);
+
+export const pageFilePaths = (files: ProjectFile[]) =>
+  files
+    .filter((file) => /\.(?:php|html?)$/i.test(file.path) && (file.encoding ?? 'utf8') !== 'base64')
+    .map((file) => file.path);
+
+/** Form rows as the server accepts them: named, text only, at most the allowed number. */
+export function requestFields(rows: { name: string; value: string }[]): [string, string][] {
+  const named = rows.filter((row) => row.name.trim());
+  if (named.length > MAX_RUN_FIELDS)
+    throw new Error(`Formularz może zawierać najwyżej ${MAX_RUN_FIELDS} pól.`);
+  return named.map((row) => [
+    row.name.trim().slice(0, MAX_RUN_FIELD_CHARACTERS),
+    row.value.slice(0, MAX_RUN_FIELD_CHARACTERS),
+  ]);
+}
 
 /**
  * Reads a learner's `.sql` file. Older phpMyAdmin exports may not be UTF-8; those are

@@ -6,13 +6,13 @@ test('the database view keeps the learner dump locally and explains the manual f
 }) => {
   await page.goto('/praktyka/inf03-01-24-06-sg?tryb=trening');
   await page.getByRole('button', { name: 'Rozpocznij trening', exact: true }).click();
-  await page.getByRole('tab', { name: 'Baza i SQL', exact: true }).click();
+  await page.getByRole('tab', { name: 'Baza i PHP', exact: true }).click();
   await expect(page).toHaveURL(/widok=baza/);
   const runner = page.locator('.database-runner');
   await expect(
-    runner.getByRole('heading', { name: 'Baza danych i zapytania SQL', exact: true }),
+    runner.getByRole('heading', { name: 'Baza danych, SQL i PHP', exact: true }),
   ).toBeVisible();
-  await expect(runner).toContainText('Uruchamianie SQL na serwerze jest teraz niedostępne.');
+  await expect(runner).toContainText('Uruchamianie SQL i PHP na serwerze jest teraz niedostępne.');
   await expect(runner).toContainText('To uruchomienie, nie ocena.');
   const run = runner.getByRole('button', { name: 'Uruchom', exact: true });
   await expect(run).toBeDisabled();
