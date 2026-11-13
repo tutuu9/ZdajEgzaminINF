@@ -1,0 +1,165 @@
+.database-runner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  min-width: 0;
+}
+.database-runner header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 19px;
+}
+.database-runner header p {
+  margin-top: 8px;
+  max-width: 76ch;
+  color: var(--muted);
+}
+.database-runner .notice {
+  margin: 0;
+}
+.run-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+}
+.run-form small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.run-dump-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.run-dump-row select {
+  flex: 1;
+  min-width: 0;
+}
+.run-sql,
+.run-actions {
+  grid-column: 1 / -1;
+}
+.run-sql textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.run-status {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.run-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.run-import {
+  padding: 13px 15px;
+  border: 1px solid var(--positive-border);
+  border-radius: 12px;
+  background: var(--positive-bg);
+}
+.run-import p {
+  margin-top: 4px;
+}
+.run-statements {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.run-statement {
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  min-width: 0;
+}
+.run-statement-text {
+  display: block;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.run-table-scroll {
+  margin-top: 10px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.run-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.run-table-scroll th,
+.run-table-scroll td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.run-table-scroll th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-subtle);
+  font-weight: 600;
+}
+.run-table-scroll td em {
+  color: var(--muted);
+}
+.run-note {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.run-error {
+  margin-top: 8px;
+  padding: 11px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: 10px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+.run-error pre {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  font-size: 12.5px;
+}
+.run-disclaimer {
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .database-runner {
+    padding: 16px;
+  }
+  .run-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .run-dump-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
