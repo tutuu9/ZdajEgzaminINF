@@ -4,6 +4,8 @@ import {
   awaitRun,
   decodeDump,
   dumpFileName,
+  pageFilePaths,
+  requestFields,
   runInputFiles,
   sqlFilePaths,
 } from '../apps/web/src/sandbox-run';
@@ -38,6 +40,30 @@ describe('browser side of a learner run', () => {
     expect(() =>
       runInputFiles([{ path: 'dane.txt', content: 'ż'.repeat(2 * 1024 * 1024 + 1) }]),
     ).toThrow(/4 MiB/);
+  });
+
+  it('offers only text pages and sends named form fields in order', () => {
+    expect(
+      pageFilePaths([
+        { path: 'motor.php', content: '' },
+        { path: 'index.HTML', content: '' },
+        { path: 'styl.css', content: '' },
+        { path: 'zrzut.php', content: 'AAAA', encoding: 'base64' },
+      ]),
+    ).toEqual(['motor.php', 'index.HTML']);
+    expect(
+      requestFields([
+        { name: ' stan ', value: 'alarmowy' },
+        { name: '', value: 'pominięte' },
+        { name: 'stan', value: '' },
+      ]),
+    ).toEqual([
+      ['stan', 'alarmowy'],
+      ['stan', ''],
+    ]);
+    expect(() =>
+      requestFields(Array.from({ length: 21 }, (_, index) => ({ name: `p${index}`, value: '' }))),
+    ).toThrow(/najwyżej 20/);
   });
 
   it('reads UTF-8 dumps as they are and reports a Windows-1250 fallback', () => {

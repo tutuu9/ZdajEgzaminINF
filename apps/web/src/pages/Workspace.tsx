@@ -737,8 +737,11 @@ export function Workspace() {
             </ul>
             <Notice>
               Pracuj w edytorze przeglądarkowym lub w swojej IDE. Możesz przesłać pojedyncze pliki
-              albo archiwum ZIP. PHP i SQL uruchom we własnym środowisku. Zakończenie tej próby
-              zapisuje pracę bez automatycznej oceny.
+              albo archiwum ZIP.{' '}
+              {data?.features.runsAvailable && usesDatabase(task)
+                ? 'SQL i PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
+                : 'PHP i SQL uruchom we własnym środowisku.'}{' '}
+              Zakończenie tej próby zapisuje pracę bez automatycznej oceny.
             </Notice>
           </section>
           <aside className="start-panel">
@@ -997,7 +1000,9 @@ export function Workspace() {
           Podgląd pokazuje statyczny HTML/CSS/JavaScript, także z plików .php. Bloki PHP są
           pomijane; dane z bazy nie pojawią się tutaj.{' '}
           {manual
-            ? 'PHP i SQL uruchom we własnym środowisku zgodnie z oryginalnym arkuszem.'
+            ? data?.features.runsAvailable
+              ? 'PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
+              : 'PHP i SQL uruchom we własnym środowisku zgodnie z oryginalnym arkuszem.'
             : 'PHP i SQL zostaną uruchomione po oddaniu pracy. Wynik zobaczysz w raporcie.'}
         </Notice>
       )}
@@ -1302,7 +1307,7 @@ export function Workspace() {
             {usesDatabase(task) && (
               <button role="tab" aria-selected={tab === 'database'} onClick={openDatabase}>
                 <Database size={17} />
-                Baza i SQL
+                Baza i PHP
               </button>
             )}
             {task.sourceCatalogId && (

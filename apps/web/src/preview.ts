@@ -92,7 +92,13 @@ function resolvePath(from: string, to: string): string | null {
 export function createPreview(
   files: ProjectFile[],
   entry: string,
-  options: { scripts?: boolean; preserveResourceAttributes?: boolean; inspection?: boolean } = {},
+  options: {
+    scripts?: boolean;
+    preserveResourceAttributes?: boolean;
+    inspection?: boolean;
+    /** Markup already produced elsewhere, e.g. by a sandboxed PHP run, shown instead of the file. */
+    markup?: string;
+  } = {},
 ): { html: string; dispose: () => void; inspection?: InspectionIndex } {
   const map = new Map(files.map((file) => [file.path, file]));
   const source = map.get(entry);
@@ -124,7 +130,9 @@ export function createPreview(
       // strings from escaping that node when the browser reparses outerHTML.
       .replace(/<\/style/gi, '<\\/style');
   const { doc, root, head, body } = inertDocument(
-    prepared?.markup ?? (/\.php$/i.test(entry) ? staticPhpMarkup(source.content) : source.content),
+    options.markup ??
+      prepared?.markup ??
+      (/\.php$/i.test(entry) ? staticPhpMarkup(source.content) : source.content),
   );
   root
     .querySelectorAll(
