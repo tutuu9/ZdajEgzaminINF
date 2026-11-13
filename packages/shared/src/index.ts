@@ -441,6 +441,57 @@ export interface AdminDashboard {
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const MAX_EXTRACTED_BYTES = 50 * 1024 * 1024;
 export const MAX_PROJECT_FILES = 500;
+/** Limits of a learner-initiated SQL/PHP run. The sandbox enforces its own copies. */
+export const MAX_RUN_DUMP_BYTES = 2 * 1024 * 1024;
+export const MAX_RUN_SQL_CHARACTERS = 64 * 1024;
+export const MAX_RUN_FIELDS = 20;
+export const MAX_RUN_FIELD_CHARACTERS = 2000;
+/** One execution of the learner's own database and code. It carries no assessment. */
+export interface SandboxRunRequest {
+  /** Database created for this run; chosen by the learner as the paper instructs. */
+  database: string;
+  /** Project path of the learner's own `.sql` file, imported before anything else. */
+  dumpPath: string | null;
+  /** Statements executed in order after the import. */
+  sql: string;
+  /** One page request made after the statements. */
+  php: { entry: string; method: 'GET' | 'POST'; fields: [string, string][] } | null;
+}
+export interface SandboxRunStatement {
+  index: number;
+  text: string;
+  status: 'rows' | 'ok' | 'error' | 'skipped';
+  columns?: string[];
+  rows?: (string | null)[][];
+  rowCount?: number;
+  truncated?: boolean;
+  affectedRows?: number | null;
+  error?: { code: number | null; sqlState: string | null; message: string };
+}
+export interface SandboxRunResult {
+  database: string;
+  import: {
+    ok: boolean;
+    error?: string;
+    tables: { name: string; rows: number | null }[] | null;
+  } | null;
+  statements: SandboxRunStatement[];
+  omittedStatements: number;
+  php: {
+    status: number | null;
+    contentType: string | null;
+    html: string;
+    truncated: boolean;
+    finalPath: string | null;
+    redirect?: string;
+    error?: 'timeout' | 'unavailable';
+    messages: string;
+  } | null;
+  /** The learner's statements stopped the database server of this run. */
+  serverStopped: boolean;
+  runtimeMs: number;
+  disclaimer: string;
+}
 export const toPublicQuestion = (q: QuestionRevision): PublicQuestion => ({
   id: q.id,
   version: q.version,

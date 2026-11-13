@@ -20,6 +20,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 # Separate identity for the database client, which parses learner-supplied SQL text.
 RUN groupadd -g 10004 sqlclient && useradd -u 10004 -g 10004 -M sqlclient
-COPY check.mjs study-adapters.mjs chromium-wrapper ./
+COPY main.mjs runtime.mjs check.mjs run.mjs study-adapters.mjs chromium-wrapper ./
 RUN chmod 755 /opt/checker/chromium-wrapper
-ENTRYPOINT ["timeout", "--signal=KILL", "115s", "node", "/opt/checker/check.mjs"]
+ENTRYPOINT ["timeout", "--signal=KILL", "115s", "node", "/opt/checker/main.mjs"]
