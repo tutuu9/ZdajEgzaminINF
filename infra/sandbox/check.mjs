@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFile, mkdir, chown, stat } from 'node:fs/promises';
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import {
@@ -9,12 +10,26 @@ import {
   installChatRandomControl,
 } from './study-adapters.mjs';
 
-const task = JSON.parse(await readFile('/config/task.json', 'utf8'));
+// The checking specification arrives on the controller's standard input. It is
+// never written to a path that learner PHP, running as another user, can read.
+async function readConfiguration() {
+  let source = '';
+  for await (const chunk of process.stdin) {
+    source += chunk;
+    if (source.length > 8 * 1024 * 1024) throw new Error('Configuration is too large.');
+  }
+  return JSON.parse(source);
+}
+const task = await readConfiguration();
+const SQL_CLIENT = { uid: 10004, gid: 10004 };
+const SYSTEM_SCHEMAS = ['mysql', 'information_schema', 'performance_schema', 'sys'];
+const quoteIdentifier = (name) => '`' + name.replaceAll('`', '``') + '`';
 const processes = [];
 let browser;
 let diagnostics = 0;
 const services = [];
 class InfrastructureError extends Error {}
+class ClientCommandError extends Error {}
 function assertServices() {
   if (diagnostics > 1024 * 1024)
     throw new InfrastructureError('Przekroczono limit diagnostyki środowiska.');
@@ -81,22 +96,40 @@ async function sql(query, database, reader = false) {
         '--default-character-set=utf8mb4',
         '--batch',
         '--raw',
+        // Without this the client executes `\!`, `system` and `source` found in SQL text.
+        '--sandbox',
         reader ? '-ucheck_reader' : '-uroot',
         ...(database ? [database] : []),
       ],
       query,
+      // The client parses learner text, so it never runs with the controller's identity.
+      SQL_CLIENT,
     );
   } catch (error) {
     if (/ERROR (2002|2003|2006|2013)\b/.test(error.message))
       throw new InfrastructureError('Baza ćwiczenia jest niedostępna.');
+    if (/Not allowed in the sandbox mode/.test(error.message))
+      throw new ClientCommandError('Niedozwolone polecenie klienta bazy.');
     throw error;
   }
 }
 async function resetDatabase() {
   if (task.runtimeProfile !== 'php-mariadb') return;
   try {
+    // Learner PHP connects as root and may create databases under any name, so every
+    // non-system schema is removed. HEX keeps unusual names intact in the client output.
+    const listed = await sql(
+      `SELECT HEX(SCHEMA_NAME) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN (${SYSTEM_SCHEMAS.map((name) => `'${name}'`).join(', ')});`,
+    );
+    const names = listed
+      .split('\n')
+      .slice(1)
+      .filter((line) => /^(?:[0-9A-F]{2})+$/.test(line))
+      .map((line) => Buffer.from(line, 'hex').toString('utf8'));
     await sql(
-      'DROP DATABASE IF EXISTS biblioteka; DROP DATABASE IF EXISTS planszowki;\n' + task.seed,
+      names.map((name) => `DROP DATABASE IF EXISTS ${quoteIdentifier(name)};`).join('\n') +
+        '\n' +
+        task.seed,
     );
   } catch {
     throw new InfrastructureError('Nie udało się odtworzyć danych testowych.');
@@ -613,6 +646,7 @@ try {
         infrastructure = true;
       }
       const expected =
+        error instanceof ClientCommandError ||
         error.code === 'ENOENT' ||
         error.name === 'TimeoutError' ||
         /ERROR \d{4}/.test(error.message);
@@ -624,7 +658,9 @@ try {
           ? 'Błąd środowiska sprawdzania. Kryterium nie zostało ocenione.'
           : error.code === 'ENOENT'
             ? 'Brak sprawdzanego pliku.'
-            : 'Nie udało się wykonać wymaganej operacji na rozwiązaniu.',
+            : error instanceof ClientCommandError
+              ? 'Zapytanie zawiera polecenie klienta bazy (np. \\! lub system), a nie instrukcję SQL. Nie zostało wykonane.'
+              : 'Nie udało się wykonać wymaganej operacji na rozwiązaniu.',
         recommendation: infrastructure
           ? 'Ponów sprawdzanie w nowej próbie.'
           : criterion.description,

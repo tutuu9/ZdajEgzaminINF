@@ -1,5 +1,22 @@
 import type { TaskVersion } from '@zdaj/shared';
 import { validatePath } from './archive.js';
+const systemSchemas = new Set(['mysql', 'information_schema', 'performance_schema', 'sys']);
+/** Accepts a learner-chosen MariaDB database name; server schemas are never a valid target. */
+export function validateDatabaseName(name: unknown): string {
+  if (
+    typeof name !== 'string' ||
+    !/^[A-Za-z0-9_]{1,64}$/.test(name) ||
+    systemSchemas.has(name.toLowerCase())
+  )
+    throw new Error(
+      'Nazwa bazy może zawierać od 1 do 64 liter bez polskich znaków, cyfr i znaków podkreślenia. Nazwy systemowe są zastrzeżone.',
+    );
+  return name;
+}
+/** Quotes any identifier for MariaDB; an embedded backtick is doubled, never interpreted. */
+export function quoteIdentifier(name: string): string {
+  return '`' + name.replaceAll('`', '``') + '`';
+}
 const methods = new Set(['file', 'dom', 'style', 'javascript', 'php', 'sql', 'image', 'manual']);
 export function validateTaskChecks(task: TaskVersion): void {
   if (!Array.isArray(task.criteria) || !task.criteria.length || task.criteria.length > 100)

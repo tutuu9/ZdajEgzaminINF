@@ -27,13 +27,17 @@ export function command(
   args: string[],
   timeoutMs = 10000,
   maxOutput = 1024 * 1024,
+  input?: string,
 ): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     const child = spawn('docker', args, {
       windowsHide: true,
       shell: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
+    // A container that exits early closes the pipe; its exit status reports the failure.
+    child.stdin.on('error', () => undefined);
+    child.stdin.end(input ?? '');
     let stdout = '';
     let stderr = '';
     let bytes = 0;
@@ -92,7 +96,7 @@ export async function checkRuntime(options: RunnerOptions): Promise<void> {
       );
   }
   const image = await command(
-    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.1.0', '--format', '{{.Id}}'],
+    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.2.0', '--format', '{{.Id}}'],
     30000,
   );
   if (image.code !== 0) throw new Error('Brak obrazu środowiska. Uruchom npm run sandbox:build.');
@@ -139,10 +143,8 @@ export async function runProject(
   const runId = randomUUID();
   const directory = path.resolve(options.dataDir, 'sandbox', runId);
   const source = path.join(directory, 'project');
-  const configDir = path.join(directory, 'config');
   const containerName = `zdaj-check-${runId}`;
   await mkdir(source, { recursive: true });
-  await mkdir(configDir, { recursive: true });
   try {
     await writeFile(
       path.join(directory, 'run.json'),
@@ -155,15 +157,14 @@ export async function runProject(
       await writeFile(destination, fileBuffer(file));
     }
     const seed = task.starterFiles.find((file) => file.path === 'baza.sql')?.content ?? '';
-    await writeFile(
-      path.join(configDir, 'task.json'),
-      JSON.stringify({
-        taskId: task.id,
-        runtimeProfile: task.runtimeProfile,
-        criteria: task.criteria,
-        seed,
-      }),
-    );
+    // Expected results travel on the controller's standard input, not through a mount:
+    // a mounted file would be readable by the learner's PHP process.
+    const configuration = JSON.stringify({
+      taskId: task.id,
+      runtimeProfile: task.runtimeProfile,
+      criteria: task.criteria,
+      seed,
+    });
     const runtime = options.profile === 'public-sandbox' ? 'runsc' : 'runc';
     const hostPath = (localPath: string) =>
       options.hostDataDir
@@ -172,6 +173,7 @@ export async function runProject(
     const args = [
       'run',
       '--rm',
+      '--interactive',
       '--name',
       containerName,
       '--label',
@@ -213,10 +215,8 @@ export async function runProject(
       '128m',
       '--mount',
       `type=bind,source=${hostPath(source)},target=/project,readonly`,
-      '--mount',
-      `type=bind,source=${hostPath(configDir)},target=/config,readonly`,
       ...(options.diagnostics ? ['--env', 'CHECKER_DEBUG=1'] : []),
-      options.image ?? 'zdaj-inf-sandbox:0.1.0',
+      options.image ?? 'zdaj-inf-sandbox:0.2.0',
     ];
     let sampling = false;
     const sampler = options.onResourceSample
@@ -248,7 +248,7 @@ export async function runProject(
       : undefined;
     let output: CommandResult;
     try {
-      output = await command(args, options.timeoutMs ?? 120000);
+      output = await command(args, options.timeoutMs ?? 120000, undefined, configuration);
     } finally {
       if (sampler) clearInterval(sampler);
     }
