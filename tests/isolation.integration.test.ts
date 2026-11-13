@@ -160,6 +160,7 @@ describe.sequential('real local sandbox isolation and bounded failure recovery',
       '/proc/1/root/var/run/docker.sock',
       '/project/../neighbor-attempt/private.txt',
       '/data/neighbor-attempt/private.txt',
+      '/config/task.json',
     ];
     const php = `
       $ok = true;
@@ -209,6 +210,102 @@ describe.sequential('real local sandbox isolation and bounded failure recovery',
       outcome: outcome.report?.results[0]?.status ?? 'runner-rejected',
     });
     await cleanJob(run.jobId);
+  });
+
+  it('does not execute database-client shell commands embedded in a learner query', async () => {
+    const jobId = randomUUID();
+    const report = await runProject(
+      {
+        ...probeTask,
+        id: 'client-command-probe',
+        runtimeProfile: 'php-mariadb',
+        criteria: [
+          {
+            id: 'query',
+            title: 'Query',
+            description: 'The query must be plain SQL.',
+            method: 'sql',
+            source: 'educational',
+            points: 1,
+            check: { type: 'sql', path: 'kwerendy.sql', expectedRows: [['1']] },
+          },
+          probeTask.criteria[0]!,
+        ],
+      },
+      [
+        { path: 'index.html', content: '<!doctype html><title>Ready</title>' },
+        // The statement starts with SELECT, so it reaches the client like any other answer.
+        { path: 'kwerendy.sql', content: 'SELECT 1 \\! sh -c "echo PWNED > /tmp/pwned.txt"' },
+        {
+          path: 'probe.php',
+          content:
+            "<?php echo '<p id=\"probe\">' . (file_exists('/tmp/pwned.txt') ? 'COMMAND_RAN' : 'PROBE_OK') . '</p>';",
+        },
+      ],
+      { dataDir, profile: 'local-development', jobId, timeoutMs: 60_000 },
+    );
+    const [query, sideEffect] = report.results;
+    expect(query?.status).toBe('failed');
+    expect(query?.evidence).toMatch(/polecenie klienta bazy/);
+    expect(sideEffect?.status, 'The embedded shell command must not have run.').toBe('passed');
+    samples.push({
+      name: 'client-command-in-query',
+      durationMs: report.runtimeMs,
+      outcome: report.results.map((result) => result.status).join(','),
+    });
+    await cleanJob(jobId);
+  });
+
+  it('restores seeded data and removes learner-created databases under arbitrary names', async () => {
+    const jobId = randomUUID();
+    const page = (body: string) =>
+      `<?php mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); $db = new mysqli('localhost', 'root', ''); ${body}`;
+    const state =
+      "$extra = $db->query(\"SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME LIKE 'obca%'\")->fetch_row()[0]; $rows = $db->query('SELECT COUNT(*) FROM `Baza_2024`.wpisy')->fetch_row()[0];";
+    const php = (path: string, text: string) => ({
+      ...probeTask.criteria[0]!,
+      id: path,
+      check: { type: 'php', path, selector: '#probe', text },
+    });
+    const report = await runProject(
+      {
+        ...probeTask,
+        id: 'reset-probe',
+        runtimeProfile: 'php-mariadb',
+        starterFiles: [
+          {
+            path: 'baza.sql',
+            content:
+              'CREATE DATABASE `Baza_2024`; CREATE TABLE `Baza_2024`.wpisy (id INT PRIMARY KEY); INSERT INTO `Baza_2024`.wpisy VALUES (1), (2);',
+          },
+        ],
+        criteria: [php('zmien.php', 'CHANGED 1/3'), php('sprawdz.php', 'RESET 0/2')],
+      },
+      [
+        { path: 'index.html', content: '<!doctype html><title>Ready</title>' },
+        {
+          path: 'zmien.php',
+          content: page(
+            `$db->query('CREATE DATABASE \`obca baza \`\`x\`'); $db->query('INSERT INTO \`Baza_2024\`.wpisy VALUES (3)'); ${state} echo '<p id="probe">CHANGED ' . $extra . '/' . $rows . '</p>';`,
+          ),
+        },
+        {
+          path: 'sprawdz.php',
+          content: page(`${state} echo '<p id="probe">RESET ' . $extra . '/' . $rows . '</p>';`),
+        },
+      ],
+      { dataDir, profile: 'local-development', jobId, timeoutMs: 60_000 },
+    );
+    expect(
+      report.results.map((result) => result.status),
+      JSON.stringify(report.results),
+    ).toEqual(['passed', 'passed']);
+    samples.push({
+      name: 'generic-database-reset',
+      durationMs: report.runtimeMs,
+      outcome: report.results.map((result) => result.status).join(','),
+    });
+    await cleanJob(jobId);
   });
 
   it('bounds an infinite PHP loop and accepts the next ordinary job', async () => {

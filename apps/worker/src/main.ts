@@ -25,7 +25,7 @@ const options: RunnerOptions = {
   dataDir,
   hostDataDir: process.env.SANDBOX_HOST_DATA_DIR,
   profile: profile as RunnerOptions['profile'],
-  image: process.env.SANDBOX_IMAGE ?? 'zdaj-inf-sandbox:0.1.0',
+  image: process.env.SANDBOX_IMAGE ?? 'zdaj-inf-sandbox:0.2.0',
   publicReady: process.env.PUBLIC_SANDBOX_VERIFIED === 'true',
 };
 let stopping = false;
