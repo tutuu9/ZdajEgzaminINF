@@ -317,6 +317,8 @@ export interface CheckResponse {
 export interface SiteSettings {
   aiEnabled: boolean;
   checkingEnabled: boolean;
+  /** Learner-initiated SQL/PHP runs; additionally requires checkingEnabled and a live worker. */
+  runtimeRunsEnabled: boolean;
   aiBudgetUsd: number;
   aiDailyLimit: number;
   aiInputTokenLimit: number;
@@ -328,6 +330,7 @@ export interface SiteSettings {
 export const DEFAULT_SETTINGS: SiteSettings = {
   aiEnabled: false,
   checkingEnabled: true,
+  runtimeRunsEnabled: false,
   aiBudgetUsd: 2,
   aiDailyLimit: 5,
   aiInputTokenLimit: 12000,
@@ -342,7 +345,7 @@ export interface Bootstrap {
   lessons: Lesson[];
   exercises: PublicExercise[];
   catalog: CatalogEntry[];
-  features: { aiAvailable: boolean; checkingAvailable: boolean };
+  features: { aiAvailable: boolean; checkingAvailable: boolean; runsAvailable: boolean };
   questionCount: number;
 }
 export interface AttemptTicket {
@@ -446,6 +449,20 @@ export const MAX_RUN_DUMP_BYTES = 2 * 1024 * 1024;
 export const MAX_RUN_SQL_CHARACTERS = 64 * 1024;
 export const MAX_RUN_FIELDS = 20;
 export const MAX_RUN_FIELD_CHARACTERS = 2000;
+/** Text files of one run. Stored in the job row, so it stays far below the project limit. */
+export const MAX_RUN_INPUT_BYTES = 4 * 1024 * 1024;
+export interface SandboxRunSubmission {
+  token: string;
+  projectRevision: number;
+  run: SandboxRunRequest;
+  files: ProjectFile[];
+}
+export interface SandboxRunResponse {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  result?: SandboxRunResult;
+  error?: string;
+}
 /** One execution of the learner's own database and code. It carries no assessment. */
 export interface SandboxRunRequest {
   /** Database created for this run; chosen by the learner as the paper instructs. */

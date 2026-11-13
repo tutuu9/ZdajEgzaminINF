@@ -11,7 +11,8 @@ const samples: { name: string; durationMs: number; sampledPeakMiB: number }[] = 
 
 // Authored for these tests only. It is not taken from any examination package.
 const dump = `-- synthetic shop
-CREATE TABLE kategorie (id INT PRIMARY KEY, nazwa VARCHAR(40) NOT NULL) DEFAULT CHARSET=utf8mb4;
+-- No table character set here: the database default must accept Polish letters.
+CREATE TABLE kategorie (id INT PRIMARY KEY, nazwa VARCHAR(40) NOT NULL);
 CREATE TABLE produkty (
   id INT PRIMARY KEY AUTO_INCREMENT,
   kategorie_id INT NOT NULL,

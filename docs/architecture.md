@@ -29,6 +29,7 @@ The API does not execute uploaded code or receive the Docker socket. The worker 
 | Guest/admin sessions and attempt tickets                                | PostgreSQL                   | Short-lived access and server-side mode/deadline enforcement |
 | Submitted project                                                       | Ignored runtime directory    | Removed after checking, including failed jobs                |
 | Check report and access-secret hash                                     | PostgreSQL                   | Until acknowledgement or the job's 24-hour expiry            |
+| Input and result of a learner-initiated SQL/PHP run                     | PostgreSQL `SandboxRunJob`   | Input until the run ends; result for at most 15 minutes      |
 | AI request token counts and accounting status                           | PostgreSQL                   | Budget accounting; no prompt or code content                 |
 | Operational events                                                      | PostgreSQL                   | Seven days; counters remain aggregated                       |
 

@@ -96,7 +96,7 @@ export async function checkRuntime(options: RunnerOptions): Promise<void> {
       );
   }
   const image = await command(
-    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.3.0', '--format', '{{.Id}}'],
+    ['image', 'inspect', options.image ?? 'zdaj-inf-sandbox:0.3.1', '--format', '{{.Id}}'],
     30000,
   );
   if (image.code !== 0) throw new Error('Brak obrazu środowiska. Uruchom npm run sandbox:build.');
@@ -217,7 +217,7 @@ export async function runSandbox(
       '--mount',
       `type=bind,source=${hostPath(source)},target=/project,readonly`,
       ...(options.diagnostics ? ['--env', 'CHECKER_DEBUG=1'] : []),
-      options.image ?? 'zdaj-inf-sandbox:0.3.0',
+      options.image ?? 'zdaj-inf-sandbox:0.3.1',
     ];
     let sampling = false;
     const sampler = options.onResourceSample
