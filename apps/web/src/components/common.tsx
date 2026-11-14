@@ -62,6 +62,12 @@ export function TopicIcon({ id, size = 22 }: { id: string; size?: number }) {
     }[id] || BookOpen;
   return <Component size={size} strokeWidth={1.7} />;
 }
+const polishPlural = new Intl.PluralRules('pl');
+/** "1 pytanie", "3 pytania", "5 pytań": Polish needs three forms. */
+export function plural(count: number, one: string, few: string, many: string) {
+  const rule = polishPlural.select(count);
+  return `${count} ${rule === 'one' ? one : rule === 'few' ? few : many}`;
+}
 export function ErrorNotice({ message, onRetry }: { message: string; onRetry?: () => void }) {
   if (!message) return null;
   return (

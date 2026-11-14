@@ -161,8 +161,16 @@ function PageResult({
   // The server returns markup only. Styles and images come from the local project, and the
   // frame keeps the same isolation as the ordinary preview: no network, no form target.
   const html = useMemo(
-    () => (page.html ? createPreview(files, entry, { markup: page.html, scripts }).html : ''),
-    [files, entry, page.html, scripts],
+    () =>
+      page.html
+        ? createPreview(files, entry, {
+            markup: page.html,
+            scripts,
+            // After a redirect the markup belongs to another page, so its folder is the base.
+            base: page.finalPath?.split(/[?#]/)[0]!.replace(/^\/+/, '') || entry,
+          }).html
+        : '',
+    [files, entry, page.html, page.finalPath, scripts],
   );
   return (
     <div className="run-page">

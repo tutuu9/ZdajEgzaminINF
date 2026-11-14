@@ -405,6 +405,13 @@ input[type='radio'] {
   font-size: 13px;
   line-height: 1.65;
 }
+.notice .missing-assets {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.notice .missing-assets code {
+  overflow-wrap: anywhere;
+}
 .notice > svg {
   margin-top: 2px;
 }

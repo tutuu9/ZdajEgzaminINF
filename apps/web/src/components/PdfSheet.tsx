@@ -15,6 +15,50 @@ import { ErrorNotice, Loading } from './common';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
+// Several readers may show crops of one document (a theory review lists many questions).
+// They share a single download; it is closed a minute after the last reader leaves.
+const openDocuments = new Map<
+  string,
+  { task: ReturnType<typeof getDocument>; users: number; close?: ReturnType<typeof setTimeout> }
+>();
+function sharedDocument(url: string) {
+  let entry = openDocuments.get(url);
+  if (!entry) {
+    const created = {
+      task: getDocument({
+        url,
+        withCredentials: true,
+        // PDF.js 6 removed the eval-based compiler and its isEvalSupported option.
+        useWasm: false,
+        useSystemFonts: true,
+      }),
+      users: 0,
+    };
+    entry = created;
+    openDocuments.set(url, created);
+    created.task.promise.catch(() => {
+      // A failed download is forgotten so that "Spróbuj ponownie" starts a new one.
+      if (openDocuments.get(url) === created) openDocuments.delete(url);
+      void created.task.destroy();
+    });
+  }
+  const shared = entry;
+  clearTimeout(shared.close);
+  shared.users++;
+  return {
+    promise: shared.task.promise,
+    release: () => {
+      shared.users--;
+      if (shared.users > 0) return;
+      shared.close = setTimeout(() => {
+        if (shared.users > 0) return;
+        if (openDocuments.get(url) === shared) openDocuments.delete(url);
+        void shared.task.destroy();
+      }, 60_000);
+    },
+  };
+}
+
 export function taskSheetUrl(task: Pick<PublicTask, 'id' | 'version'>) {
   return `/api/v1/tasks/${encodeURIComponent(task.id)}/sheet.pdf?version=${task.version}`;
 }
@@ -90,13 +134,7 @@ export function PdfReader({
     setError('');
     setPageNumber(requestedPage ?? 1);
     setPageText('');
-    const job = getDocument({
-      url,
-      withCredentials: true,
-      // PDF.js 6 removed the eval-based compiler and its isEvalSupported option.
-      useWasm: false,
-      useSystemFonts: true,
-    });
+    const job = sharedDocument(url);
     void job.promise
       .then((document) => {
         if (!cancelled) setPdf(document);
@@ -112,7 +150,7 @@ export function PdfReader({
       });
     return () => {
       cancelled = true;
-      void job.destroy();
+      job.release();
     };
   }, [url, retry]);
   useEffect(() => {

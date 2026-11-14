@@ -37,6 +37,7 @@ import type {
   ProjectFile,
   PublicTask,
 } from '@zdaj/shared';
+import { MAX_PROJECT_FILES } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { DatabaseRunner } from '../components/DatabaseRunner';
@@ -610,7 +611,12 @@ export function Workspace() {
       const incoming = await importProject(list);
       const current = attemptRef.current;
       if (!current || current.id !== attempt.id || current.submittedAt) return;
-      const replace = list.length === 1 && /\.zip$/i.test(list[0]!.name);
+      // A ZIP with a page replaces the project. A ZIP of images or other additions (for
+      // example the pictures from a CKE package) joins the files already written.
+      const replace =
+        list.length === 1 &&
+        /\.zip$/i.test(list[0]!.name) &&
+        incoming.some((item) => /\.(?:html?|php)$/i.test(item.path));
       const files = replace
         ? incoming
         : [
@@ -619,6 +625,8 @@ export function Workspace() {
             ),
             ...incoming,
           ];
+      if (files.length > MAX_PROJECT_FILES)
+        throw new Error(`Projekt może zawierać maksymalnie ${MAX_PROJECT_FILES} plików.`);
       await update((latest) => ({
         ...latest,
         files,
@@ -850,7 +858,7 @@ export function Workspace() {
               Wczytaj pliki / ZIP
             </button>
             <small className="file-help">
-              ZIP zastępuje pliki projektu.
+              ZIP ze stroną zastępuje pliki projektu. ZIP z samymi obrazami jest dodawany.
               <br />
               Maksymalnie 10 MiB.
             </small>
@@ -1079,6 +1087,29 @@ export function Workspace() {
             </div>
           )}
           {projectPreview.problem && <Notice>{projectPreview.problem}</Notice>}
+          {projectPreview.missing.length > 0 && (
+            <Notice>
+              Podgląd nie znalazł w projekcie{' '}
+              {projectPreview.missing.length === 1 ? 'pliku' : 'plików'}:
+              <ul className="missing-assets">
+                {projectPreview.missing.slice(0, 5).map((item) => (
+                  <li key={item.value}>
+                    <code>{item.value}</code>
+                    {item.suggestion && (
+                      <>
+                        {' '}
+                        — w projekcie jest <code>{item.suggestion}</code>. Popraw adres w kodzie
+                        albo przenieś plik.
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {projectPreview.missing.length > 5 &&
+                `Oraz ${projectPreview.missing.length - 5} innych. `}
+              Sprawdź nazwę i folder albo wczytaj brakujący plik przyciskiem „Wczytaj pliki / ZIP”.
+            </Notice>
+          )}
           <div className="inspector-frame">
             <iframe
               ref={iframeRef}

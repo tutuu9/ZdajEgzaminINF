@@ -298,6 +298,14 @@
 .report-filter h2 {
   font-size: 23px;
 }
+.feedback-source {
+  margin: 12px 0;
+}
+.feedback-source > summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 600;
+}
 .question-feedback-list {
   display: grid;
   gap: 22px;

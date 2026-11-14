@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { AttemptSnapshot, ProjectFile } from '@zdaj/shared';
-import { createPreview } from '../preview';
+import { createPreview, type MissingAsset } from '../preview';
 import { readInspectionMessage } from './bridge';
 import type { InspectionIndex, InspectionSelection, InspectionSource } from './types';
 
@@ -15,6 +15,7 @@ interface PreparedPreview {
   context: PreviewContext;
   html: string;
   inspection?: InspectionIndex;
+  missing: MissingAsset[];
 }
 const sameContext = (a: PreviewContext, b: PreviewContext) =>
   a.id === b.id &&
@@ -106,7 +107,12 @@ export function useProjectPreview({
         scripts: scriptsRunning,
         inspection: inspecting,
       });
-      setPrepared({ context: snapshot, html: document.html, inspection: document.inspection });
+      setPrepared({
+        context: snapshot,
+        html: document.html,
+        inspection: document.inspection,
+        missing: document.missing,
+      });
       return document.dispose;
     } catch {
       setPrepared(undefined);
@@ -184,6 +190,7 @@ export function useProjectPreview({
 
   return {
     html: fresh ? prepared.html : '',
+    missing: fresh ? prepared.missing : [],
     index,
     selection,
     inspecting,
