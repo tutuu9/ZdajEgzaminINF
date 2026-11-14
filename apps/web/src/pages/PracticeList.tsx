@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, ChevronDown, Clock3, FileCode2, Search } from 'lu
 import { Link } from 'react-router-dom';
 import { useApp } from '../context';
 import { resumeHref } from '../resume';
-import { EmptyState, Loading, PageHeading, Tags } from '../components/common';
+import { EmptyState, Loading, PageHeading, Tags, plural } from '../components/common';
 import { CatalogSource } from './Catalog';
 
 export function PracticeList() {
@@ -95,7 +95,7 @@ export function PracticeList() {
                   </Link>
                   <span>
                     {past.length
-                      ? `${past.length} zapisane próby`
+                      ? plural(past.length, 'zapisana próba', 'zapisane próby', 'zapisanych prób')
                       : 'Z objaśnieniami i plikami do pobrania'}
                   </span>
                 </div>

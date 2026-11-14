@@ -20,6 +20,7 @@ export function Home() {
   if (!data)
     return (
       <EmptyState
+        failed
         title="Nie udało się wczytać nauki"
         to="/moje-prace"
         label="Otwórz zapisane prace"

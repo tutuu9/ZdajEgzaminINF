@@ -64,6 +64,8 @@ import {
   Timer,
   levelLabel,
   modeLabel,
+  plural,
+  usePageTitle,
 } from '../components/common';
 
 const PdfSheet = lazy(() =>
@@ -106,7 +108,7 @@ function TaskPdfPanel({
   if (task.origin === 'exam')
     return (
       <Notice>
-        Oryginalny PDF jest chwilowo niedostępny. <Link to="/katalog">Otwórz katalog źródeł.</Link>
+        Oryginalny PDF jest chwilowo niedostępny. <Link to="/arkusze">Otwórz katalog źródeł.</Link>
       </Notice>
     );
   return <PdfSheet task={task} requestedPage={requestedPage} onPageChange={onPageChange} />;
@@ -135,6 +137,7 @@ export function Workspace() {
   const [task, setTask] = useState<PublicTask | null>(null),
     [attempt, setAttempt] = useState<AttemptSnapshot | null>(null),
     [mode, setMode] = useState<Mode>('nauka');
+  usePageTitle(task?.title);
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -685,8 +688,9 @@ export function Workspace() {
         <ErrorNotice message={error} />
         <EmptyState
           title="Nie udało się otworzyć projektu"
-          to="/praktyka"
-          label="Wróć do projektów"
+          failed
+          to="/arkusze"
+          label="Wróć do arkuszy"
         >
           Sprawdź połączenie i wybierz projekt z listy.
         </EmptyState>
@@ -694,7 +698,7 @@ export function Workspace() {
     );
   if (!attempt && task.origin !== 'exam')
     return (
-      <EmptyState title="Ten projekt jest w archiwum" to="/praktyka" label="Otwórz zadania CKE">
+      <EmptyState title="Ten projekt jest w archiwum" to="/arkusze" label="Otwórz arkusze CKE">
         Nowe próby dotyczą wyłącznie arkuszy CKE. Wcześniejsze autorskie próby pozostają w Twoich
         lokalnych postępach.
       </EmptyState>
@@ -703,9 +707,9 @@ export function Workspace() {
     return (
       <>
         <div className="workspace-entry-navigation">
-          <Link className="back-link" to="/praktyka">
+          <Link className="back-link" to="/arkusze">
             <ArrowLeft size={16} />
-            Zadania praktyczne
+            Arkusze
           </Link>
           <ThemePicker />
         </div>
@@ -1237,9 +1241,9 @@ export function Workspace() {
     <>
       <div className="workspace-heading">
         <div>
-          <Link className="back-link" to="/praktyka">
+          <Link className="back-link" to="/arkusze">
             <ArrowLeft size={15} />
-            Zadania praktyczne
+            Arkusze
           </Link>
           <h1>{task.title}</h1>
           <div className="workspace-meta">
@@ -1462,7 +1466,9 @@ export function Workspace() {
                 )}
               </button>
             )}
-            <span className="workspace-file-count">{attempt.files?.length ?? 0} plików</span>
+            <span className="workspace-file-count">
+              {plural(attempt.files?.length ?? 0, 'plik', 'pliki', 'plików')}
+            </span>
           </div>
           {tab === 'sheet' && (
             <div className="workspace-sheet">

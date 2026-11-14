@@ -12,6 +12,8 @@ interface AppContextValue {
   setLevel: (level: Level) => void;
   attempts: AttemptSnapshot[];
   completed: string[];
+  /** False until saved work has been read once; lists are not yet known to be empty. */
+  progressLoaded: boolean;
   reload: () => Promise<void>;
   refreshProgress: () => Promise<void>;
 }
@@ -22,7 +24,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [error, setError] = useState('');
   const [level, updateLevel] = useState<Level>('beginner'),
     [attempts, setAttempts] = useState<AttemptSnapshot[]>([]),
-    [completed, setCompleted] = useState<string[]>([]);
+    [completed, setCompleted] = useState<string[]>([]),
+    [progressLoaded, setProgressLoaded] = useState(false);
   const location = useLocation();
   const refreshProgress = useCallback(async () => {
     try {
@@ -36,6 +39,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateLevel(savedLevel);
     } catch (e) {
       setError(errorMessage(e));
+    } finally {
+      setProgressLoaded(true);
     }
   }, []);
   const reload = useCallback(async () => {
@@ -77,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLevel,
         attempts,
         completed,
+        progressLoaded,
         reload,
         refreshProgress,
       }}

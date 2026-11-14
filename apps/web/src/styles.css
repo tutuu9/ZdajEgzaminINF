@@ -550,7 +550,7 @@ input[type='radio'] {
 .brand small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
   margin-top: 4px;
@@ -624,7 +624,7 @@ input[type='radio'] {
   justify-content: space-between;
   gap: 20px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .main-footer > span,
 .main-footer > div,
@@ -1598,7 +1598,7 @@ input[type='radio'] {
     font-size: 14px;
   }
   .brand small {
-    font-size: 10px;
+    font-size: 12px;
   }
   .qualification-badge {
     display: flex;
@@ -1652,7 +1652,7 @@ input[type='radio'] {
   .main-footer {
     padding: 15px 20px;
     flex-direction: column;
-    font-size: 10px;
+    font-size: 12px;
     gap: 12px;
   }
   .main-footer > div {
@@ -1764,7 +1764,7 @@ input[type='radio'] {
     line-height: 1.2;
   }
   .learning-project-row p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .learning-project-row div > span {
     font-size: 12px;
@@ -1797,7 +1797,7 @@ input[type='radio'] {
   }
   .learning-footnote {
     justify-content: flex-start;
-    font-size: 11px;
+    font-size: 12px;
     margin-top: 27px;
   }
   .library-toolbar {
@@ -1816,7 +1816,7 @@ input[type='radio'] {
     flex: 1;
   }
   .library-count {
-    font-size: 11px;
+    font-size: 12px;
   }
   .exam-library-row {
     padding: 22px 20px 0;
@@ -1829,7 +1829,7 @@ input[type='radio'] {
     font-size: 24px;
   }
   .exam-row-heading .subtle-label {
-    font-size: 10px;
+    font-size: 12px;
   }
   .exam-duration {
     width: 100%;
@@ -1851,7 +1851,7 @@ input[type='radio'] {
   }
   .exam-row-actions > span {
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
   }
   .source-actions {
     align-items: flex-start;
@@ -1864,7 +1864,7 @@ input[type='radio'] {
     gap: 7px;
   }
   .topic-filter button {
-    font-size: 11px;
+    font-size: 12px;
     padding: 9px 11px;
   }
   .lesson-list {
@@ -1893,7 +1893,7 @@ input[type='radio'] {
     margin-top: 8px;
   }
   .lesson-row .meta-line {
-    font-size: 11px;
+    font-size: 12px;
     gap: 9px;
   }
   .lesson-layout {
@@ -1980,4 +1980,10 @@ input[type='radio'] {
   .nav-link.active {
     color: LinkText;
   }
+}
+.empty-state.failed > svg {
+  color: var(--danger);
+}
+.empty-state .button + .button {
+  margin-left: 10px;
 }
