@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { AttemptSnapshot, Mode, TheoryResult, TheoryTicket } from '@zdaj/shared';
 import { useApp } from '../context';
-import { api, errorMessage } from '../api';
+import { api, ApiError, errorMessage } from '../api';
 import { readAttempt, saveAttempt } from '../storage';
 import {
   EmptyState,
@@ -26,10 +26,47 @@ import {
   PageHeading,
   Timer,
   modeLabel,
+  plural,
 } from '../components/common';
 const SourceQuestionPdf = lazy(() =>
   import('../components/PdfSheet').then((module) => ({ default: module.PdfReader })),
 );
+
+type ReviewedQuestion = TheoryResult['results'][number]['question'];
+/** The official wording lives only in the CKE document, so the review shows the same crop. */
+function ReviewSource({ question, open }: { question: ReviewedQuestion; open: boolean }) {
+  const [shown, setShown] = useState(open);
+  const source = question.source;
+  if (!source) return null;
+  return (
+    <details
+      className="feedback-source"
+      open={shown}
+      onToggle={(event) => setShown(event.currentTarget.open)}
+    >
+      <summary>Pytanie CKE i warianty odpowiedzi</summary>
+      {shown && (
+        <div className="theory-source-question">
+          <Suspense fallback={<Loading label="Wczytywanie oryginalnego pytania CKE…" />}>
+            <SourceQuestionPdf
+              url={`/api/v1/catalog/${encodeURIComponent(source.catalogId)}/sheet.pdf`}
+              title={question.prompt}
+              label={`CKE · zadanie ${source.questionNumber} · strona ${source.page}`}
+              downloadName={`${source.catalogId}.pdf`}
+              requestedPage={source.page}
+              compact
+              crop={
+                source.top !== undefined && source.bottom !== undefined
+                  ? { top: source.top, bottom: source.bottom }
+                  : undefined
+              }
+            />
+          </Suspense>
+        </div>
+      )}
+    </details>
+  );
+}
 
 export function Theory() {
   const { data, level, refreshProgress } = useApp();
@@ -93,7 +130,8 @@ export function Theory() {
         body: {
           mode,
           topicId: topic === 'all' ? undefined : topic,
-          count: Math.min(count, data?.questionCount ?? count),
+          // The server accepts at most 40 questions in one series.
+          count: Math.min(count, data?.questionCount ?? count, 40),
         },
       });
       const now = new Date().toISOString();
@@ -122,15 +160,48 @@ export function Theory() {
     }
   };
   const submit = useCallback(async () => {
-    const current = ref.current;
+    let current = ref.current;
     if (!current || current.submittedAt) return;
     setBusy(true);
     setError('');
-    try {
-      const result = await api<TheoryResult>(`/theory/${current.ticket.id}/submit`, {
+    const send = (attempt: AttemptSnapshot) =>
+      api<TheoryResult>(`/theory/${attempt.ticket.id}/submit`, {
         method: 'POST',
-        body: { token: current.ticket.token, answers: current.answers ?? {} },
+        body: { token: attempt.ticket.token, answers: attempt.answers ?? {} },
       });
+    try {
+      let result: TheoryResult;
+      try {
+        result = await send(current);
+      } catch (cause) {
+        // The server keeps a series for a day; the browser keeps it for as long as the
+        // learner wants. An expired series gets a new ticket for the same questions.
+        if (
+          !(cause instanceof ApiError) ||
+          ![404, 410].includes(cause.status) ||
+          current.mode === 'egzamin' ||
+          !current.questions?.length
+        )
+          throw cause;
+        const ticket = await api<TheoryTicket>('/theory/renew', {
+          method: 'POST',
+          body: {
+            mode: current.mode,
+            level: current.level,
+            questions: current.questions.map((question) => ({
+              id: question.id,
+              version: question.version,
+              optionOrder: question.options.map((option) => option.id),
+            })),
+          },
+        });
+        current = {
+          ...(ref.current ?? current),
+          ticket: { id: ticket.id, token: ticket.token, deadlineAt: ticket.deadlineAt },
+        };
+        await update(current);
+        result = await send(current);
+      }
       await update({
         ...current,
         theoryResult: result,
@@ -178,7 +249,11 @@ export function Theory() {
             wracaj do trudniejszych tematów.
           </p>
           <div className="theory-set-summary">
-            <strong>{Math.min(count, data?.questionCount ?? 0)} pytań</strong>
+            <strong>
+              {topic === 'all'
+                ? plural(Math.min(count, data?.questionCount ?? 0), 'pytanie', 'pytania', 'pytań')
+                : `Do ${Math.min(count, data?.questionCount ?? 0)} pytań`}
+            </strong>
             <span>
               {topic === 'all'
                 ? 'Wszystkie tematy'
@@ -312,7 +387,7 @@ export function Theory() {
           </div>
         </div>
         <div className="question-feedback-list">
-          {visible.map((item, qindex) => (
+          {visible.map((item) => (
             <article
               className="question-feedback"
               key={`${item.question.id}:${item.question.version}`}
@@ -320,9 +395,10 @@ export function Theory() {
               <div className="feedback-heading">
                 {item.correct ? <CheckCircle2 size={22} /> : <XCircle size={22} />}
                 <h3>
-                  {qindex + 1}. {item.question.prompt}
+                  {result.results.indexOf(item) + 1}. {item.question.prompt}
                 </h3>
               </div>
+              <ReviewSource question={item.question} open={!item.correct} />
               <div className="feedback-options">
                 {item.question.options.map((option, index) => (
                   <div
@@ -492,7 +568,7 @@ export function Theory() {
           </div>
           <p>
             {questions.length - answered
-              ? `${questions.length - answered} pytań pozostaje bez odpowiedzi.`
+              ? `Bez odpowiedzi: ${plural(questions.length - answered, 'pytanie', 'pytania', 'pytań')}.`
               : 'Wszystkie odpowiedzi zaznaczone.'}
           </p>
           <button
@@ -502,7 +578,7 @@ export function Theory() {
               if (
                 answered === questions.length ||
                 window.confirm(
-                  `Pozostało ${questions.length - answered} pytań bez odpowiedzi. Oddać próbę?`,
+                  `Bez odpowiedzi: ${plural(questions.length - answered, 'pytanie', 'pytania', 'pytań')}. Oddać próbę?`,
                 )
               )
                 void submit();

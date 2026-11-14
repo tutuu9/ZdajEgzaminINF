@@ -39,6 +39,12 @@ test('a learner resumes theory, receives explanations after submission and expor
     page.getByRole('heading', { name: 'Omówienie odpowiedzi', exact: true }),
   ).toBeVisible();
   await expect(page.locator('.question-feedback')).toHaveCount(5);
+  // Each reviewed question can show its official wording, not only letters.
+  await expect(page.locator('.question-feedback .feedback-source')).toHaveCount(5);
+  const source = page.locator('.question-feedback .feedback-source').first();
+  if (!(await source.evaluate((details: HTMLDetailsElement) => details.open)))
+    await source.locator('summary').click();
+  await expect(source.locator('canvas')).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole('heading', { name: 'Omówienie odpowiedzi', exact: true }),

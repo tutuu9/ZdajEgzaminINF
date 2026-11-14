@@ -22,6 +22,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Square,
   Trash2,
   Upload,
   X,
@@ -37,11 +38,13 @@ import type {
   ProjectFile,
   PublicTask,
 } from '@zdaj/shared';
+import { MAX_PROJECT_FILES } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
+import { PreviewConsole } from '../components/PreviewConsole';
 import { InspectorOverlay, PageInspector } from '../components/PageInspector';
 import '../inspector.css';
 import { Editor, type EditorReveal } from '../components/Editor';
@@ -112,6 +115,16 @@ function TaskPdfPanel({
 const usesDatabase = (task: PublicTask) =>
   task.technologies.some((technology) => technology === 'SQL' || technology === 'PHP');
 
+const EDITOR_FONT_KEY = 'zdaj-editor-font';
+function storedEditorFont() {
+  try {
+    const size = Number(localStorage.getItem(EDITOR_FONT_KEY));
+    return Number.isInteger(size) && size >= 12 && size <= 18 ? size : 13;
+  } catch {
+    return 13;
+  }
+}
+
 export function Workspace() {
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
@@ -137,6 +150,8 @@ export function Workspace() {
     [sheetPage, setSheetPageState] = useState(1);
   const [previewEntry, setPreviewEntryState] = useState(''),
     [inspectSpacing, setInspectSpacing] = useState(false),
+    [previewWidth, setPreviewWidth] = useState(0),
+    [editorFont, setEditorFont] = useState(storedEditorFont),
     [inspectChoice, setInspectChoice] = useState<{ generation: string; id: string }>(),
     [checkStatus, setCheckStatus] = useState(''),
     [hintBusy, setHintBusy] = useState(false),
@@ -610,7 +625,12 @@ export function Workspace() {
       const incoming = await importProject(list);
       const current = attemptRef.current;
       if (!current || current.id !== attempt.id || current.submittedAt) return;
-      const replace = list.length === 1 && /\.zip$/i.test(list[0]!.name);
+      // A ZIP with a page replaces the project. A ZIP of images or other additions (for
+      // example the pictures from a CKE package) joins the files already written.
+      const replace =
+        list.length === 1 &&
+        /\.zip$/i.test(list[0]!.name) &&
+        incoming.some((item) => /\.(?:html?|php)$/i.test(item.path));
       const files = replace
         ? incoming
         : [
@@ -619,13 +639,23 @@ export function Workspace() {
             ),
             ...incoming,
           ];
+      if (files.length > MAX_PROJECT_FILES)
+        throw new Error(`Projekt może zawierać maksymalnie ${MAX_PROJECT_FILES} plików.`);
       await update((latest) => ({
         ...latest,
         files,
         recovery: recoverySnapshot(latest, 'Import plików'),
       }));
       setSelected(incoming[0]?.path ?? '');
-      setPreviewEntry(files.find((item) => /\.(?:html?|php)$/i.test(item.path))?.path ?? '');
+      // Adding a script or an image must not switch the preview to another page.
+      const pages = files.filter((item) => /\.(?:html?|php)$/i.test(item.path));
+      const uploadedPage = incoming.find((item) => /\.(?:html?|php)$/i.test(item.path));
+      setPreviewEntry(
+        uploadedPage?.path ??
+          (pages.some((item) => item.path === previewEntry)
+            ? previewEntry
+            : (pages[0]?.path ?? '')),
+      );
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -773,8 +803,19 @@ export function Workspace() {
     inspectChoice?.generation === projectPreview.index?.generation
       ? (inspectChoice?.id ?? '')
       : (projectPreview.selection?.elementId ?? '');
+  const changeEditorFont = (size: number) => {
+    setEditorFont(size);
+    try {
+      localStorage.setItem(EDITOR_FONT_KEY, String(size));
+    } catch {
+      // The size then lasts for this visit only.
+    }
+  };
   const editorPanel = (
-    <div className="editor-shell">
+    <div
+      className="editor-shell"
+      style={{ '--editor-font-size': `${editorFont}px` } as React.CSSProperties}
+    >
       <div className="file-tree">
         <div className="file-tree-heading">
           <span>Projekt</span>
@@ -850,7 +891,7 @@ export function Workspace() {
               Wczytaj pliki / ZIP
             </button>
             <small className="file-help">
-              ZIP zastępuje pliki projektu.
+              ZIP ze stroną zastępuje pliki projektu. ZIP z samymi obrazami jest dodawany.
               <br />
               Maksymalnie 10 MiB.
             </small>
@@ -871,6 +912,20 @@ export function Workspace() {
         )}
         <div className="editor-filebar">
           <span>{selected || 'Wybierz plik'}</span>
+          <span className="editor-font-controls">
+            <button
+              className="icon-button font-smaller"
+              aria-label="Zmniejsz tekst w edytorze"
+              disabled={editorFont <= 12}
+              onClick={() => changeEditorFont(editorFont - 1)}
+            />
+            <button
+              className="icon-button font-larger"
+              aria-label="Powiększ tekst w edytorze"
+              disabled={editorFont >= 18}
+              onClick={() => changeEditorFont(editorFont + 1)}
+            />
+          </span>
           {closed ? (
             <span>Tylko odczyt</span>
           ) : (
@@ -1021,14 +1076,35 @@ export function Workspace() {
               <ShieldCheck size={14} />
               Izolowany podgląd
             </span>
+            <label>
+              Szerokość
+              <select
+                value={previewWidth}
+                onChange={(event) => setPreviewWidth(Number(event.target.value))}
+              >
+                <option value={0}>Pełna</option>
+                <option value={768}>Tablet 768 px</option>
+                <option value={375}>Telefon 375 px</option>
+              </select>
+            </label>
             <button
               className="button secondary small"
               onClick={projectPreview.runScripts}
               disabled={projectPreview.scriptsRunning}
             >
               <Play size={14} />
-              {projectPreview.scriptsRunning ? 'JS uruchomiony' : 'Uruchom JS'}
+              {projectPreview.scriptsRunning
+                ? 'JS uruchomiony'
+                : projectPreview.scriptsStale
+                  ? 'Uruchom ponownie'
+                  : 'Uruchom JS'}
             </button>
+            {(projectPreview.scriptsRunning || projectPreview.scriptsStale) && (
+              <button className="button secondary small" onClick={projectPreview.stopScripts}>
+                <Square size={13} />
+                Zatrzymaj JS
+              </button>
+            )}
             {inspectorEnabled && (
               <button
                 ref={inspectorToggleRef}
@@ -1079,7 +1155,50 @@ export function Workspace() {
             </div>
           )}
           {projectPreview.problem && <Notice>{projectPreview.problem}</Notice>}
-          <div className="inspector-frame">
+          {projectPreview.missing.length > 0 && (
+            <Notice>
+              Podgląd nie znalazł w projekcie{' '}
+              {projectPreview.missing.length === 1 ? 'pliku' : 'plików'}:
+              <ul className="missing-assets">
+                {projectPreview.missing.slice(0, 5).map((item) => (
+                  <li key={item.value}>
+                    <code>{item.value}</code>
+                    {item.suggestion && (
+                      <>
+                        {' '}
+                        — w projekcie jest <code>{item.suggestion}</code>. Popraw adres w kodzie
+                        albo przenieś plik.
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {projectPreview.missing.length > 5 &&
+                `Oraz ${projectPreview.missing.length - 5} innych. `}
+              Sprawdź nazwę i folder albo wczytaj brakujący plik przyciskiem „Wczytaj pliki / ZIP”.
+            </Notice>
+          )}
+          <div className="preview-run-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={projectPreview.autoRun}
+                onChange={(event) => projectPreview.setAutoRun(event.target.checked)}
+              />
+              Uruchamiaj JS ponownie po zmianie kodu
+            </label>
+            {projectPreview.scriptsStale && (
+              <span role="status">
+                {projectPreview.autoRun
+                  ? 'Kod zmieniony. JS uruchomi się za chwilę.'
+                  : 'Kod zmieniony. JS jest zatrzymany.'}
+              </span>
+            )}
+          </div>
+          <div
+            className="inspector-frame"
+            style={previewWidth ? { maxWidth: previewWidth, marginInline: 'auto' } : undefined}
+          >
             <iframe
               ref={iframeRef}
               title="Podgląd projektu"
@@ -1092,10 +1211,18 @@ export function Workspace() {
               <InspectorOverlay box={projectPreview.selection.box} spacing={inspectSpacing} />
             )}
           </div>
+          {!projectPreview.inspecting && (
+            <PreviewConsole
+              entries={projectPreview.console}
+              running={projectPreview.scriptsRunning}
+              onClear={projectPreview.clearConsole}
+            />
+          )}
           <p className="fine-print">
-            HTML i CSS odświeżają się po zmianie pliku. JavaScript uruchom przyciskiem. Zewnętrzne
-            zasoby, połączenia sieciowe i wysyłanie formularzy są zablokowane. Moduły z importami
-            wymagają własnej IDE.
+            HTML i CSS odświeżają się po zmianie pliku. JavaScript uruchom przyciskiem; po zmianie
+            kodu zatrzymuje się, chyba że włączysz ponowne uruchamianie. Zewnętrzne zasoby,
+            połączenia sieciowe i wysyłanie formularzy są zablokowane. Moduły z importami wymagają
+            własnej IDE.
           </p>
         </>
       ) : (

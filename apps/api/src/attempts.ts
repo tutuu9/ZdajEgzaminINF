@@ -157,6 +157,81 @@ export async function startTheory(body: unknown, req: Request): Promise<TheoryTi
   };
 }
 type QuestionRef = { key: string; version: number; optionOrder: string[] };
+/**
+ * A learning series has no time limit, but its server ticket lasts a day. The browser keeps
+ * the questions, so an unfinished series gets a fresh ticket for exactly the same published
+ * revisions and option order. Nothing here reveals a key: grading still happens on submit.
+ */
+export async function renewTheory(body: unknown, req: Request): Promise<TheoryTicket> {
+  const value = parse(
+    z
+      .object({
+        mode: z.enum(['nauka', 'trening']),
+        level: levelSchema.optional(),
+        questions: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1).max(200),
+                version: z.number().int().positive(),
+                optionOrder: z.array(z.string().max(100)).min(2).max(10),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(40),
+      })
+      .strict(),
+    body,
+  );
+  await rateLimit(`theory:${requestIpKey(req)}`, 60, 3_600_000);
+  if (new Set(value.questions.map((item) => item.id)).size !== value.questions.length)
+    throw new BadRequestException('Pytania w serii nie mogą się powtarzać.');
+  const records = await db.contentRevision.findMany({
+    where: {
+      kind: 'question',
+      status: 'published',
+      OR: value.questions.map((item) => ({ key: item.id, version: item.version })),
+    },
+  });
+  const selected = value.questions.map((item) => {
+    const row = records.find((record) => record.key === item.id && record.version === item.version);
+    const question = row?.payload as unknown as QuestionRevision | undefined;
+    if (!question || !isCkeQuestion(question))
+      throw new GoneException(
+        'Ta seria zawiera pytania, które nie są już dostępne. Rozpocznij nową serię.',
+      );
+    const known = question.options.map((option) => option.id);
+    if (
+      item.optionOrder.length !== known.length ||
+      new Set(item.optionOrder).size !== known.length ||
+      item.optionOrder.some((optionId) => !known.includes(optionId))
+    )
+      throw new BadRequestException('Kolejność odpowiedzi nie pasuje do pytania.');
+    return {
+      ...question,
+      options: item.optionOrder.map((optionId) =>
+        question.options.find((option) => option.id === optionId)!,
+      ),
+    };
+  });
+  const token = secretToken();
+  const row = await db.attemptTicket.create({
+    data: {
+      tokenHash: hash(token),
+      mode: value.mode,
+      level: value.level ?? 'beginner',
+      questionRefs: selected.map((question) => ({
+        key: question.id,
+        version: question.version,
+        optionOrder: question.options.map((option) => option.id),
+      })),
+      deadlineAt: null,
+      expiresAt: new Date(Date.now() + DAY_MS),
+    },
+  });
+  return { id: row.id, token, deadlineAt: null, questions: selected.map(toPublicQuestion) };
+}
 export async function submitTheory(id: string, body: unknown): Promise<TheoryResult> {
   const value = parse(
     z

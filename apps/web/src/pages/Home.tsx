@@ -145,7 +145,7 @@ export function Home() {
             <GraduationCap size={32} strokeWidth={1.5} />
           </span>
           <h2>Chwila na teorię.</h2>
-          <p>Krótka seria pytań CKE. Po odpowiedzi zobaczysz, co warto powtórzyć.</p>
+          <p>Krótka seria pytań CKE. Po oddaniu serii zobaczysz, co warto powtórzyć.</p>
           <Link className="button secondary" to="/teoria">
             Otwórz teorię
             <ArrowRight size={17} />

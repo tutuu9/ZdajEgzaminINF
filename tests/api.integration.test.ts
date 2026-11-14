@@ -1069,6 +1069,91 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     ).toBe(true);
   });
 
+  it('renews an expired learning series for the same questions and refuses anything else', async () => {
+    const started = await learner.request<TheoryTicket>('/theory/start', 'POST', {
+      mode: 'nauka',
+      count: 3,
+    });
+    expect(started.status).toBe(201);
+    const officialById = new Map(seed.officialQuestions.map((question) => [question.id, question]));
+    const answers = Object.fromEntries(
+      started.data.questions.map((question) => [
+        question.id,
+        officialById.get(question.id)!.correctOptionId,
+      ]),
+    );
+    await db.attemptTicket.update({
+      where: { id: started.data.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    expect(
+      (
+        await learner.request(`/theory/${started.data.id}/submit`, 'POST', {
+          token: started.data.token,
+          answers,
+        })
+      ).status,
+    ).toBe(410);
+    const questions = started.data.questions.map((question) => ({
+      id: question.id,
+      version: question.version,
+      optionOrder: question.options.map((option) => option.id),
+    }));
+    const renewed = await learner.request<TheoryTicket>('/theory/renew', 'POST', {
+      mode: 'nauka',
+      questions,
+    });
+    expect(renewed.status).toBe(201);
+    expect(renewed.data.id).not.toBe(started.data.id);
+    expect(renewed.data.questions).toEqual(started.data.questions);
+    expect(JSON.stringify(renewed.data)).not.toContain('correctOptionId');
+    expect(JSON.stringify(renewed.data)).not.toContain('explanation');
+    const result = await learner.request<TheoryResult>(
+      `/theory/${renewed.data.id}/submit`,
+      'POST',
+      { token: renewed.data.token, answers },
+    );
+    expect(result.status).toBe(201);
+    expect(result.data.correct).toBe(3);
+
+    const refused = async (body: unknown) =>
+      (await learner.request('/theory/renew', 'POST', body)).status;
+    expect(await refused({ mode: 'egzamin', questions })).toBe(400);
+    expect(await refused({ mode: 'nauka', questions: [] })).toBe(400);
+    expect(await refused({ mode: 'nauka', questions: [questions[0], questions[0]] })).toBe(400);
+    expect(
+      await refused({
+        mode: 'nauka',
+        questions: [{ ...questions[0]!, optionOrder: questions[0]!.optionOrder.slice(1) }],
+      }),
+    ).toBe(400);
+    expect(
+      await refused({
+        mode: 'nauka',
+        questions: [
+          {
+            ...questions[0]!,
+            optionOrder: [...questions[0]!.optionOrder.slice(1), 'not-an-option'],
+          },
+        ],
+      }),
+    ).toBe(400);
+    expect(
+      await refused({ mode: 'nauka', questions: [{ ...questions[0]!, version: 99_999 }] }),
+    ).toBe(410);
+    const legacy = await legacyTheory();
+    expect(
+      await refused({
+        mode: 'nauka',
+        questions: legacy.questions.slice(0, 1).map((question) => ({
+          id: question.id,
+          version: question.version,
+          optionOrder: question.options.map((option) => option.id),
+        })),
+      }),
+    ).toBe(410);
+  });
+
   it('preserves existing exam attempts and enforces hint restrictions with idempotent grading', async () => {
     const started = { data: await legacyTheory() };
     expect(started.data.questions).toHaveLength(40);

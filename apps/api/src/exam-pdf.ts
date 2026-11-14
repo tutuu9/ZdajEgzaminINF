@@ -71,11 +71,50 @@ const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 25_000;
 let activeDownloads = 0;
 
-/** Returns the exact reviewed source bytes, without rewriting or retaining an exam copy. */
+/**
+ * Joins simultaneous loads of one key and keeps a few results in memory for a short time.
+ * Failures are never kept, so the next request tries the source again.
+ */
+export function createBriefCache<T>(ttlMs: number, maxEntries: number) {
+  const ready = new Map<string, { value: T; expires: number }>();
+  const pending = new Map<string, Promise<T>>();
+  return async (key: string, load: () => Promise<T>): Promise<T> => {
+    const hit = ready.get(key);
+    if (hit && hit.expires > Date.now()) return hit.value;
+    ready.delete(key);
+    const running = pending.get(key);
+    if (running) return running;
+    const job = load()
+      .then((value) => {
+        ready.set(key, { value, expires: Date.now() + ttlMs });
+        // Map keeps insertion order, so the first key is the oldest.
+        while (ready.size > maxEntries) ready.delete(ready.keys().next().value!);
+        return value;
+      })
+      .finally(() => pending.delete(key));
+    pending.set(key, job);
+    return job;
+  };
+}
+// Every theory question is a crop of one pinned document. Without this, each learner who
+// opens a question starts another multi-megabyte download and the third one is refused.
+const pinnedSheets = createBriefCache<Buffer>(10 * 60_000, 3);
+
+/**
+ * Returns the exact reviewed source bytes without rewriting them. Nothing is written to
+ * disk. Only documents pinned by SHA-256 are held in memory, briefly: their bytes cannot
+ * differ between requests. Unpinned sources are fetched every time.
+ */
 export async function originalExamSheet(id: string) {
   const source = Object.hasOwn(REVIEWED_EXAM_PDFS, id) ? REVIEWED_EXAM_PDFS[id] : undefined;
   if (!source)
     throw new NotFoundException('Nie potwierdzono bezpośredniego źródła PDF dla tego arkusza.');
+  const bytes = source.sha256
+    ? await pinnedSheets(id, () => downloadExamSheet(source))
+    : await downloadExamSheet(source);
+  return { bytes, source };
+}
+async function downloadExamSheet(source: ReviewedExamSource) {
   if (activeDownloads >= 2)
     throw new HttpException('Trwa pobieranie innych arkuszy. Spróbuj ponownie za chwilę.', 429);
   activeDownloads++;
@@ -125,7 +164,7 @@ export async function originalExamSheet(id: string) {
       throw new BadGatewayException(
         'Dokument źródłowy zmienił się. Wymaga ponownej weryfikacji przed udostępnieniem podglądu.',
       );
-    return { bytes, source };
+    return bytes;
   } catch (error) {
     if (error instanceof HttpException) throw error;
     throw new ServiceUnavailableException(

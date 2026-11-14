@@ -33,6 +33,7 @@ import {
   getCheck,
   preparedHint,
   startTheory,
+  renewTheory,
   submitCheck,
   submitTheory,
 } from './attempts.js';
@@ -171,6 +172,10 @@ export class ApiController {
   @Post('theory/start') async theoryStart(@Body() body: unknown, @Req() req: Request) {
     await protectMutation(req);
     return startTheory(body, req);
+  }
+  @Post('theory/renew') async theoryRenew(@Body() body: unknown, @Req() req: Request) {
+    await protectMutation(req);
+    return renewTheory(body, req);
   }
   @Post('theory/:id/submit') async theorySubmit(
     @Param('id') id: string,

@@ -145,9 +145,14 @@ export async function markLesson(id: string, completed: boolean): Promise<void> 
   else await db.delete('learning', id);
 }
 
+const unsupportedImages = /\.(bmp|jfif|avif|tiff?|heic)$/i;
 const binaryExtensions = /\.(png|jpe?g|gif|webp|ico|pdf|woff2?|ttf|otf)$/i;
 export function bytesToFile(path: string, bytes: Uint8Array): ProjectFile {
   safePath(path);
+  if (unsupportedImages.test(path))
+    throw new Error(
+      `Plik ${path} ma format, którego projekt nie obsługuje. Zapisz obraz jako JPG lub PNG i wczytaj go ponownie.`,
+    );
   if (binaryExtensions.test(path)) {
     let content = '';
     for (let i = 0; i < bytes.length; i += 16384)

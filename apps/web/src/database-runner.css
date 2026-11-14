@@ -44,11 +44,12 @@
 .run-actions {
   grid-column: 1 / -1;
 }
-.run-sql textarea {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13.5px;
-  line-height: 1.5;
-  resize: vertical;
+.run-sql .code-editor {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.run-sql .cm-editor {
+  max-height: 420px;
 }
 .run-php {
   grid-column: 1 / -1;

@@ -4,6 +4,7 @@ import { phpLanguage } from '@codemirror/lang-php';
 import { prepareInspection } from './inspector/source';
 import { createInspectionBridge } from './inspector/bridge';
 import type { InspectionIndex } from './inspector/types';
+import { consoleBridgeScript } from './preview-console';
 
 /** Retain only literal HTML outside PHP blocks. PHP is never evaluated in a preview. */
 export function staticPhpMarkup(source: string) {
@@ -71,23 +72,106 @@ const mime = (path: string) =>
           ? 'image/gif'
           : /\.webp$/i.test(path)
             ? 'image/webp'
-            : 'application/octet-stream';
+            : /\.bmp$/i.test(path)
+              ? 'image/bmp'
+              : /\.ico$/i.test(path)
+                ? 'image/x-icon'
+                : /\.avif$/i.test(path)
+                  ? 'image/avif'
+                  : 'application/octet-stream';
+const imagePath = /\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i;
 function previewNonce() {
   const supplied = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content;
   if (supplied && /^[A-Za-z0-9+/]{24,}={0,2}$/.test(supplied)) return supplied;
   return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24))));
 }
 const scriptText = (code: string) => code.replace(/<\/script/gi, '<\\/script');
-function resolvePath(from: string, to: string): string | null {
-  if (!to || /^(?:[a-z]+:|\/\/|#)/i.test(to)) return null;
-  const parts = to.startsWith('/') ? [] : from.split('/').slice(0, -1);
-  for (const part of to.split(/[?#]/)[0]!.split('/')) {
+/** Browsers read a backslash as a slash and decode percent escapes before asking for a file. */
+export function resolvePath(from: string, to: string): string | null {
+  if (!to || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(to)) return null;
+  let target = to.replace(/\\/g, '/').split(/[?#]/)[0]!;
+  try {
+    target = decodeURIComponent(target);
+  } catch {
+    // A stray percent sign stays literal, as it does in a file name.
+  }
+  const parts = target.startsWith('/') ? [] : from.split('/').slice(0, -1);
+  for (const part of target.split('/')) {
     if (part === '..') {
       if (!parts.length) return null;
       parts.pop();
     } else if (part && part !== '.') parts.push(part);
   }
   return parts.join('/');
+}
+
+export interface MissingAsset {
+  /** The address exactly as the learner wrote it. */
+  value: string;
+  /** A project file with the same name in another folder, when there is one. */
+  suggestion?: string;
+}
+
+/**
+ * Finds project files the way the examination workstation (Windows) does: letter case is
+ * ignored. A file of the same name in another folder is only suggested, never substituted,
+ * because that path would not work outside the preview either.
+ */
+export function assetLookup<T extends { path: string }>(files: readonly T[]) {
+  const exact = new Map(files.map((file) => [file.path, file]));
+  const folded = new Map<string, T>();
+  for (const file of files) {
+    const key = file.path.toLowerCase();
+    if (!folded.has(key)) folded.set(key, file);
+  }
+  const find = (from: string, value: string): T | undefined => {
+    const path = resolvePath(from, value);
+    if (path === null) return undefined;
+    return exact.get(path) ?? folded.get(path.toLowerCase());
+  };
+  const suggest = (value: string): string | undefined => {
+    const name = resolvePath('', value)?.split('/').pop()?.toLowerCase();
+    if (!name) return undefined;
+    return files.find((file) => file.path.split('/').pop()!.toLowerCase() === name)?.path;
+  };
+  return { find, suggest };
+}
+
+/** Rewrites every url(...) of a stylesheet, including quoted addresses that contain spaces. */
+export function rewriteCssUrls(text: string, replace: (url: string) => string) {
+  return text.replace(
+    /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"\s]+))\s*\)/gi,
+    (_all: string, double?: string, single?: string, bare?: string) =>
+      `url("${replace((double ?? single ?? bare ?? '').trim())}")`,
+  );
+}
+
+/**
+ * Learner JavaScript may set an image address after the page is built (img.src = '…',
+ * innerHTML, style.backgroundImage). The frame has no network, so this trusted script,
+ * placed before any learner script, swaps such addresses for the project's own files.
+ */
+function runtimeAssetScript(images: Record<string, string>, entry: string) {
+  const data = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
+  return `(function(){var assets=${data(images)},base=${data(entry.split('/').slice(0, -1))};
+function find(value){if(!value||/^(?:[a-z][a-z0-9+.-]*:|\\/\\/|#)/i.test(value))return null;
+var target=value.replace(/\\\\/g,'/').split(/[?#]/)[0];try{target=decodeURIComponent(target);}catch(e){}
+var parts=target.charAt(0)==='/'?[]:base.slice(),list=target.split('/');
+for(var i=0;i<list.length;i++){var part=list[i];if(part==='..'){if(!parts.length)return null;parts.pop();}else if(part&&part!=='.')parts.push(part);}
+var key=parts.join('/').toLowerCase();return Object.prototype.hasOwnProperty.call(assets,key)?assets[key]:null;}
+function attribute(element,name){var value=element.getAttribute(name),found=value?find(value):null;if(found)element.setAttribute(name,found);}
+function style(element){var value=element.getAttribute('style');if(!value||value.indexOf('url(')<0)return;
+var next=value.replace(/url\\(\\s*(?:"([^"]*)"|'([^']*)'|([^)'"\\s]+))\\s*\\)/gi,function(all,a,b,c){var found=find((a||b||c||'').trim());return found?'url("'+found+'")':all;});
+if(next!==value)element.setAttribute('style',next);}
+function fix(element){if(element.nodeType!==1)return;var tag=element.tagName;
+if(tag!=='SCRIPT'&&tag!=='IFRAME'&&element.hasAttribute('src'))attribute(element,'src');
+if(element.hasAttribute('poster'))attribute(element,'poster');
+if(element.hasAttribute('style'))style(element);}
+new MutationObserver(function(records){for(var i=0;i<records.length;i++){var record=records[i];
+if(record.type==='attributes'){fix(record.target);continue;}
+for(var j=0;j<record.addedNodes.length;j++){var node=record.addedNodes[j];if(node.nodeType!==1)continue;fix(node);
+var inner=node.querySelectorAll('[src],[poster],[style]');for(var k=0;k<inner.length;k++)fix(inner[k]);}}
+}).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['src','poster','style']});})();`;
 }
 export function createPreview(
   files: ProjectFile[],
@@ -98,12 +182,17 @@ export function createPreview(
     inspection?: boolean;
     /** Markup already produced elsewhere, e.g. by a sandboxed PHP run, shown instead of the file. */
     markup?: string;
+    /** Page whose folder relative addresses start from, when it differs from the entry. */
+    base?: string;
   } = {},
-): { html: string; dispose: () => void; inspection?: InspectionIndex } {
+): { html: string; dispose: () => void; inspection?: InspectionIndex; missing: MissingAsset[] } {
   const map = new Map(files.map((file) => [file.path, file]));
+  const lookup = assetLookup(files);
+  const missing: MissingAsset[] = [];
   const source = map.get(entry);
   if (!source || source.encoding === 'base64' || !/\.(?:html?|php)$/i.test(entry))
-    return { html: '', dispose: () => undefined };
+    return { html: '', dispose: () => undefined, missing };
+  const origin = options.base ?? entry;
   const nonce = previewNonce();
   // Inspection owns its trusted bridge; learner JavaScript stays disabled. Measurement
   // frames never get instrumentation or a script, even if inspection is requested.
@@ -113,19 +202,20 @@ export function createPreview(
   // Used only by the hidden, script-free style measurement frame. CSP blocks
   // original URLs, while attribute selectors retain their actual meaning.
   const preserveAttributes = options.scripts === false && options.preserveResourceAttributes;
+  const dataUri = (file: ProjectFile) =>
+    `data:${mime(file.path)};base64,${file.encoding === 'base64' ? file.content : btoa(unescape(encodeURIComponent(file.content)))}`;
   const asset = (from: string, value: string) => {
-    const path = resolvePath(from, value),
-      file = path ? map.get(path) : undefined;
-    if (!file) return 'data:,';
-    return `data:${mime(file.path)};base64,${file.encoding === 'base64' ? file.content : btoa(unescape(encodeURIComponent(file.content)))}`;
+    const address = value.trim();
+    // Embedded images and same-document references need no file.
+    if (/^data:/i.test(address) || address.startsWith('#')) return address;
+    const file = lookup.find(from, address);
+    if (file) return dataUri(file);
+    if (resolvePath(from, address) !== null && !missing.some((item) => item.value === address))
+      missing.push({ value: address, suggestion: lookup.suggest(address) });
+    return 'data:,';
   };
   const css = (text: string, path: string) =>
-    text
-      .replace(/@import\s+[^;]+;?/gi, '')
-      .replace(
-        /url\(\s*['"]?([^)'"\s]+)['"]?\s*\)/gi,
-        (_all: string, url: string) => `url("${asset(path, url)}")`,
-      )
+    rewriteCssUrls(text.replace(/@import\s+[^;]+;?/gi, ''), (url) => asset(path, url))
       // Stylesheets become raw-text <style> nodes in srcdoc. Keep external CSS
       // strings from escaping that node when the browser reparses outerHTML.
       .replace(/<\/style/gi, '<\\/style');
@@ -140,13 +230,12 @@ export function createPreview(
     )
     .forEach((element) => element.remove());
   root.querySelectorAll('style').forEach((style) => {
-    style.textContent = css(style.textContent || '', entry);
+    style.textContent = css(style.textContent || '', origin);
   });
   root.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"]').forEach((link) => {
-    const path = resolvePath(entry, link.getAttribute('href') || '');
-    const file = path ? map.get(path) : undefined;
+    const file = lookup.find(origin, link.getAttribute('href') || '');
     const style = doc.createElement('style');
-    style.textContent = file ? css(file.content, file.path) : '';
+    style.textContent = file && file.encoding !== 'base64' ? css(file.content, file.path) : '';
     if (link.hasAttribute('media')) style.setAttribute('media', link.getAttribute('media')!);
     if (link.hasAttribute('disabled') || /(?:^|\s)alternate(?:\s|$)/i.test(link.rel))
       style.setAttribute('media', 'not all');
@@ -155,7 +244,7 @@ export function createPreview(
   root
     .querySelectorAll<HTMLElement>('[style]')
     .forEach((element) =>
-      element.setAttribute('style', css(element.getAttribute('style') || '', entry)),
+      element.setAttribute('style', css(element.getAttribute('style') || '', origin)),
     );
   const deferredScripts: HTMLScriptElement[] = [];
   root.querySelectorAll<HTMLScriptElement>('script').forEach((script) => {
@@ -169,8 +258,7 @@ export function createPreview(
     )
       return;
     const sourcePath = script.getAttribute('src');
-    const path = sourcePath ? resolvePath(entry, sourcePath) : null;
-    const file = path ? map.get(path) : undefined;
+    const file = sourcePath ? lookup.find(origin, sourcePath) : undefined;
     const code = sourcePath
       ? file?.encoding !== 'base64'
         ? file?.content || ''
@@ -186,7 +274,10 @@ export function createPreview(
     script.removeAttribute('integrity');
     script.removeAttribute('crossorigin');
     script.setAttribute('nonce', nonce);
-    script.textContent = scriptText(code);
+    // A sourceURL lets the browser name the learner's file when it reports an error.
+    script.textContent =
+      scriptText(code) +
+      (file && code ? `\n//# sourceURL=${file.path.replace(/[^\w./ -]/g, '_')}` : '');
     if (deferred) {
       script.remove();
       deferredScripts.push(script);
@@ -213,16 +304,26 @@ export function createPreview(
       element.removeAttribute(attribute.name);
     }
   });
-  root.querySelectorAll<HTMLElement>('[src]:not(script),[srcset]').forEach((element) => {
-    if (element.hasAttribute('src') && !preserveAttributes)
-      element.setAttribute('src', asset(entry, element.getAttribute('src') || ''));
-    if (!preserveAttributes) element.removeAttribute('srcset');
-  });
+  if (!preserveAttributes)
+    root
+      .querySelectorAll<HTMLElement>('[src]:not(script),[srcset],[poster],[background]')
+      .forEach((element) => {
+        // The preview has one size, so the first srcset candidate stands in for the set.
+        const candidate = element
+          .getAttribute('srcset')
+          ?.trim()
+          .split(/[\s,]+/)[0];
+        if (element.tagName === 'IMG' && !element.getAttribute('src') && candidate)
+          element.setAttribute('src', candidate);
+        element.removeAttribute('srcset');
+        for (const name of ['src', 'poster', 'background'])
+          if (element.hasAttribute(name))
+            element.setAttribute(name, asset(origin, element.getAttribute(name) || ''));
+      });
   root.querySelectorAll('a[href]').forEach((link) => {
-    const path = resolvePath(entry, link.getAttribute('href') || '');
+    const path = lookup.find(origin, link.getAttribute('href') || '')?.path;
     if (!preserveAttributes) link.setAttribute('href', '#');
-    if (path && map.has(path) && /\.(?:html?|php)$/i.test(path))
-      link.setAttribute('data-preview-path', path);
+    if (path && /\.(?:html?|php)$/i.test(path)) link.setAttribute('data-preview-path', path);
     link.removeAttribute('target');
     link.removeAttribute('download');
   });
@@ -230,6 +331,25 @@ export function createPreview(
   csp.httpEquiv = 'Content-Security-Policy';
   csp.content = `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'; media-src data:`;
   head.prepend(csp);
+  const images = scripts
+    ? Object.fromEntries(
+        files
+          .filter((file) => imagePath.test(file.path))
+          .map((file) => [file.path.toLowerCase(), dataUri(file)]),
+      )
+    : {};
+  if (scripts) {
+    const reporter = doc.createElement('script');
+    reporter.setAttribute('nonce', nonce);
+    reporter.textContent = scriptText(consoleBridgeScript);
+    csp.after(reporter);
+  }
+  if (Object.keys(images).length) {
+    const runtime = doc.createElement('script');
+    runtime.setAttribute('nonce', nonce);
+    runtime.textContent = scriptText(runtimeAssetScript(images, origin));
+    csp.after(runtime);
+  }
   const bridge = doc.createElement('script');
   bridge.setAttribute('nonce', nonce);
   bridge.textContent = scriptText(
@@ -253,5 +373,6 @@ export function createPreview(
     html: '<!doctype html>' + root.outerHTML,
     dispose: () => undefined,
     inspection: prepared?.index,
+    missing,
   };
 }
