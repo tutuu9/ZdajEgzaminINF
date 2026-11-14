@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { assetLookup, resolvePath, rewriteCssUrls } from '../apps/web/src/preview';
 import { createBriefCache } from '../apps/api/src/exam-pdf';
+import {
+  appendConsoleEntry,
+  CONSOLE_MESSAGE,
+  MAX_CONSOLE_ENTRIES,
+  readConsoleMessage,
+  type ConsoleEntry,
+} from '../apps/web/src/preview-console';
 
 const files = [
   { path: 'index.html' },
@@ -104,5 +111,41 @@ describe('brief cache for pinned exam documents', () => {
     expect(await cache('a', reload)).toBe('A2');
     expect(reload).toHaveBeenCalledOnce();
     expect(await cache('c', reload)).toBe('C');
+  });
+});
+
+describe('preview console messages', () => {
+  it('accepts only the expected shape and limits what the frame can make the page hold', () => {
+    const base = { type: CONSOLE_MESSAGE, level: 'error', text: 'x is not defined' };
+    expect(readConsoleMessage({ ...base, file: 'js/app.js', line: 3 })).toEqual({
+      level: 'error',
+      text: 'x is not defined',
+      file: 'js/app.js',
+      line: 3,
+    });
+    // The frame's own address is not a project file, and a line needs a file.
+    expect(readConsoleMessage({ ...base, file: 'about:srcdoc', line: 9 })).toEqual({
+      level: 'error',
+      text: 'x is not defined',
+    });
+    expect(readConsoleMessage({ ...base, file: '', line: 9 })).not.toHaveProperty('line');
+    expect(readConsoleMessage({ ...base, file: 'app.js', line: -1 })).not.toHaveProperty('line');
+    expect(readConsoleMessage({ ...base, text: 'a'.repeat(5000) })!.text).toHaveLength(2000);
+    for (const invalid of [
+      null,
+      'text',
+      { ...base, type: 'zdaj-preview-navigate' },
+      { ...base, level: 'table' },
+      { ...base, text: { html: '<b>x</b>' } },
+    ])
+      expect(readConsoleMessage(invalid)).toBeNull();
+  });
+
+  it('keeps only the newest entries', () => {
+    let entries: ConsoleEntry[] = [];
+    for (let index = 0; index < MAX_CONSOLE_ENTRIES + 5; index++)
+      entries = appendConsoleEntry(entries, { level: 'log', text: String(index) });
+    expect(entries).toHaveLength(MAX_CONSOLE_ENTRIES);
+    expect(entries[0]!.text).toBe('5');
   });
 });

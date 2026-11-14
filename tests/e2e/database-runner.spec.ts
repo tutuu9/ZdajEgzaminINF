@@ -35,7 +35,7 @@ test('the database view keeps the learner dump locally and explains the manual f
   await page.reload();
   await expect(runner.getByLabel('Nazwa bazy danych')).toHaveValue('motory');
   await expect(runner.getByLabel('Plik bazy (.sql) z projektu')).toHaveValue('moja.sql');
-  await expect(runner.getByLabel('Zapytania SQL')).toHaveValue('SELECT nazwa FROM miasta;');
+  await expect(runner.getByLabel('Zapytania SQL')).toContainText('SELECT nazwa FROM miasta;');
   await page.getByRole('tab', { name: 'Projekt', exact: true }).click();
   await expect(page.locator('.workspace-file-count')).toContainText('1');
   await expect(page.getByText('moja.sql').first()).toBeVisible();

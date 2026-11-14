@@ -1068,3 +1068,134 @@
     padding: 7px;
   }
 }
+.editor-filebar > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.editor-font-controls {
+  display: flex;
+  gap: 2px;
+  margin-right: 6px;
+}
+.editor-font-controls .icon-button {
+  color: #899db8;
+  min-height: 23px;
+  min-width: 28px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.editor-font-controls .icon-button:hover:not(:disabled) {
+  background: #31425c;
+}
+.preview-run-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 8px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.preview-run-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.preview-console {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+.preview-console-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.preview-console-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+}
+.preview-console-count {
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 11px;
+}
+.preview-console-list {
+  max-height: 190px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.preview-console-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+.preview-console-list li > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--muted);
+}
+.preview-console-list .console-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.preview-console-list .console-warn {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.preview-console-list .console-error > svg,
+.preview-console-list .console-warn > svg {
+  color: inherit;
+}
+.preview-console-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.preview-console-source {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+.preview-console-empty {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* The toolbar holds more controls than fit one row of a narrow preview pane. */
+.preview-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  row-gap: 8px;
+}
+.preview-toolbar > .button {
+  flex: none;
+  white-space: nowrap;
+}
+.preview-toolbar > span {
+  white-space: nowrap;
+}
+/* Drawn by CSS: the file bar's own text stays just the file name. */
+.editor-font-controls .font-smaller::before {
+  content: 'A2';
+}
+.editor-font-controls .font-larger::before {
+  content: 'A+';
+}

@@ -3,6 +3,17 @@ import type { AttemptSnapshot, ProjectFile } from '@zdaj/shared';
 import { createPreview, type MissingAsset } from '../preview';
 import { readInspectionMessage } from './bridge';
 import type { InspectionIndex, InspectionSelection, InspectionSource } from './types';
+import { appendConsoleEntry, readConsoleMessage, type ConsoleEntry } from '../preview-console';
+
+const AUTO_RUN_KEY = 'zdaj-preview-autorun';
+const AUTO_RUN_DELAY_MS = 800;
+function storedAutoRun() {
+  try {
+    return localStorage.getItem(AUTO_RUN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface PreviewContext {
   id?: string;
@@ -51,6 +62,13 @@ export function useProjectPreview({
   }>();
   const [problem, setProblem] = useState('');
   const [ready, setReady] = useState(false);
+  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
+  // The page whose scripts the learner last started. An edit stops them; this remembers
+  // that a restart, not a first run, is what the learner needs next.
+  const [lastRun, setLastRun] = useState<{ id?: string; entry: string }>();
+  const [autoRun, setAutoRunState] = useState(storedAutoRun);
+  const lastRunRef = useRef(lastRun);
+  lastRunRef.current = lastRun;
   const context: PreviewContext = {
     id: project?.id,
     files: project?.files,
@@ -68,6 +86,12 @@ export function useProjectPreview({
   const activeRef = useRef(inspecting);
   activeRef.current = inspecting;
   const scriptsRunning = !inspecting && !!scriptRequest && sameContext(scriptRequest, context);
+  const scriptsStale =
+    !inspecting &&
+    !scriptsRunning &&
+    !!lastRun &&
+    lastRun.id === context.id &&
+    lastRun.entry === context.entry;
   const fresh = !!prepared && sameContext(prepared.context, context);
   const index = fresh && inspecting ? prepared.inspection : undefined;
   const selection =
@@ -102,6 +126,8 @@ export function useProjectPreview({
       setPrepared(undefined);
       return;
     }
+    // Messages stay visible while the learner edits; a new run starts a clean console.
+    if (scriptsRunning) setConsoleEntries([]);
     try {
       const document = createPreview(snapshot.files, entry, {
         scripts: scriptsRunning,
@@ -129,6 +155,29 @@ export function useProjectPreview({
     inspecting,
     scriptsRunning,
   ]);
+
+  useEffect(() => {
+    // Half-typed code can loop forever, so an automatic restart waits for a pause in typing
+    // and is something the learner turns on.
+    if (!autoRun || !scriptsStale) return;
+    const timer = setTimeout(() => {
+      // The learner may have stopped the scripts while this restart was waiting.
+      const wanted = lastRunRef.current;
+      if (wanted && wanted.id === current.current.id && wanted.entry === current.current.entry)
+        setScriptRequest(current.current);
+    }, AUTO_RUN_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoRun, scriptsStale, project?.files]);
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      // Only this preview's own frame may write to its console.
+      if (!iframe.current?.contentWindow || event.source !== iframe.current.contentWindow) return;
+      const entry = readConsoleMessage(event.data);
+      if (entry) setConsoleEntries((entries) => appendConsoleEntry(entries, entry));
+    };
+    window.addEventListener('message', receive);
+    return () => window.removeEventListener('message', receive);
+  }, [iframe]);
 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
@@ -195,11 +244,29 @@ export function useProjectPreview({
     selection,
     inspecting,
     scriptsRunning,
+    scriptsStale,
+    autoRun,
+    setAutoRun: (value: boolean) => {
+      setAutoRunState(value);
+      try {
+        localStorage.setItem(AUTO_RUN_KEY, value ? '1' : '0');
+      } catch {
+        // The choice then lasts for this visit only.
+      }
+    },
+    stopScripts: () => {
+      lastRunRef.current = undefined;
+      setScriptRequest(undefined);
+      setLastRun(undefined);
+    },
+    console: consoleEntries,
+    clearConsole: () => setConsoleEntries([]),
     problem,
     ready,
     loaded: () => setReady(true),
     toggle: () => {
       setScriptRequest(undefined);
+      setLastRun(undefined);
       if (inspecting) stop();
       else setRequested(true);
     },
@@ -209,12 +276,14 @@ export function useProjectPreview({
       setRequested(false);
       setSelection(undefined);
       setScriptRequest(undefined);
+      setLastRun(undefined);
     },
     runScripts: () => {
       activeRef.current = false;
       setRequested(false);
       setSelection(undefined);
       setScriptRequest(context);
+      setLastRun({ id: context.id, entry: context.entry });
     },
     choose: (elementId: string) => {
       if (!ready || !index?.elements.some((element) => element.id === elementId)) return;

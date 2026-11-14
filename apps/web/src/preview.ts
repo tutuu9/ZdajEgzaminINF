@@ -4,6 +4,7 @@ import { phpLanguage } from '@codemirror/lang-php';
 import { prepareInspection } from './inspector/source';
 import { createInspectionBridge } from './inspector/bridge';
 import type { InspectionIndex } from './inspector/types';
+import { consoleBridgeScript } from './preview-console';
 
 /** Retain only literal HTML outside PHP blocks. PHP is never evaluated in a preview. */
 export function staticPhpMarkup(source: string) {
@@ -273,7 +274,10 @@ export function createPreview(
     script.removeAttribute('integrity');
     script.removeAttribute('crossorigin');
     script.setAttribute('nonce', nonce);
-    script.textContent = scriptText(code);
+    // A sourceURL lets the browser name the learner's file when it reports an error.
+    script.textContent =
+      scriptText(code) +
+      (file && code ? `\n//# sourceURL=${file.path.replace(/[^\w./ -]/g, '_')}` : '');
     if (deferred) {
       script.remove();
       deferredScripts.push(script);
@@ -334,6 +338,12 @@ export function createPreview(
           .map((file) => [file.path.toLowerCase(), dataUri(file)]),
       )
     : {};
+  if (scripts) {
+    const reporter = doc.createElement('script');
+    reporter.setAttribute('nonce', nonce);
+    reporter.textContent = scriptText(consoleBridgeScript);
+    csp.after(reporter);
+  }
   if (Object.keys(images).length) {
     const runtime = doc.createElement('script');
     runtime.setAttribute('nonce', nonce);

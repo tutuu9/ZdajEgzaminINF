@@ -17,7 +17,13 @@ import {
   showPanel,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
+import {
+  acceptCompletion,
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+} from '@codemirror/autocomplete';
+import { search, searchKeymap } from '@codemirror/search';
 import {
   bracketMatching,
   foldGutter,
@@ -26,7 +32,7 @@ import {
 } from '@codemirror/language';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
-import { javascript } from '@codemirror/lang-javascript';
+import { javascript, javascriptLanguage, scopeCompletionSource } from '@codemirror/lang-javascript';
 import { php } from '@codemirror/lang-php';
 import { sql } from '@codemirror/lang-sql';
 import { oneDarkTheme, oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
@@ -65,11 +71,38 @@ const abbreviationTools = [
   }),
 ];
 
+// CSS, JavaScript and SQL use the suggestions their language packages provide.
+const languageCompletions = [
+  autocompletion(),
+  EditorState.phrases.of({ Completions: 'Podpowiedzi kodu' }),
+];
+const searchPhrases = EditorState.phrases.of({
+  Find: 'Znajdź',
+  Replace: 'Zamień',
+  next: 'następny',
+  previous: 'poprzedni',
+  all: 'wszystkie',
+  'match case': 'wielkość liter',
+  regexp: 'wyrażenie regularne',
+  'by word': 'całe słowa',
+  replace: 'zamień',
+  'replace all': 'zamień wszystkie',
+  close: 'zamknij',
+  'Go to line': 'Przejdź do wiersza',
+  go: 'przejdź',
+});
+
 function accessSettings(readOnly: boolean, path: string) {
   return [
     EditorState.readOnly.of(readOnly),
     EditorView.editable.of(!readOnly),
-    !readOnly && supportsHtmlAbbreviation(path) ? abbreviationTools : [],
+    readOnly
+      ? []
+      : supportsHtmlAbbreviation(path)
+        ? abbreviationTools
+        : /\.(css|js|mjs|sql|txt)$/i.test(path)
+          ? languageCompletions
+          : [],
   ];
 }
 
@@ -101,6 +134,7 @@ export function Editor({
   initialView,
   onViewChange,
   reveal,
+  onRun,
 }: {
   value: string;
   path: string;
@@ -112,12 +146,16 @@ export function Editor({
   initialView?: ViewPosition;
   onViewChange?: (view: ViewPosition) => void;
   reveal?: EditorReveal;
+  /** Ctrl+Enter (Cmd+Enter) action, e.g. executing the statements being written. */
+  onRun?: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | null>(null),
     revealedSelection = useRef<EditorSelection | null>(null),
     callback = useRef(onChange);
   callback.current = onChange;
+  const runCallback = useRef(onRun);
+  runCallback.current = onRun;
   const positionCallback = useRef(onViewChange),
     compartments = useRef<SavedEditor | null>(null);
   positionCallback.current = onViewChange;
@@ -138,7 +176,11 @@ export function Editor({
         : /\.css$/i.test(path)
           ? css()
           : /\.(js|mjs|ts)$/i.test(path)
-            ? javascript()
+            ? [
+                javascript(),
+                // Browser names such as document, window and their members.
+                javascriptLanguage.data.of({ autocomplete: scopeCompletionSource(globalThis) }),
+              ]
             : /\.(sql|txt)$/i.test(path) && /sql|kwerend/i.test(path)
               ? sql()
               : [];
@@ -174,12 +216,25 @@ export function Editor({
             highlightActiveLine(),
             highlightActiveLineGutter(),
             bracketMatching(),
+            closeBrackets(),
+            search({ top: true }),
+            searchPhrases,
             foldGutter(),
             syntaxHighlighting(readableHighlightStyle),
             keymap.of([
               { key: 'Tab', run: acceptCompletion },
               { key: 'Tab', run: expandHtmlAbbreviation(path) },
               indentWithTab,
+              {
+                key: 'Mod-Enter',
+                run: () => {
+                  if (!runCallback.current) return false;
+                  runCallback.current();
+                  return true;
+                },
+              },
+              ...closeBracketsKeymap,
+              ...searchKeymap,
               ...defaultKeymap,
               ...historyKeymap,
             ]),
@@ -190,7 +245,7 @@ export function Editor({
             labelConfig.of(EditorView.contentAttributes.of({ 'aria-label': `${label}: ${path}` })),
             size.of(EditorView.theme({ '.cm-scroller': { minHeight: `${minHeight}px` } })),
             EditorView.theme({
-              '&': { fontSize: '13px', height: '100%' },
+              '&': { fontSize: 'var(--editor-font-size, 13px)', height: '100%' },
               '.cm-scroller': {
                 fontFamily: '"IBM Plex Mono", monospace',
                 overflow: 'auto',

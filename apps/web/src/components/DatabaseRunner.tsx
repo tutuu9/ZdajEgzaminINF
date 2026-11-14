@@ -9,6 +9,7 @@ import type {
 import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS } from '@zdaj/shared';
 import { api, errorMessage } from '../api';
 import { createPreview } from '../preview';
+import { Editor } from './Editor';
 import type { ProjectStore } from '../project-store';
 import {
   awaitRun,
@@ -409,6 +410,14 @@ export function DatabaseRunner({
   };
 
   const nothingToRun = !dumpPath && !draft.sql.trim() && !entry;
+  // A greyed-out button says nothing; name what is still missing.
+  const blocked = !available
+    ? 'Uruchamianie na serwerze jest teraz niedostępne.'
+    : !draft.database.trim()
+      ? 'Wpisz nazwę bazy danych.'
+      : nothingToRun
+        ? 'Wybierz plik bazy, wpisz zapytanie albo wskaż stronę PHP.'
+        : '';
   return (
     <div className="database-runner">
       <header>
@@ -480,18 +489,24 @@ export function DatabaseRunner({
             Platforma nie dostarcza plików z arkuszy. Pobierz je ze źródła wskazanego przy arkuszu.
           </small>
         </div>
-        <label className="field run-sql">
+        <div className="field run-sql">
           <span>Zapytania SQL</span>
-          <textarea
+          <Editor
+            path="zapytania.sql"
+            label="Zapytania SQL"
+            minHeight={170}
             value={draft.sql}
-            rows={8}
-            maxLength={MAX_RUN_SQL_CHARACTERS}
-            spellCheck={false}
-            placeholder="SELECT ... ;"
-            onChange={(event) => change({ sql: event.target.value })}
+            readOnly={busy}
+            onChange={(sql) => change({ sql: sql.slice(0, MAX_RUN_SQL_CHARACTERS) })}
+            onRun={() => {
+              if (!blocked) void run();
+            }}
           />
-          <small>Rozdziel instrukcje średnikami. Wykonywanych jest najwyżej 30 instrukcji.</small>
-        </label>
+          <small>
+            Rozdziel instrukcje średnikami. Wykonywanych jest najwyżej 30 instrukcji. Ctrl+Enter
+            uruchamia.
+          </small>
+        </div>
         <fieldset className="run-php">
           <legend>Strona PHP (opcjonalnie)</legend>
           <div className="run-php-row">
@@ -579,7 +594,8 @@ export function DatabaseRunner({
           <button
             type="button"
             className="button primary"
-            disabled={!available || busy || !draft.database.trim() || nothingToRun}
+            disabled={busy || !!blocked}
+            aria-describedby={blocked ? 'run-blocked' : undefined}
             onClick={() => void run()}
           >
             {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
@@ -598,6 +614,11 @@ export function DatabaseRunner({
           <span className="run-status" role="status">
             {busy && (status === 'running' ? 'Wykonywanie w izolowanym środowisku…' : 'W kolejce…')}
           </span>
+          {!busy && blocked && (
+            <span className="run-status" id="run-blocked">
+              {blocked}
+            </span>
+          )}
         </div>
       </div>
       {notice && <Notice>{notice}</Notice>}
