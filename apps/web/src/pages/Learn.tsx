@@ -23,6 +23,7 @@ import {
   PageHeading,
   TopicIcon,
   levelLabel,
+  usePageTitle,
 } from '../components/common';
 import { Editor } from '../components/Editor';
 
@@ -116,11 +117,12 @@ export function Learn() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const [error, setError] = useState('');
+  usePageTitle(data?.lessons.find((item) => item.id === id)?.title, !!id && id !== 'podstawy');
   if (!data)
     return loading ? (
       <Loading />
     ) : (
-      <EmptyState title="Lekcje są chwilowo niedostępne">
+      <EmptyState failed title="Lekcje są chwilowo niedostępne">
         Spróbuj ponownie połączyć się z serwerem.
       </EmptyState>
     );

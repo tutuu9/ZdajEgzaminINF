@@ -303,7 +303,7 @@
 }
 .pdf-reading-guide summary > span {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--accent-ink);
   margin-top: 3px;
 }

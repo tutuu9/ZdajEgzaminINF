@@ -228,7 +228,7 @@
   padding: 6px 9px;
   color: var(--accent-ink);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 .course-editor,
@@ -370,7 +370,7 @@
 }
 .course-preview .fine-print {
   padding: 8px 16px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .course-preview .notice {
   font-size: 12px;

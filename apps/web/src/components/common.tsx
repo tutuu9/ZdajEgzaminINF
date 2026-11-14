@@ -62,6 +62,14 @@ export function TopicIcon({ id, size = 22 }: { id: string; size?: number }) {
     }[id] || BookOpen;
   return <Component size={size} strokeWidth={1.7} />;
 }
+const SITE_TITLE = 'Zdaj Egzamin INF';
+/** Names the browser tab after the current page so several open tabs can be told apart. */
+export function usePageTitle(title: string | undefined | null, active = true) {
+  useEffect(() => {
+    if (active)
+      document.title = title ? `${title} — ${SITE_TITLE}` : `${SITE_TITLE} — Twoja pracownia`;
+  }, [title, active]);
+}
 const polishPlural = new Intl.PluralRules('pl');
 /** "1 pytanie", "3 pytania", "5 pytań": Polish needs three forms. */
 export function plural(count: number, one: string, few: string, many: string) {
@@ -127,17 +135,27 @@ export function EmptyState({
   children,
   to,
   label,
+  failed,
+  onRetry,
 }: {
   title: string;
   children: ReactNode;
   to?: string;
   label?: string;
+  /** A failure, not an empty list: shown with a warning sign and announced. */
+  failed?: boolean;
+  onRetry?: () => void;
 }) {
   return (
-    <div className="empty-state">
-      <BookOpen size={34} />
+    <div className={`empty-state${failed ? ' failed' : ''}`} role={failed ? 'alert' : undefined}>
+      {failed ? <AlertCircle size={34} /> : <BookOpen size={34} />}
       <h2>{title}</h2>
       <p>{children}</p>
+      {onRetry && (
+        <button className="button secondary" onClick={onRetry}>
+          Spróbuj ponownie
+        </button>
+      )}
       {to && (
         <Link className="button primary" to={to}>
           {label || 'Zacznij naukę'}

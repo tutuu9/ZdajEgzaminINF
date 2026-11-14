@@ -17,10 +17,18 @@ import { useApp } from '../context';
 import { exportProgress, importProgress, removeAttempt } from '../storage';
 import { errorMessage } from '../api';
 import { resumeHref } from '../resume';
-import { EmptyState, ErrorNotice, PageHeading, dateLabel, modeLabel } from '../components/common';
+import {
+  EmptyState,
+  ErrorNotice,
+  Loading,
+  PageHeading,
+  dateLabel,
+  modeLabel,
+  plural,
+} from '../components/common';
 
 export function Progress() {
-  const { data, attempts, completed, refreshProgress } = useApp();
+  const { data, attempts, completed, progressLoaded, refreshProgress } = useApp();
   const [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [busy, setBusy] = useState(false);
@@ -105,15 +113,20 @@ export function Progress() {
       <div className="progress-summary">
         <span>
           <BookOpen size={17} />
-          {completed.length} ukończonych lekcji
+          {plural(completed.length, 'ukończona lekcja', 'ukończone lekcje', 'ukończonych lekcji')}
         </span>
         <span>
           <GraduationCap size={17} />
-          {theory.length} rozwiązanych testów
+          {plural(theory.length, 'rozwiązany test', 'rozwiązane testy', 'rozwiązanych testów')}
         </span>
         <span>
           <FolderOpen size={17} />
-          {attempts.filter((attempt) => !attempt.submittedAt).length} prac w toku
+          {plural(
+            attempts.filter((attempt) => !attempt.submittedAt).length,
+            'praca w toku',
+            'prace w toku',
+            'prac w toku',
+          )}
         </span>
       </div>
       <div className="progress-columns">
@@ -198,6 +211,8 @@ export function Progress() {
                 </section>
               ))}
             </div>
+          ) : !progressLoaded ? (
+            <Loading label="Wczytywanie zapisanych prac…" />
           ) : (
             <EmptyState title="Tutaj pojawi się Twoja pierwsza próba" to="/nauka">
               Zacznij od lekcji lub krótkiego testu. Postęp będzie zapisywany automatycznie.

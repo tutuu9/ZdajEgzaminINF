@@ -10,7 +10,7 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Suspense } from 'react';
 import { useApp } from '../context';
-import { ErrorNotice, Loading } from './common';
+import { ErrorNotice, Loading, usePageTitle } from './common';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
 import { ThemePicker } from './ThemePicker';
 
@@ -21,10 +21,23 @@ const navigation = [
   { to: '/moje-prace', label: 'Moje prace', icon: FolderOpen },
   { to: '/faq', label: 'Pytania i odpowiedzi', shortLabel: 'FAQ', icon: CircleHelp },
 ];
+const staticTitles: Record<string, string> = {
+  '/nauka': 'Nauka',
+  '/nauka/podstawy': 'Lekcje',
+  '/arkusze': 'Arkusze',
+  '/teoria': 'Teoria',
+  '/moje-prace': 'Moje prace',
+  '/faq': 'Pytania i odpowiedzi',
+  '/admin': 'Administracja',
+};
 export function Shell() {
   const { error, reload } = useApp();
   const location = useLocation();
   const workspace = /^\/(praktyka|arkusze)\/[^/]+/.test(location.pathname);
+  // Sections name the tab here; a lesson or a paper sets its own, more specific title.
+  const section = staticTitles[location.pathname.replace(/\/+$/, '') || '/nauka'];
+  const specific = /^\/(praktyka|arkusze|nauka)\/[^/]+/.test(location.pathname) && !section;
+  usePageTitle(section, !specific);
   return (
     <div className={`app-shell${workspace ? ' workspace-shell' : ''}`}>
       <a href="#main-content" className="skip-link">

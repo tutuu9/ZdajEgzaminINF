@@ -181,7 +181,7 @@
   padding-top: 20px;
 }
 .question-navigation > span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .quiz-overview {
@@ -232,7 +232,7 @@
   background: var(--green);
 }
 .quiz-legend small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .quiz-overview > p {
   font-size: 12px;
@@ -454,7 +454,7 @@
 }
 .attempt-status {
   display: inline-flex;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .attempt-status.submitted {
@@ -512,7 +512,7 @@
 }
 .weak-topics small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -540,7 +540,7 @@
   font-size: 13px;
 }
 .backup-panel > .fine-print {
-  font-size: 11px;
+  font-size: 12px;
   margin: 17px 0 0;
 }
 .admin-login {
@@ -775,7 +775,7 @@
 .event-list small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 5px;
 }
 .admin-content-layout {
@@ -816,7 +816,7 @@
   display: block;
   color: var(--muted);
   margin-top: 5px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .content-list > button.active {
   background: var(--accent-soft);
@@ -958,7 +958,7 @@
     font-size: 14px;
   }
   .theory-set-summary {
-    font-size: 11px;
+    font-size: 12px;
     gap: 8px;
   }
   .theory-set-summary > span {
@@ -984,7 +984,7 @@
     font-size: 20px;
   }
   .question-topline {
-    font-size: 11px;
+    font-size: 12px;
   }
   .answer-options > label {
     min-height: 57px;
@@ -1058,7 +1058,7 @@
     font-size: 17px;
   }
   .attempt-row p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .attempt-row > .icon-button {
     width: 35px;
