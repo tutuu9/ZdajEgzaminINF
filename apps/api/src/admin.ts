@@ -80,7 +80,7 @@ const settingsSchema = z
     runtimeRunsEnabled: z.boolean(),
     aiBudgetUsd: z.number().finite().min(0).max(1000),
     aiDailyLimit: z.number().int().min(1).max(100),
-    aiInputTokenLimit: z.number().int().min(1000).max(12000),
+    aiInputTokenLimit: z.number().int().min(1000).max(64000),
     aiOutputTokenLimit: z.number().int().min(100).max(1500),
     aiInputPricePerMillion: z.number().finite().positive().max(100),
     aiOutputPricePerMillion: z.number().finite().positive().max(100),

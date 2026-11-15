@@ -24,7 +24,7 @@ New assignments use **8 original CKE practical papers and 25 published CKE theor
 - Theory learning and practice using reviewed excerpts from an official informator. Its published answer key remains accessible in the source, so a hidden-key theory exam and a fabricated 40-question set are not offered.
 - Browser-local progress, draft recovery and a portable backup. Student registration and cross-device synchronisation are not included.
 - An administrator panel at `/admin` for versioned content, source metadata, checking controls and aggregate operational statistics. Public pages link to the [owner](https://t.me/tutuu9); there is no administrator shortcut in the footer.
-- Optional DeepSeek explanations, disabled without a key and an administrator setting. The initial application budget is **$2 total**, not a renewing subscription.
+- Optional DeepSeek assistant, disabled without a key and an administrator setting. It reads the original paper, the learner's files and the findings of local checks, points at the mistake and explains it; it does not run code or award a score. The initial application budget is **$2 total**, not a renewing subscription.
 
 The interface and learning material are Polish. Technical documentation is English. Projects stay in the browser; explicit runtime checks temporarily upload code to the trusted worker. The administrator does not receive a permanent student history. See [architecture](docs/architecture.md) and [checking](docs/checking.md).
 

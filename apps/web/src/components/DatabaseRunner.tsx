@@ -284,12 +284,15 @@ export function DatabaseRunner({
   available,
   readOnly,
   onAddFile,
+  onResult,
 }: {
   store: ProjectStore;
   files: ProjectFile[];
   available: boolean;
   readOnly: boolean;
   onAddFile: (file: ProjectFile) => Promise<void>;
+  /** Lets the page keep the last run after this view is closed. */
+  onResult?: (result: SandboxRunResult) => void;
 }) {
   const attemptId = store.get().project.id;
   const [draft, setDraft] = useState<Draft>(() => loadDraft(attemptId));
@@ -393,6 +396,7 @@ export function DatabaseRunner({
         },
         { onStatus: (next) => mounted.current && setStatus(next), active: () => mounted.current },
       );
+      if (finished) onResult?.(finished);
       if (finished && mounted.current)
         setResult({
           value: finished,

@@ -24,7 +24,7 @@ Nowe próby korzystają z **8 oryginalnych arkuszy praktycznych CKE i 25 opublik
 - Nauka i trening teorii na sprawdzonych fragmentach oficjalnego informatora. Źródło zawiera dostępny klucz, dlatego nie oferujemy z niego egzaminu z ukrytymi odpowiedziami ani sztucznie uzupełnionego zestawu 40 pytań.
 - Postęp i szkice przechowywane w przeglądarce oraz eksport kopii zapasowej. Bez kont uczniów i automatycznej synchronizacji urządzeń.
 - Panel administratora pod `/admin`: wersje materiałów, katalog źródeł, zarządzanie sprawdzaniem i zbiorcza statystyka działania. W stopce jest kontakt do [właściciela](https://t.me/tutuu9), bez skrótu do administracji.
-- Opcjonalne wyjaśnienia DeepSeek, niedostępne bez klucza i włączenia przez administratora. Początkowy budżet aplikacji wynosi **2 USD łącznie**, bez automatycznego odnowienia.
+- Opcjonalny asystent DeepSeek, niedostępny bez klucza i włączenia przez administratora. Czyta oryginalny arkusz, pliki ucznia i wyniki lokalnych kontroli, wskazuje błąd i go wyjaśnia; nie uruchamia kodu i nie wystawia oceny. Początkowy budżet aplikacji wynosi **2 USD łącznie**, bez automatycznego odnowienia.
 
 Interfejs i materiały są po polsku, dokumentacja techniczna po angielsku. Projekty pozostają w przeglądarce; jawne sprawdzenie zachowania skryptu przesyła tymczasowo kod do wykonawcy. Administrator nie otrzymuje trwałej historii prac ucznia. Szczegóły: [architektura](docs/architecture.md) i [sprawdzanie](docs/checking.md).
 
