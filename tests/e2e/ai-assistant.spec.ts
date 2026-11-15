@@ -56,7 +56,7 @@ async function prepare(page: Page, { available = true, exam = false, failFollowU
             features: {
               aiAvailable: available,
               checkingAvailable: false,
-              runtimeRunsAvailable: false,
+              runsAvailable: false,
             },
             questionCount: 25,
           }
