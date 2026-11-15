@@ -24,9 +24,23 @@ export const config = {
       .map((x) => x.trim()),
   ),
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? '',
+  deepseekBaseUrl: (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(
+    /\/+$/,
+    '',
+  ),
+  deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-flash',
   runnerProfile: process.env.RUNNER_PROFILE ?? 'local-development',
   publicSandboxVerified: process.env.PUBLIC_SANDBOX_VERIFIED === 'true',
 };
+// The key is sent to this address, so a mistyped or plain-HTTP value must stop the start.
+// Plain HTTP is accepted only for a stand-in provider on this machine.
+const provider = new URL(config.deepseekBaseUrl);
+if (
+  provider.protocol !== 'https:' &&
+  !(provider.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(provider.hostname))
+) {
+  throw new Error('DEEPSEEK_BASE_URL must be an HTTPS address.');
+}
 if (!['local-development', 'public-sandbox'].includes(config.runnerProfile)) {
   throw new Error('RUNNER_PROFILE must be local-development or public-sandbox.');
 }

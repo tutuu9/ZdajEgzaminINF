@@ -21,7 +21,6 @@ import {
   Play,
   Send,
   ShieldCheck,
-  Sparkles,
   Square,
   Trash2,
   Upload,
@@ -37,10 +36,12 @@ import type {
   Mode,
   ProjectFile,
   PublicTask,
+  SandboxRunResult,
 } from '@zdaj/shared';
 import { MAX_PROJECT_FILES } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
+import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
@@ -160,10 +161,7 @@ export function Workspace() {
     [inspectChoice, setInspectChoice] = useState<{ generation: string; id: string }>(),
     [checkStatus, setCheckStatus] = useState(''),
     [hintBusy, setHintBusy] = useState(false),
-    [aiBusy, setAiBusy] = useState(false),
-    [aiPrompt, setAiPrompt] = useState(''),
-    [consent, setConsent] = useState(false),
-    [aiText, setAiText] = useState('');
+    [lastRun, setLastRun] = useState<SandboxRunResult | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null),
     iframeRef = useRef<HTMLIFrameElement>(null),
     inspectorToggleRef = useRef<HTMLButtonElement>(null),
@@ -312,7 +310,7 @@ export function Workspace() {
     setError('');
     setAttempt(null);
     setEditorReveal(undefined);
-    setAiText('');
+    setLastRun(null);
     setTabState('code');
     storeRef.current = null;
     setStore(null);
@@ -596,30 +594,6 @@ export function Workspace() {
       setError(errorMessage(e));
     } finally {
       setHintBusy(false);
-    }
-  };
-  const askAi = async () => {
-    if (!attempt) return;
-    setAiBusy(true);
-    setError('');
-    try {
-      const response = await storeRef.current!.request((latest) =>
-        api<{ text: string }>('/ai', {
-          method: 'POST',
-          body: {
-            attemptId: latest.ticket.id,
-            attemptToken: latest.ticket.token,
-            prompt: aiPrompt,
-            code: file?.encoding === 'base64' ? '' : (file?.content ?? ''),
-            consent,
-          },
-        }),
-      );
-      if (attemptRef.current?.id === attempt.id) setAiText(response.text);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setAiBusy(false);
     }
   };
   const upload = async (list: FileList | null) => {
@@ -1512,6 +1486,7 @@ export function Workspace() {
               files={attempt.files ?? []}
               available={Boolean(data?.features.runsAvailable)}
               readOnly={closed}
+              onResult={setLastRun}
               onAddFile={(added) =>
                 update((latest) => ({
                   ...latest,
@@ -1587,64 +1562,20 @@ export function Workspace() {
           )}
         </section>
       </div>
-      {(attempt.mode !== 'egzamin' || closed) && (
-        <section className="ai-panel">
-          <div className="ai-panel-heading">
-            <Sparkles size={23} />
-            <div>
-              <h2>Pomoc w zrozumieniu</h2>
-              <p>AI może wyjaśnić błąd. Jego odpowiedź nie jest oceną egzaminacyjną.</p>
-            </div>
-            <span className={`pill ${data?.features.aiAvailable ? '' : 'subtle'}`}>
-              {data?.features.aiAvailable ? 'DeepSeek' : 'AI wyłączone'}
-            </span>
-          </div>
-          {data?.features.aiAvailable ? (
-            <>
-              <label className="field">
-                <span>Co chcesz zrozumieć?</span>
-                <textarea
-                  rows={3}
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Np. Dlaczego zapytanie nie zwraca żadnego wiersza?"
-                  maxLength={4000}
-                />
-              </label>
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                <span>
-                  Zgadzam się na przesłanie pytania i treści wybranego pliku ({file?.path ?? 'brak'}
-                  ) do DeepSeek. Nie wpisuję danych osobowych ani kluczy.
-                </span>
-              </label>
-              <button
-                className="button secondary"
-                disabled={!consent || !aiPrompt.trim() || aiBusy}
-                onClick={() => void askAi()}
-              >
-                {aiBusy ? <Loader2 size={17} className="spin" /> : <Sparkles size={17} />}Poproś o
-                wyjaśnienie
-              </button>
-              {aiText && (
-                <div className="ai-response prose">
-                  <Markdown>{aiText}</Markdown>
-                </div>
-              )}
-            </>
-          ) : (
-            <p>
-              {manual
-                ? 'Oryginalny arkusz, przewodnik czytania i lokalny zapis działają niezależnie od AI.'
-                : 'Przygotowane wskazówki i sprawdzanie projektu działają niezależnie od AI.'}{' '}
-              Dostępność AI zależy od ustawień administratora i pozostałego budżetu.
-            </p>
+      {(attempt.mode !== 'egzamin' || closed) && store && (
+        <AiAssistant
+          key={attempt.id}
+          store={store}
+          attempt={attempt}
+          activePath={selected}
+          available={Boolean(data?.features.aiAvailable)}
+          hasSheet={Boolean(
+            data?.catalog.find((entry) => entry.id === task.sourceCatalogId)?.sourcePdf,
           )}
-        </section>
+          manual={manual}
+          console={projectPreview.console}
+          run={lastRun}
+        />
       )}
     </>
   );

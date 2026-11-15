@@ -54,7 +54,9 @@ Compose builds both the application image and the fixed sandbox image. Its `sand
 
 Run `npm run admin:create` in an interactive terminal. The CLI asks for a username and a password of at least 12 characters without displaying the password. There is no default admin password. It refuses to replace an existing account silently.
 
-DeepSeek is optional. Set `DEEPSEEK_API_KEY` privately in `.env`, restart the API and enable AI in the administrator panel. The key is not stored in client code. Initial settings limit application use to $2 total, five daily requests per guest session, additional IP throttling and one unresolved provider call. The input bound is conservative, and output is limited to 1500 tokens.
+DeepSeek is optional. Set `DEEPSEEK_API_KEY` privately in `.env`, restart the API and enable AI in the administrator panel. The key is not stored in client code. Initial settings limit application use to $2 total, 30 daily requests per guest session, additional IP throttling and one unresolved provider call. The input bound is conservative (48,000 bytes counted as tokens, so that the paper text and the project files fit), and output is limited to 1500 tokens. `DEEPSEEK_MODEL` selects the model (`deepseek-flash` by default) and `DEEPSEEK_BASE_URL` must be an HTTPS address.
+
+The assistant sends the learner's question, the conversation of the current tab, the project's text files and the findings of local checks to DeepSeek, together with text extracted from the reviewed original PDF. Nothing of this is stored by the API. See [the assistant context](architecture.md#ai-assistant-context).
 
 The displayed application cost is calculated from configured rates. Review those rates against the provider's current pricing; provider balance is a separate value. Failed requests with uncertain billing keep a reservation. The administrator can conservatively settle that reservation rather than assuming the call was free. Disabling AI leaves lessons, prepared hints and checking available.
 

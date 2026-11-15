@@ -764,7 +764,7 @@ function Overview() {
             <input
               type="number"
               min="1000"
-              max="12000"
+              max="64000"
               value={settings.aiInputTokenLimit}
               onChange={(e) => setNumber('aiInputTokenLimit', e.target.value)}
             />

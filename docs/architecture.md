@@ -31,6 +31,8 @@ The API does not execute uploaded code or receive the Docker socket. The worker 
 | Check report and access-secret hash                                     | PostgreSQL                   | Until acknowledgement or the job's 24-hour expiry            |
 | Input and result of a learner-initiated SQL/PHP run                     | PostgreSQL `SandboxRunJob`   | Input until the run ends; result for at most 15 minutes      |
 | AI request token counts and accounting status                           | PostgreSQL                   | Budget accounting; no prompt or code content                 |
+| Assistant conversation                                                  | Browser memory of one tab    | Until the tab is closed or the learner clears it             |
+| Text extracted from a reviewed original PDF                             | API process memory           | Up to six hours; rebuilt from the pinned source              |
 | Operational events                                                      | PostgreSQL                   | Seven days; counters remain aggregated                       |
 
 No permanent student account or `StudentAttempt` history exists on the server. A local backup contains sensitive attempt tokens and the learner's own files; treat it as private. There is no automatic cross-device sync.
@@ -69,5 +71,18 @@ The development API and database bind to loopback. HTTPS termination, production
 ## AI budget
 
 An application-wide budget is stored in integer micro-USD. A PostgreSQL transaction reserves a conservative maximum before contacting the provider. Only one unresolved call is admitted. Successful usage reconciles the reservation using configured rates; uncertain upstream failures retain it until conservative administrative settlement. No hidden paid retry is performed.
+
+## AI assistant context
+
+The assistant answers inside a practical attempt and is refused during an unsubmitted exam. Each request is assembled by the API in `apps/api/src/ai-context.ts`, ordered from stable to volatile so the provider can reuse a cached prefix:
+
+1. Fixed Polish instructions: the paper is the only source of requirements, how to locate a mistake, how to teach instead of handing over a solution, and what the assistant must not claim.
+2. The paper: task metadata and, for a reviewed CKE paper, text extracted from the allow-listed original PDF (`apps/api/src/exam-text.ts`). The text is derived in memory, cached briefly and never written to the repository or the database. Illustrations are not available to the model. If the PDF cannot be read, the request continues and the instructions tell the model to refer the learner to the PDF page instead of recalling requirements.
+3. Earlier turns of the conversation, sent again by the browser with every question. The server stores none of them.
+4. The current turn: mode and level, the open course activity (only when the learner already has the course open), project text files with line numbers, findings of the browser's own checks, and the question.
+
+Findings come from `apps/web/src/ai-findings.ts`: failed course checks with their code position, required files that are missing, links to files the project does not contain, preview console errors and errors of the last learner-initiated SQL/PHP run. They are facts for the model to explain, not a score. Learner-supplied text is wrapped in blocks closed by a per-request random marker and is declared to be data.
+
+Required parts that exceed the input limit are refused before any reservation. Optional parts are dropped in this order: other project files, then older conversation turns. The response names the files that were read and the ones left out.
 
 The ledger is a conservative application estimate, not the provider's invoice. Provider balance is displayed separately and may reflect other applications using the same account. Turning AI off blocks new calls but cannot recall one already transmitted.
