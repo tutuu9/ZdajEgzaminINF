@@ -39,6 +39,31 @@ export async function saveAttempt(attempt: AttemptSnapshot): Promise<void> {
     );
   }
 }
+/**
+ * Applies a change to the stored attempt inside one transaction. A theory series open in two
+ * tabs then adds each tab's answers to the latest saved state instead of overwriting it.
+ */
+export async function updateAttempt(
+  id: string,
+  change: (stored: AttemptSnapshot) => AttemptSnapshot,
+): Promise<AttemptSnapshot> {
+  try {
+    const tx = (await database()).transaction('attempts', 'readwrite');
+    const stored = (await tx.store.get(id)) as AttemptSnapshot | undefined;
+    if (!stored) {
+      await tx.done;
+      throw new Error('missing');
+    }
+    const next = structuredClone(change(stored));
+    await tx.store.put(next);
+    await tx.done;
+    return next;
+  } catch {
+    throw new Error(
+      'Nie udało się zapisać próby w przeglądarce. Sprawdź wolne miejsce i wyeksportuj postęp przed zamknięciem strony.',
+    );
+  }
+}
 /** Compare-and-swap prevents another tab or an older queued update from erasing code. */
 export async function saveProjectRevision(
   attempt: AttemptSnapshot,

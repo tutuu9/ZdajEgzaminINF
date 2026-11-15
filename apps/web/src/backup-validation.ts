@@ -176,6 +176,23 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
             question!.options.map((option) => option.id),
           );
         }
+      if (item.checked !== undefined)
+        for (const [questionId, raw] of Object.entries(record(item.checked))) {
+          const question = questions.find((q) => q.id === questionId);
+          if (!question) fail();
+          const check = record(raw),
+            optionIds = question!.options.map((option) => option.id);
+          member(check.selectedOptionId, optionIds);
+          member(check.correctOptionId, optionIds);
+          if (
+            typeof check.correct !== 'boolean' ||
+            check.correct !== (check.selectedOptionId === check.correctOptionId)
+          )
+            fail();
+          text(check.explanation);
+          const explanations = record(check.optionExplanations);
+          for (const optionId of optionIds) text(explanations[optionId]);
+        }
     }
     if (item.checkJob !== undefined) {
       const job = record(item.checkJob);

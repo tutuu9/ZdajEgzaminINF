@@ -18,6 +18,7 @@ import {
   toPublicQuestion,
   type AttemptTicket,
   type ProjectFile,
+  type QuestionCheck,
   type QuestionRevision,
   type TheoryTicket,
   type TheoryResult,
@@ -231,6 +232,55 @@ export async function renewTheory(body: unknown, req: Request): Promise<TheoryTi
     },
   });
   return { id: row.id, token, deadlineAt: null, questions: selected.map(toPublicQuestion) };
+}
+/**
+ * Learning mode explains each question as soon as it is answered. The source informator
+ * publishes its key, so this reveals nothing a learner could not read there; training and
+ * examination attempts still receive explanations only after submission.
+ */
+export async function checkTheoryQuestion(
+  id: string,
+  body: unknown,
+  req: Request,
+): Promise<QuestionCheck> {
+  const value = parse(
+    z
+      .object({
+        token: z.string().max(100),
+        questionId: z.string().min(1).max(200),
+        optionId: z.string().min(1).max(100),
+      })
+      .strict(),
+    body,
+  );
+  await rateLimit(`theory-check:${requestIpKey(req)}`, 600, 3_600_000);
+  const attempt = await getAttempt(id, value.token);
+  if (!attempt.questionRefs) throw new BadRequestException('To nie jest próba teoretyczna.');
+  if (attempt.mode !== 'nauka')
+    throw new ForbiddenException(
+      'Wyjaśnienie po każdym pytaniu jest dostępne tylko w trybie nauki.',
+    );
+  if (attempt.submittedAt) throw new ConflictException('Ta próba została już oddana.');
+  const ref = (attempt.questionRefs as unknown as QuestionRef[]).find(
+    (item) => item.key === value.questionId,
+  );
+  if (!ref) throw new BadRequestException('Pytanie nie należy do tej próby.');
+  const row = await db.contentRevision.findFirst({
+    where: { kind: 'question', status: 'published', key: ref.key, version: ref.version },
+  });
+  if (!row) throw new ServiceUnavailableException('Brakuje wersji pytania użytej w tej próbie.');
+  const question = row.payload as unknown as QuestionRevision;
+  if (!question.options.some((option) => option.id === value.optionId))
+    throw new BadRequestException('Nieznany wariant odpowiedzi.');
+  return {
+    selectedOptionId: value.optionId,
+    correctOptionId: question.correctOptionId,
+    correct: value.optionId === question.correctOptionId,
+    explanation: question.explanation,
+    optionExplanations: Object.fromEntries(
+      question.options.map((option) => [option.id, option.explanation]),
+    ),
+  };
 }
 export async function submitTheory(id: string, body: unknown): Promise<TheoryResult> {
   const value = parse(

@@ -253,6 +253,14 @@ export interface QuestionFeedback {
   explanation: string;
   optionExplanations: Record<string, string>;
 }
+/** Feedback for one question of a learning series, given before the series is submitted. */
+export interface QuestionCheck {
+  selectedOptionId: string;
+  correctOptionId: string;
+  correct: boolean;
+  explanation: string;
+  optionExplanations: Record<string, string>;
+}
 export interface TheoryResult {
   correct: number;
   total: number;
@@ -372,6 +380,8 @@ export interface AttemptSnapshot {
   files?: ProjectFile[];
   questions?: PublicQuestion[];
   answers?: Record<string, string>;
+  /** Learning mode only: questions already checked one by one; their answers are final. */
+  checked?: Record<string, QuestionCheck>;
   hintCount: number;
   revealedHints?: string[];
   report?: CheckReport;

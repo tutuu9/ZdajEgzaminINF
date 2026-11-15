@@ -2,6 +2,90 @@ import { expect, test, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import type { AttemptSnapshot, ExamStudyGuide, ProjectFile, PublicQuestion } from '@zdaj/shared';
 
+test('learning mode explains each question at once and hands the series in from the last one', async ({
+  page,
+}) => {
+  await page.goto('/teoria');
+  await page.locator('.theory-set-options summary').click();
+  await page.getByLabel('Liczba pytań').selectOption('5');
+  await page.getByRole('button', { name: 'Rozpocznij naukę', exact: true }).click();
+  await expect(page.locator('.question-topline')).toContainText('Pytanie 1 z 5');
+  const check = page.getByRole('button', { name: 'Sprawdź odpowiedź', exact: true });
+  await expect(check).toBeDisabled();
+  await page.getByRole('radio').first().check();
+  const checked = page.waitForResponse((response) => response.url().endsWith('/check'));
+  await check.click();
+  const feedback = (await (await checked).json()) as { correct: boolean };
+  await expect(page.locator('.question-check .check-verdict')).toHaveClass(
+    feedback.correct ? /correct/ : /wrong/,
+  );
+  await expect(page.locator('.question-check .feedback-options > div')).toHaveCount(4);
+  await expect(page.locator('.question-check .feedback-options .correct')).toHaveCount(1);
+  await expect(page.locator('.question-check .feedback-explanation')).not.toBeEmpty();
+  // A checked answer is final: the choices are replaced by the explanation.
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', {
+      name: `Przejdź do pytania 1, odpowiedź zaznaczona, ${feedback.correct ? 'poprawna' : 'błędna'}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  // The explanation is kept in the browser with the series.
+  await page.reload();
+  await page.getByRole('button', { name: /^Przejdź do pytania 1,/ }).click();
+  await expect(page.locator('.question-check .feedback-options > div')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Następne', exact: true }).click();
+  await expect(page.locator('.question-topline')).toContainText('Pytanie 2 z 5');
+  await expect(page.locator('.quiz-question > h2')).toBeFocused();
+  await page.getByRole('button', { name: 'Przejdź do pytania 5', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Następne', exact: true })).toHaveCount(0);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Oddaj serię', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Omówienie odpowiedzi', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.question-feedback')).toHaveCount(5);
+});
+
+test('answers given in two tabs of one series are both kept', async ({ page, context }) => {
+  await page.goto('/teoria');
+  await page.locator('.theory-set-options summary').click();
+  await page.getByLabel('Liczba pytań').selectOption('5');
+  await page
+    .locator('.mode-picker')
+    .getByRole('button', { name: /Trening/ })
+    .click();
+  await page.getByRole('button', { name: 'Rozpocznij trening', exact: true }).click();
+  await expect(page.locator('.question-topline')).toContainText('Pytanie 1 z 5');
+  const other = await context.newPage();
+  await other.goto(page.url());
+  await expect(other.locator('.question-topline')).toContainText('Pytanie 1 z 5');
+  await page.getByRole('radio').first().check();
+  // The second tab still shows the series as it was when it opened.
+  await other.getByRole('button', { name: 'Przejdź do pytania 2', exact: true }).click();
+  await other.getByRole('radio').nth(1).check();
+  await expect(other.locator('.meta-line')).toContainText('Odpowiedziano na 2 z 5');
+  await page.reload();
+  await expect(page.locator('.meta-line')).toContainText('Odpowiedziano na 2 z 5');
+  await expect(page.locator('.question-topline')).toContainText('Pytanie 3 z 5');
+  await other.close();
+});
+
+test('training keeps explanations until the series is submitted', async ({ page }) => {
+  await page.goto('/teoria');
+  await page.locator('.theory-set-options summary').click();
+  await page.getByLabel('Liczba pytań').selectOption('5');
+  await page
+    .locator('.mode-picker')
+    .getByRole('button', { name: /Trening/ })
+    .click();
+  await page.getByRole('button', { name: 'Rozpocznij trening', exact: true }).click();
+  await expect(page.locator('.question-topline')).toContainText('Pytanie 1 z 5');
+  await page.getByRole('radio').first().check();
+  await expect(page.getByRole('button', { name: 'Sprawdź odpowiedź', exact: true })).toHaveCount(0);
+  await expect(page.locator('.question-check')).toHaveCount(0);
+});
+
 test('a learner resumes theory, receives explanations after submission and exports local progress', async ({
   page,
 }) => {
