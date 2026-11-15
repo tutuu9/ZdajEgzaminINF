@@ -12,12 +12,20 @@ import {
   Loader2,
   RotateCcw,
   Send,
+  SearchCheck,
   XCircle,
 } from 'lucide-react';
-import type { AttemptSnapshot, Mode, TheoryResult, TheoryTicket } from '@zdaj/shared';
+import type {
+  AttemptSnapshot,
+  Mode,
+  PublicQuestion,
+  QuestionCheck,
+  TheoryResult,
+  TheoryTicket,
+} from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, ApiError, errorMessage } from '../api';
-import { readAttempt, saveAttempt } from '../storage';
+import { readAttempt, saveAttempt, updateAttempt } from '../storage';
 import {
   EmptyState,
   ErrorNotice,
@@ -68,6 +76,41 @@ function ReviewSource({ question, open }: { question: ReviewedQuestion; open: bo
   );
 }
 
+/** The four options with what is right or wrong about each, as shown in the final review. */
+function FeedbackOptions({
+  question,
+  correctOptionId,
+  selectedOptionId,
+  optionExplanations,
+}: {
+  question: PublicQuestion;
+  correctOptionId: string;
+  selectedOptionId: string | null;
+  optionExplanations: Record<string, string>;
+}) {
+  return (
+    <div className="feedback-options">
+      {question.options.map((option, index) => (
+        <div
+          key={option.id}
+          className={`${option.id === correctOptionId ? 'correct ' : ''}${option.id === selectedOptionId ? 'chosen' : ''}`}
+        >
+          <span className="option-letter">{'ABCD'[index]}</span>
+          <div>
+            {!question.source && <strong>{option.text}</strong>}
+            <p>{optionExplanations[option.id]}</p>
+          </div>
+          {option.id === correctOptionId ? (
+            <Check size={17} />
+          ) : option.id === selectedOptionId ? (
+            <XCircle size={17} />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Theory() {
   const { data, level, refreshProgress } = useApp();
   const [params, setParams] = useSearchParams();
@@ -82,9 +125,13 @@ export function Theory() {
     [error, setError] = useState(''),
     [filter, setFilter] = useState<'all' | 'wrong'>('all');
   const ref = useRef<AttemptSnapshot | null>(null),
-    expired = useRef<string | null>(null);
+    expired = useRef<string | null>(null),
+    heading = useRef<HTMLHeadingElement>(null),
+    moved = useRef(false);
   ref.current = attempt;
   useEffect(() => {
+    // A series that was just started here is already on screen; reading it again would flash.
+    if (id && ref.current?.id === id) return;
     setError('');
     expired.current = null;
     setAttempt(null);
@@ -98,7 +145,10 @@ export function Theory() {
           throw new Error('Nie znaleziono tego testu w tej przeglądarce.');
         setAttempt(value);
         setMode(value.mode);
-        setIndex(Math.max(0, value.questions?.findIndex((q) => !value.answers?.[q.id]) ?? 0));
+        // Open at the first question still waiting for an answer, or at the last one, where
+        // the series is handed in.
+        const open = value.questions?.findIndex((q) => !value.answers?.[q.id]) ?? 0;
+        setIndex(open < 0 ? Math.max(0, (value.questions?.length ?? 1) - 1) : open);
       })
       .catch((e) => {
         if (!cancelled) setError(errorMessage(e));
@@ -110,11 +160,71 @@ export function Theory() {
       cancelled = true;
     };
   }, [id]);
+  useEffect(() => {
+    // Keyboard and screen-reader users land on the question they moved to.
+    if (!moved.current) return;
+    moved.current = false;
+    heading.current?.focus();
+  }, [index]);
+  const go = (next: number) => {
+    moved.current = true;
+    setIndex(next);
+  };
   const update = useCallback(async (value: AttemptSnapshot) => {
     ref.current = value;
     setAttempt(value);
     await saveAttempt(value);
   }, []);
+  /** Saves a change on top of what is stored, so a second tab's answers are not lost. */
+  const patch = useCallback(async (change: (stored: AttemptSnapshot) => AttemptSnapshot) => {
+    const current = ref.current;
+    if (!current) return null;
+    const next = await updateAttempt(current.id, change);
+    if (ref.current?.id === next.id) {
+      ref.current = next;
+      setAttempt(next);
+    }
+    return next;
+  }, []);
+  /**
+   * The server keeps a series for a day; the browser keeps it for as long as the learner
+   * wants. An expired series gets a new ticket for the same questions and the request is
+   * sent again.
+   */
+  const withTicket = useCallback(
+    async <T,>(send: (attempt: AttemptSnapshot) => Promise<T>): Promise<T> => {
+      const current = ref.current!;
+      try {
+        return await send(current);
+      } catch (cause) {
+        if (
+          !(cause instanceof ApiError) ||
+          ![404, 410].includes(cause.status) ||
+          current.mode === 'egzamin' ||
+          !current.questions?.length
+        )
+          throw cause;
+        const ticket = await api<TheoryTicket>('/theory/renew', {
+          method: 'POST',
+          body: {
+            mode: current.mode,
+            level: current.level,
+            questions: current.questions.map((question) => ({
+              id: question.id,
+              version: question.version,
+              optionOrder: question.options.map((option) => option.id),
+            })),
+          },
+        });
+        const renewed = await patch((stored) => ({
+          ...stored,
+          ticket: { id: ticket.id, token: ticket.token, deadlineAt: ticket.deadlineAt },
+        }));
+        return send(renewed ?? current);
+      }
+    },
+    [patch],
+  );
   const start = async () => {
     if (mode === 'egzamin') {
       setError(
@@ -160,61 +270,41 @@ export function Theory() {
     }
   };
   const submit = useCallback(async () => {
-    let current = ref.current;
-    if (!current || current.submittedAt) return;
+    const shown = ref.current;
+    if (!shown || shown.submittedAt) return;
     setBusy(true);
     setError('');
-    const send = (attempt: AttemptSnapshot) =>
-      api<TheoryResult>(`/theory/${attempt.ticket.id}/submit`, {
-        method: 'POST',
-        body: { token: attempt.ticket.token, answers: attempt.answers ?? {} },
-      });
     try {
-      let result: TheoryResult;
-      try {
-        result = await send(current);
-      } catch (cause) {
-        // The server keeps a series for a day; the browser keeps it for as long as the
-        // learner wants. An expired series gets a new ticket for the same questions.
-        if (
-          !(cause instanceof ApiError) ||
-          ![404, 410].includes(cause.status) ||
-          current.mode === 'egzamin' ||
-          !current.questions?.length
-        )
-          throw cause;
-        const ticket = await api<TheoryTicket>('/theory/renew', {
-          method: 'POST',
-          body: {
-            mode: current.mode,
-            level: current.level,
-            questions: current.questions.map((question) => ({
-              id: question.id,
-              version: question.version,
-              optionOrder: question.options.map((option) => option.id),
-            })),
-          },
-        });
-        current = {
-          ...(ref.current ?? current),
-          ticket: { id: ticket.id, token: ticket.token, deadlineAt: ticket.deadlineAt },
-        };
-        await update(current);
-        result = await send(current);
+      // Another tab may have answered more questions or already handed the series in.
+      const stored = await readAttempt(shown.id);
+      if (stored && ref.current?.id === stored.id) {
+        ref.current = stored;
+        setAttempt(stored);
+        if (stored.submittedAt) return;
       }
-      await update({
-        ...current,
-        theoryResult: result,
-        submittedAt: result.submittedAt,
-        updatedAt: new Date().toISOString(),
-      });
+      const result = await withTicket((attempt) =>
+        api<TheoryResult>(`/theory/${attempt.ticket.id}/submit`, {
+          method: 'POST',
+          body: { token: attempt.ticket.token, answers: attempt.answers ?? {} },
+        }),
+      );
+      await patch((latest) =>
+        latest.submittedAt
+          ? latest
+          : {
+              ...latest,
+              theoryResult: result,
+              submittedAt: result.submittedAt,
+              updatedAt: new Date().toISOString(),
+            },
+      );
       await refreshProgress();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
-  }, [refreshProgress, update]);
+  }, [patch, refreshProgress, withTicket]);
   const expire = useCallback(() => {
     if (ref.current && !ref.current.submittedAt && expired.current !== ref.current.id) {
       expired.current = ref.current.id;
@@ -224,19 +314,60 @@ export function Theory() {
   const choose = (optionId: string) => {
     const current = ref.current,
       question = current?.questions?.[index];
-    if (!current || !question || current.submittedAt) return;
-    void update({
-      ...current,
-      answers: { ...current.answers, [question.id]: optionId },
-      updatedAt: new Date().toISOString(),
-    }).catch((e) => setError(errorMessage(e)));
+    if (!current || !question) return;
+    const change = (stored: AttemptSnapshot): AttemptSnapshot =>
+      stored.submittedAt || stored.checked?.[question.id]
+        ? stored
+        : {
+            ...stored,
+            answers: { ...stored.answers, [question.id]: optionId },
+            updatedAt: new Date().toISOString(),
+          };
+    // Show the choice at once; the save then merges it with what is stored.
+    const optimistic = change(current);
+    ref.current = optimistic;
+    setAttempt(optimistic);
+    void patch(change).catch((e) => setError(errorMessage(e)));
+  };
+  /** Learning mode: explain this question now. A checked answer is final. */
+  const check = async () => {
+    const current = ref.current,
+      question = current?.questions?.[index],
+      optionId = question && current?.answers?.[question.id];
+    if (!current || !question || !optionId || current.submittedAt || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const feedback = await withTicket((attempt) =>
+        api<QuestionCheck>(`/theory/${attempt.ticket.id}/check`, {
+          method: 'POST',
+          body: { token: attempt.ticket.token, questionId: question.id, optionId },
+        }),
+      );
+      await patch((stored) =>
+        stored.submittedAt || stored.checked?.[question.id]
+          ? stored
+          : {
+              ...stored,
+              answers: { ...stored.answers, [question.id]: feedback.selectedOptionId },
+              checked: { ...stored.checked, [question.id]: feedback },
+              updatedAt: new Date().toISOString(),
+            },
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
   };
   if (loading) return <Loading label="Otwieranie zapisanej próby…" />;
   if (!attempt)
     return (
       <div className="theory-landing">
         <PageHeading title="Teoria w małych porcjach.">
-          Wybierz odpowiedź. Po oddaniu serii poznasz jej wyjaśnienie.
+          {mode === 'nauka'
+            ? 'Wybierz odpowiedź i sprawdź ją od razu. Wyjaśnienie zobaczysz po każdym pytaniu.'
+            : 'Wybierz odpowiedź. Po oddaniu serii poznasz jej wyjaśnienie.'}
         </PageHeading>
         <ErrorNotice message={error} />
         <section className="theory-start glass-panel">
@@ -341,6 +472,8 @@ export function Theory() {
               onClick={() => {
                 setParams({});
                 setAttempt(null);
+                // A retained examination attempt must not leave the start button disabled.
+                setMode((value) => (value === 'egzamin' ? 'nauka' : value));
               }}
             >
               <RotateCcw size={16} />
@@ -399,25 +532,12 @@ export function Theory() {
                 </h3>
               </div>
               <ReviewSource question={item.question} open={!item.correct} />
-              <div className="feedback-options">
-                {item.question.options.map((option, index) => (
-                  <div
-                    key={option.id}
-                    className={`${option.id === item.correctOptionId ? 'correct ' : ''}${option.id === item.selectedOptionId ? 'chosen' : ''}`}
-                  >
-                    <span className="option-letter">{'ABCD'[index]}</span>
-                    <div>
-                      {!item.question.source && <strong>{option.text}</strong>}
-                      <p>{item.optionExplanations[option.id]}</p>
-                    </div>
-                    {option.id === item.correctOptionId ? (
-                      <Check size={17} />
-                    ) : option.id === item.selectedOptionId ? (
-                      <XCircle size={17} />
-                    ) : null}
-                  </div>
-                ))}
-              </div>
+              <FeedbackOptions
+                question={item.question}
+                correctOptionId={item.correctOptionId}
+                selectedOptionId={item.selectedOptionId}
+                optionExplanations={item.optionExplanations}
+              />
               {!item.selectedOptionId && <p className="muted">Nie zaznaczono odpowiedzi.</p>}
               <p className="feedback-explanation">{item.explanation}</p>
               <Link className="text-link" to={`/nauka/podstawy?temat=${item.question.topicId}`}>
@@ -438,6 +558,18 @@ export function Theory() {
   const questions = attempt.questions ?? [],
     question = questions[index],
     answered = Object.keys(attempt.answers ?? {}).length;
+  const feedback = question ? attempt.checked?.[question.id] : undefined,
+    chosen = question ? attempt.answers?.[question.id] : undefined,
+    last = index === questions.length - 1;
+  const finish = () => {
+    if (
+      answered === questions.length ||
+      window.confirm(
+        `Bez odpowiedzi: ${plural(questions.length - answered, 'pytanie', 'pytania', 'pytań')}. Oddać próbę?`,
+      )
+    )
+      void submit();
+  };
   if (!question)
     return (
       <EmptyState
@@ -475,7 +607,9 @@ export function Theory() {
             </span>
             <span>{data?.topics.find((t) => t.id === question.topicId)?.title}</span>
           </div>
-          <h2>{question.prompt}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {question.prompt}
+          </h2>
           {question.source && (
             <div className="theory-source-question">
               <Suspense fallback={<Loading label="Wczytywanie oryginalnego pytania CKE…" />}>
@@ -502,46 +636,86 @@ export function Theory() {
               </p>
             </div>
           )}
-          <fieldset className="answer-options">
-            <legend className="visually-hidden">Wybierz jedną odpowiedź</legend>
-            {question.options.map((option, optionIndex) => (
-              <label
-                key={option.id}
-                className={attempt.answers?.[question.id] === option.id ? 'selected' : ''}
-              >
-                <input
-                  type="radio"
-                  aria-label={question.source ? `Odpowiedź ${'ABCD'[optionIndex]}` : undefined}
-                  name={`answer-${question.id}`}
-                  value={option.id}
-                  checked={attempt.answers?.[question.id] === option.id}
-                  disabled={busy}
-                  onChange={() => choose(option.id)}
-                />
-                <span className="option-letter">{'ABCD'[optionIndex]}</span>
-                {!question.source && <span>{option.text}</span>}
-                {attempt.answers?.[question.id] === option.id && <Check size={18} />}
-              </label>
-            ))}
-          </fieldset>
+          {feedback ? (
+            <div className="question-check" role="status">
+              <p className={`check-verdict ${feedback.correct ? 'correct' : 'wrong'}`}>
+                {feedback.correct ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+                {feedback.correct
+                  ? 'Dobrze. To poprawna odpowiedź.'
+                  : `Nie tym razem. Poprawna odpowiedź to ${'ABCD'[question.options.findIndex((option) => option.id === feedback.correctOptionId)]}.`}
+              </p>
+              <FeedbackOptions
+                question={question}
+                correctOptionId={feedback.correctOptionId}
+                selectedOptionId={feedback.selectedOptionId}
+                optionExplanations={feedback.optionExplanations}
+              />
+              <p className="feedback-explanation">{feedback.explanation}</p>
+            </div>
+          ) : (
+            <>
+              <fieldset className="answer-options">
+                <legend className="visually-hidden">Wybierz jedną odpowiedź</legend>
+                {question.options.map((option, optionIndex) => (
+                  <label key={option.id} className={chosen === option.id ? 'selected' : ''}>
+                    <input
+                      type="radio"
+                      aria-label={question.source ? `Odpowiedź ${'ABCD'[optionIndex]}` : undefined}
+                      name={`answer-${question.id}`}
+                      value={option.id}
+                      checked={chosen === option.id}
+                      disabled={busy}
+                      onChange={() => choose(option.id)}
+                    />
+                    <span className="option-letter">{'ABCD'[optionIndex]}</span>
+                    {!question.source && <span>{option.text}</span>}
+                    {chosen === option.id && <Check size={18} />}
+                  </label>
+                ))}
+              </fieldset>
+              {attempt.mode === 'nauka' && (
+                <div className="question-check-action">
+                  <button
+                    className="button primary"
+                    disabled={busy || !chosen}
+                    onClick={() => void check()}
+                  >
+                    {busy ? <Loader2 size={17} className="spin" /> : <SearchCheck size={17} />}
+                    Sprawdź odpowiedź
+                  </button>
+                  <span>
+                    {chosen
+                      ? 'Po sprawdzeniu nie zmienisz już tej odpowiedzi.'
+                      : 'Zaznacz odpowiedź, aby zobaczyć wyjaśnienie.'}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
           <div className="question-navigation">
             <button
               className="button secondary"
               disabled={index === 0}
-              onClick={() => setIndex((value) => value - 1)}
+              onClick={() => go(index - 1)}
             >
               <ChevronLeft size={17} />
               Poprzednie
             </button>
             <span>Odpowiedzi zapisują się automatycznie.</span>
-            <button
-              className="button primary"
-              disabled={index === questions.length - 1}
-              onClick={() => setIndex((value) => value + 1)}
-            >
-              Następne
-              <ChevronRight size={17} />
-            </button>
+            {last ? (
+              <button className="button primary" disabled={busy} onClick={finish}>
+                <Send size={17} />
+                Oddaj serię
+              </button>
+            ) : (
+              <button
+                className={`button ${attempt.mode === 'nauka' && chosen && !feedback ? 'secondary' : 'primary'}`}
+                onClick={() => go(index + 1)}
+              >
+                Następne
+                <ChevronRight size={17} />
+              </button>
+            )}
           </div>
         </section>
         <aside className="quiz-overview">
@@ -550,10 +724,10 @@ export function Theory() {
             {questions.map((item, questionIndex) => (
               <button
                 key={item.id}
-                aria-label={`Przejdź do pytania ${questionIndex + 1}${attempt.answers?.[item.id] ? ', odpowiedź zaznaczona' : ''}`}
+                aria-label={`Przejdź do pytania ${questionIndex + 1}${attempt.answers?.[item.id] ? ', odpowiedź zaznaczona' : ''}${attempt.checked?.[item.id] ? (attempt.checked[item.id]!.correct ? ', poprawna' : ', błędna') : ''}`}
                 aria-current={index === questionIndex ? 'step' : undefined}
-                className={`${attempt.answers?.[item.id] ? 'answered ' : ''}${index === questionIndex ? 'current' : ''}`}
-                onClick={() => setIndex(questionIndex)}
+                className={`${attempt.answers?.[item.id] ? 'answered ' : ''}${attempt.checked?.[item.id] ? (attempt.checked[item.id]!.correct ? 'checked-correct ' : 'checked-wrong ') : ''}${index === questionIndex ? 'current' : ''}`}
+                onClick={() => go(questionIndex)}
               >
                 {questionIndex + 1}
               </button>
@@ -571,19 +745,7 @@ export function Theory() {
               ? `Bez odpowiedzi: ${plural(questions.length - answered, 'pytanie', 'pytania', 'pytań')}.`
               : 'Wszystkie odpowiedzi zaznaczone.'}
           </p>
-          <button
-            className="button primary full"
-            disabled={busy}
-            onClick={() => {
-              if (
-                answered === questions.length ||
-                window.confirm(
-                  `Bez odpowiedzi: ${plural(questions.length - answered, 'pytanie', 'pytania', 'pytań')}. Oddać próbę?`,
-                )
-              )
-                void submit();
-            }}
-          >
+          <button className="button primary full" disabled={busy} onClick={finish}>
             {busy ? <Loader2 size={17} className="spin" /> : <Send size={17} />}Oddaj i zobacz wynik
           </button>
           <p className="fine-print">

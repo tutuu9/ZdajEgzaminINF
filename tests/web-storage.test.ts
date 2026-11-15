@@ -181,6 +181,38 @@ describe('progress backup shape validation', () => {
       ).toThrow();
     }
   });
+  it('keeps per-question learning feedback and rejects feedback that contradicts itself', () => {
+    const question = {
+      id: 'cke-question-1',
+      version: 1,
+      topicId: 'html-css',
+      level: 'beginner',
+      prompt: 'Przykład CKE 1',
+      options: ['a', 'b', 'c', 'd'].map((id) => ({ id, text: id.toUpperCase() })),
+    };
+    const check = {
+      selectedOptionId: 'a',
+      correctOptionId: 'b',
+      correct: false,
+      explanation: 'Wyjaśnienie.',
+      optionExplanations: { a: 'Nie.', b: 'Tak.', c: 'Nie.', d: 'Nie.' },
+    };
+    const value = {
+      ...attempt(),
+      kind: 'theory',
+      questions: [question],
+      answers: { 'cke-question-1': 'a' },
+      checked: { 'cke-question-1': check },
+    };
+    expect(validateBackupAttempts([value])[0]?.checked).toEqual(value.checked);
+    for (const checked of [
+      { 'other-question': check },
+      { 'cke-question-1': { ...check, correct: true } },
+      { 'cke-question-1': { ...check, correctOptionId: 'z' } },
+      { 'cke-question-1': { ...check, optionExplanations: { a: 'Nie.' } } },
+    ])
+      expect(() => validateBackupAttempts([{ ...value, checked }])).toThrow();
+  });
   it('accepts a restorable draft without changing its ticket or files', () => {
     const value = attempt();
     expect(validateBackupAttempts([value])).toEqual([value]);

@@ -14,6 +14,7 @@ import type {
   StudyCheckResponse,
   TheoryResult,
   TheoryTicket,
+  QuestionCheck,
 } from '@zdaj/shared';
 import { toPublicQuestion } from '@zdaj/shared';
 import { disableServerFeatures } from '../packages/database/src/site-only.js';
@@ -1152,6 +1153,89 @@ describe('real Nest API and PostgreSQL boundaries', () => {
         })),
       }),
     ).toBe(410);
+  });
+
+  it('explains one question at a time in learning mode only and never after submission', async () => {
+    const officialById = new Map(seed.officialQuestions.map((question) => [question.id, question]));
+    const started = await learner.request<TheoryTicket>('/theory/start', 'POST', {
+      mode: 'nauka',
+      count: 2,
+    });
+    expect(started.status).toBe(201);
+    const [first, second] = started.data.questions;
+    const key = officialById.get(first!.id)!;
+    const wrong = first!.options.find((option) => option.id !== key.correctOptionId)!.id;
+    const check = (id: string, body: Record<string, unknown>) =>
+      learner.request<QuestionCheck>(`/theory/${id}/check`, 'POST', body);
+    const token = started.data.token;
+    const missed = await check(started.data.id, { token, questionId: first!.id, optionId: wrong });
+    expect(missed.status).toBe(201);
+    expect(missed.data).toMatchObject({
+      selectedOptionId: wrong,
+      correctOptionId: key.correctOptionId,
+      correct: false,
+      explanation: key.explanation,
+    });
+    expect(Object.keys(missed.data.optionExplanations).sort()).toEqual(
+      first!.options.map((option) => option.id).sort(),
+    );
+    const hit = await check(started.data.id, {
+      token,
+      questionId: first!.id,
+      optionId: key.correctOptionId,
+    });
+    expect(hit.data.correct).toBe(true);
+
+    const refused = async (id: string, body: Record<string, unknown>) =>
+      (await check(id, body)).status;
+    expect(
+      await refused(started.data.id, { token, questionId: 'not-in-series', optionId: wrong }),
+    ).toBe(400);
+    expect(
+      await refused(started.data.id, { token, questionId: first!.id, optionId: 'not-an-option' }),
+    ).toBe(400);
+    expect(
+      await refused(started.data.id, { token: 'wrong', questionId: first!.id, optionId: wrong }),
+    ).toBe(404);
+    expect(await refused(started.data.id, { token, questionId: first!.id })).toBe(400);
+
+    // Training keeps every explanation until the series is handed in.
+    const training = await learner.request<TheoryTicket>('/theory/start', 'POST', {
+      mode: 'trening',
+      count: 1,
+    });
+    const trained = training.data.questions[0]!;
+    expect(
+      await refused(training.data.id, {
+        token: training.data.token,
+        questionId: trained.id,
+        optionId: trained.options[0]!.id,
+      }),
+    ).toBe(403);
+    const legacy = await legacyTheory();
+    expect(
+      await refused(legacy.id, {
+        token: legacy.token,
+        questionId: legacy.questions[0]!.id,
+        optionId: legacy.questions[0]!.options[0]!.id,
+      }),
+    ).toBe(403);
+
+    // Checking does not grade or close the series; submitting does, and then checking stops.
+    const result = await learner.request<TheoryResult>(
+      `/theory/${started.data.id}/submit`,
+      'POST',
+      { token, answers: { [first!.id]: wrong } },
+    );
+    expect(result.status).toBe(201);
+    expect(result.data.correct).toBe(0);
+    expect(
+      await refused(started.data.id, {
+        token,
+        questionId: second!.id,
+        optionId: second!.options[0]!.id,
+      }),
+    ).toBe(409);
   });
 
   it('preserves existing exam attempts and enforces hint restrictions with idempotent grading', async () => {

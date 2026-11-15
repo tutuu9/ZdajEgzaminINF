@@ -36,6 +36,7 @@ import {
   renewTheory,
   submitCheck,
   submitTheory,
+  checkTheoryQuestion,
 } from './attempts.js';
 import { askAi, providerBalance, settleUncertain } from './ai.js';
 import { createTaskSheet } from './task-pdf.js';
@@ -176,6 +177,14 @@ export class ApiController {
   @Post('theory/renew') async theoryRenew(@Body() body: unknown, @Req() req: Request) {
     await protectMutation(req);
     return renewTheory(body, req);
+  }
+  @Post('theory/:id/check') async theoryCheck(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    await protectMutation(req);
+    return checkTheoryQuestion(id, body, req);
   }
   @Post('theory/:id/submit') async theorySubmit(
     @Param('id') id: string,
