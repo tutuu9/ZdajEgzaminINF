@@ -68,6 +68,7 @@ npm run check
 npm run build
 npm run test:integration
 npm run test:e2e
+npm run test:site-config
 ```
 
 Testy integracyjne wymagają PostgreSQL projektu i wygenerowanego klienta Prisma. Testy API tworzą osobną testową bazę; testy sprawdzającego wymagają obrazu sandbox. Wymagania testów przeglądarkowych opisuje [instrukcja lokalna](docs/local-development.md). Lista poleceń opisuje sposób kontroli, a nie certyfikację dowolnego środowiska.
@@ -78,7 +79,7 @@ Każde nowe zadanie praktyczne i pytanie teoretyczne odsyła do zweryfikowanego,
 
 25 pytań to niewielki opublikowany zestaw, nie pełne pokrycie programu. Pominięto pytanie wymagające filmu. Nieścisłość typograficzna jednego przykładu CSS jest objaśniona po oddaniu, z zachowaniem oryginalnej treści i klucza CKE. Kursy są powiązane z wymaganiami PDF; przykłady i cudze rozwiązania nie są certyfikowanymi pracami. PHP/SQL i kompletność projektu wymagają własnego środowiska oraz kontroli ręcznej. Kontrole edukacyjne nie wystawiają punktów CKE.
 
-Profil programistyczny Windows **nie stanowi potwierdzenia gotowości do publicznego uruchamiania obcego kodu**. Publiczne sprawdzanie wymaga profilu Linux/gVisor oraz oddzielnych testów izolacji i zasobów. Oddzielny [profil wdrożenia samego serwisu](docs/site-deployment.md) udostępnia kursy, PDF, teorię, edytor i przeglądarkowe kontrole HTML/CSS bez procesu wykonującego kod i bez AI. Compose korzysta z gotowego obrazu; wdrożenie pozostaje ręczną, zatwierdzoną operacją.
+Profil programistyczny Windows **nie stanowi potwierdzenia gotowości do publicznego uruchamiania obcego kodu**. Publiczne sprawdzanie wymaga profilu Linux/gVisor oraz oddzielnych testów izolacji i zasobów. Oddzielny [profil wdrożenia serwisu](docs/site-deployment.md) udostępnia kursy, PDF, teorię, edytor i przeglądarkowe kontrole HTML/CSS bez procesu wykonującego kod. DeepSeek można włączyć osobno dla API, z prywatnym kluczem, zgodą ucznia i istniejącą kontrolą budżetu; inicjalizacja pozostawia AI wyłączone. Compose korzysta z gotowego obrazu; wdrożenie pozostaje ręczną, zatwierdzoną operacją. `test:site-config` sprawdza obie konfiguracje na sztucznych danych i wymaga narzędzia Docker Compose.
 
 ## Struktura projektu
 

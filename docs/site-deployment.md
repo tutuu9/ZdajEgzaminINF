@@ -1,6 +1,6 @@
 # Public site without a code executor
 
-This profile serves the current eight CKE INF.03 courses, 25 published theory examples and 35 FAQ entries at `https://zdajegzamin.sbs`. It deliberately has only PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview remain available; server behaviour checks have an explicit manual fallback. AI is disabled. This does not certify the VPS for anonymous code execution.
+This profile serves the current eight CKE INF.03 courses, 25 published theory examples and 35 FAQ entries at `https://zdajegzamin.sbs`. It deliberately has only PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview remain available; server behaviour checks have an explicit manual fallback. AI is disabled by default and can be enabled separately as described below. This does not certify the VPS for anonymous code execution.
 
 ## Build and transfer
 
@@ -17,7 +17,19 @@ Use `infra/compose.site.yaml` **by itself**, never as an override of the local o
 3. Calculate SHA-256, copy the archive over host-key-verified SSH and compare the remote checksum before `docker load`. Record the Git SHA, image ID and archive checksum. Keep the verified image/archive for rollback.
 4. Use `/opt/zdaj-egzamin-inf` with mode `0700`. Copy `infra/compose.site.yaml` there as `compose.site.yaml`, plus the assets from `infra/site`. Create `.env` with mode `0600` from `infra/site.env.example`. Generate separate production database/session/IP secrets; never reuse the development `.env` or database. Pin `SITE_IMAGE` to the full verified SHA tag and `POSTGRES_IMAGE` to the tested PostgreSQL 17 digest.
 
-The initialization process validates production HTTPS, exact proxy trust, separate secrets and disabled sandbox/AI configuration before migrations and seeding. It then atomically sets `aiEnabled=false` and `checkingEnabled=false`, preserving the budget and other settings. Missing settings cause initialization to fail. API startup depends on successful initialization. The public sandbox remains independently unavailable even if an administrator later changes the database switch.
+The initialization process validates production HTTPS, exact proxy trust, separate secrets and disabled sandbox/AI configuration before migrations and seeding. It then atomically sets `aiEnabled=false`, `checkingEnabled=false` and `runtimeRunsEnabled=false`, preserving the budget and other settings. Missing settings cause initialization to fail. API startup depends on successful initialization. The public sandbox remains independently unavailable even if an administrator later changes the database switch.
+
+## Optional DeepSeek assistant
+
+Set `SITE_DEEPSEEK_API_KEY` privately in the production `.env` (mode `0600`), with `SITE_DEEPSEEK_BASE_URL=https://api.deepseek.com` and `SITE_DEEPSEEK_MODEL=deepseek-flash`. These variables are passed only to the API. Initialization always receives an empty provider key and continues to disable all three server feature switches. Do not print resolved Compose configuration, container environments or the real key into logs. A blank key preserves the default AI-unavailable behaviour.
+
+For an existing deployment, record its image, Compose configuration and private environment; make and restore-check a fresh database backup before applying migrations. Build from the verified Git archive, excluding local secrets and untracked files. Keep enough disk for the transferred archive and loaded image while retaining at least 8 GiB free. Only remove explicitly reviewed obsolete artifacts of this site after verifying retained owner copies; preserve the active and previous rollback versions and all database backups.
+
+With the new image selected in `.env`, run `docker compose --env-file .env -f compose.site.yaml run --rm --no-deps initialize`, then recreate only the API with `docker compose --env-file .env -f compose.site.yaml up -d --no-deps --wait api`. After health checks, sign in through the existing administrator API or `/admin`, read the current settings and enable only `aiEnabled`, preserving the budget, spent amount and reservations. Keep checking and runtime execution disabled. Ordinary API restarts retain the switch; running initialization again disables it and requires deliberate re-enabling.
+
+The v1.5.0 migration moves only former default limits from 12,000 to 48,000 input tokens and from 5 to 30 daily requests. Other administrator limits remain unchanged. The initial application cap stays $2 total, output stays bounded to 1,500 tokens and unresolved calls still block further provider calls. The configured $0.30 input / $1.20 output per million tokens conservatively cover the current peak `deepseek-flash` rates; recheck [provider pricing](https://api-docs.deepseek.com/quick_start/pricing/) before changing the model or enabling it later. Provider funds are separate from the application cap; this workflow never tops up the account automatically.
+
+Run `npm run test:site-config` with the Docker Compose CLI to verify both blank-key and opt-in configurations using synthetic credentials. Verify consent, conversation context and failure handling with mocked browser/API tests first. For production acceptance, use a synthetic learner project and at most two real calls (a question and a follow-up), inspect the returned context summary and verify that reservations close correctly. An uncertain provider response must not be retried automatically. Disable AI before rolling back the image, retain all usage accounting and check the previous image against the migrated database; do not reverse migrations or restore old spending totals.
 
 ## Host capacity and startup
 
@@ -71,7 +83,7 @@ Code rollback means loading/selecting an earlier verified image and recreating o
 ## Acceptance
 
 - Validate HTTPS certificate, apex/www redirects including path/query, and public API responses from this application.
-- Bootstrap returns 8 tasks, 25 questions, checking/AI disabled; FAQ returns 35 published entries. Exercise all nine official PDF endpoints.
+- Bootstrap returns 8 tasks, 25 questions and checking/runtime disabled; AI is available only for the explicitly enabled optional deployment. FAQ returns 35 published entries. Exercise all nine official PDF endpoints.
 - Validate secure HttpOnly SameSite cookies, CSRF/origin rejection, anonymous admin rejection and owner login.
 - Create a project, edit, change steps, reload and export/import; verify pinned guide and saved files. Check dark theme, theory and responsive navigation. Full browser CI remains required before deployment.
 - A server study check returns unavailable/manual without creating an execution job; manual completion works. Inspect runtime limits, mounts, published ports and feature flags.

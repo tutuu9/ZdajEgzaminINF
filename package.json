@@ -1,6 +1,6 @@
 {
   "name": "zdaj-egzamin-inf",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -24,6 +24,7 @@
     "test:checker": "vitest run --config vitest.integration.config.ts tests/checker.integration.test.ts tests/isolation.integration.test.ts tests/study-checker.integration.test.ts tests/new-study-runtime.integration.test.ts tests/sandbox-run.integration.test.ts",
     "test:integration": "npm run test:api && npm run test:checker",
     "test:e2e": "playwright test",
+    "test:site-config": "node --test scripts/site-compose.test.mjs",
     "db:generate": "prisma generate --config packages/database/prisma.config.ts",
     "db:migrate": "prisma migrate deploy --config packages/database/prisma.config.ts",
     "db:seed": "tsx packages/database/src/seed.ts",
