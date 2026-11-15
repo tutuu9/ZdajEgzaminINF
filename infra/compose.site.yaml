@@ -62,6 +62,10 @@ services:
     command: ['npm', 'run', 'start', '--workspace', '@zdaj/api']
     environment:
       <<: *site-environment
+      # Optional provider access belongs only to the API, never initialization.
+      DEEPSEEK_API_KEY: ${SITE_DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${SITE_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${SITE_DEEPSEEK_MODEL:-deepseek-flash}
       HOST: 0.0.0.0
       PORT: 3001
       DATA_DIR: /app/data
