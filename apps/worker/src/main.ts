@@ -22,11 +22,12 @@ const dataDir = path.resolve(process.env.DATA_DIR ?? 'data');
 const profile = process.env.RUNNER_PROFILE ?? 'local-development';
 if (!['local-development', 'public-sandbox'].includes(profile))
   throw new Error('Invalid RUNNER_PROFILE.');
+const currentSandboxImage = 'zdaj-inf-sandbox:0.3.1';
 const options: RunnerOptions = {
   dataDir,
   hostDataDir: process.env.SANDBOX_HOST_DATA_DIR,
   profile: profile as RunnerOptions['profile'],
-  image: process.env.SANDBOX_IMAGE ?? 'zdaj-inf-sandbox:0.3.1',
+  image: process.env.SANDBOX_IMAGE ?? currentSandboxImage,
   publicReady: process.env.PUBLIC_SANDBOX_VERIFIED === 'true',
 };
 let stopping = false;
@@ -164,6 +165,10 @@ async function executeRun(job: { id: string; input: unknown }) {
 await mkdir(dataDir, { recursive: true });
 await checkRuntime(options);
 console.log(`Checking worker ready (${profile}); one job at a time.`);
+if (options.image !== currentSandboxImage)
+  console.warn(
+    `SANDBOX_IMAGE is ${options.image}, but this version expects ${currentSandboxImage}. Checks added since that image was built will fail; update .env or run npm run sandbox:build.`,
+  );
 const heartbeatKey = `worker.${profile}.lastSeen`;
 const heartbeat = async () => {
   await db.metric.upsert({
@@ -269,7 +274,9 @@ while (!stopping) {
           report.results.filter((result) => result.status === status).length,
         );
       console.log('Check completed.');
-    } catch {
+    } catch (cause) {
+      // Only the error class is logged: messages may quote sandbox output or learner files.
+      const reason = cause instanceof Error ? cause.name : 'unknown';
       const update = {
         where: { id: job.id },
         data: {
@@ -285,7 +292,9 @@ while (!stopping) {
       await db.event
         .create({ data: { type: 'check.failed', detail: { taskId: job.taskId } } })
         .catch(() => undefined);
-      console.error('Check failed; no student code was logged.');
+      console.error(
+        `Check failed (${job.kind}, task ${job.taskId}, image ${options.image}, ${reason}); no student code was logged.`,
+      );
     } finally {
       await discard(job.inputPath);
     }
