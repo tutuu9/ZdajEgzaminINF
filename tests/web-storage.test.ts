@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
 import { MAX_EXTRACTED_BYTES, type AttemptSnapshot } from '@zdaj/shared';
 import { extractBrowserZip, safePath } from '../apps/web/src/safe-zip';
+import { importProject, projectFromArchive } from '../apps/web/src/storage';
 import { validateBackupAttempts, validateBackupLearning } from '../apps/web/src/backup-validation';
 import {
   planBackupMerge,
@@ -17,6 +18,60 @@ function centralOffset(bytes: Uint8Array) {
     if (view.getUint32(offset, true) === 0x02014b50) return offset;
   throw new Error('No central directory');
 }
+
+describe('project import from an archive', () => {
+  const png = new Uint8Array([137, 80, 78, 71]);
+  it('removes a single enclosing folder and system entries, as the checking server does', () => {
+    const project = projectFromArchive({
+      'pliki7/index.html': strToU8('<img src="smok1.JPG">'),
+      'pliki7/smok1.JPG': png,
+      'pliki7/obrazy/tlo.png': png,
+      'pliki7/Thumbs.db': new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]),
+      'pliki7/.DS_Store': new Uint8Array([0, 0, 0, 1]),
+      '__MACOSX/pliki7/._smok1.JPG': new Uint8Array([0, 5, 22, 7]),
+    });
+    expect(project.files.map((file) => file.path)).toEqual([
+      'index.html',
+      'smok1.JPG',
+      'obrazy/tlo.png',
+    ]);
+    expect(project.files[1]).toMatchObject({ encoding: 'base64' });
+    expect(project.skipped).toEqual([]);
+  });
+  it('keeps folders when the archive has files at more than one top-level name', () => {
+    const project = projectFromArchive({
+      'index.html': strToU8('<p>a</p>'),
+      'obrazy/tlo.png': png,
+    });
+    expect(project.files.map((file) => file.path)).toEqual(['index.html', 'obrazy/tlo.png']);
+  });
+  it('leaves out files the project cannot hold instead of refusing the whole archive', () => {
+    const project = projectFromArchive({
+      'index.html': strToU8('<p>a</p>'),
+      'skan.bmp': png,
+      'dane.bin': new Uint8Array([0xff, 0xfe, 0x00, 0x81]),
+    });
+    expect(project.files.map((file) => file.path)).toEqual(['index.html']);
+    expect(project.skipped).toEqual(['skan.bmp', 'dane.bin']);
+    expect(() => projectFromArchive({ 'skan.bmp': png, '.DS_Store': png })).toThrow(
+      'nie zawiera plików',
+    );
+  });
+  it('reads Windows-1250 text and reports that it was stored as UTF-8', () => {
+    // "żółw" in Windows-1250.
+    const project = projectFromArchive({ 'opis.txt': new Uint8Array([0xbf, 0xf3, 0xb3, 0x77]) });
+    expect(project.files[0]).toMatchObject({ path: 'opis.txt', content: 'żółw', encoding: 'utf8' });
+    expect(project.recoded).toEqual(['opis.txt']);
+  });
+  it('still explains an unsupported image uploaded on its own', async () => {
+    await expect(importProject([new File([png], 'skan.bmp')])).rejects.toThrow(
+      'Zapisz obraz jako JPG lub PNG',
+    );
+    const loose = await importProject([new File(['<p>a</p>'], 'index.html')]);
+    expect(loose).toMatchObject({ skipped: [], recoded: [] });
+    expect(loose.files[0]!.path).toBe('index.html');
+  });
+});
 
 describe('bounded browser ZIP import', () => {
   it('extracts UTF-8 project files and verifies their CRC', async () => {

@@ -147,7 +147,17 @@ export async function markLesson(id: string, completed: boolean): Promise<void> 
 
 const unsupportedImages = /\.(bmp|jfif|avif|tiff?|heic)$/i;
 const binaryExtensions = /\.(png|jpe?g|gif|webp|ico|pdf|woff2?|ttf|otf)$/i;
-export function bytesToFile(path: string, bytes: Uint8Array): ProjectFile {
+const textExtensions = /\.(html?|css|js|php|txt|sql|json|xml|svg|md|csv)$/i;
+/** Entries an operating system or archiver adds on its own; the server refuses them too. */
+const systemEntry = (path: string) =>
+  path
+    .split('/')
+    .some(
+      (part) =>
+        part === '__MACOSX' || part.startsWith('.') || /^(?:thumbs\.db|desktop\.ini)$/i.test(part),
+    );
+
+function readProjectFile(path: string, bytes: Uint8Array): { file: ProjectFile; recoded: boolean } {
   safePath(path);
   if (unsupportedImages.test(path))
     throw new Error(
@@ -157,37 +167,82 @@ export function bytesToFile(path: string, bytes: Uint8Array): ProjectFile {
     let content = '';
     for (let i = 0; i < bytes.length; i += 16384)
       content += String.fromCharCode(...bytes.subarray(i, i + 16384));
-    return { path, content: btoa(content), encoding: 'base64' };
+    return { file: { path, content: btoa(content), encoding: 'base64' }, recoded: false };
   }
-  return {
-    path,
-    content: new TextDecoder('utf-8', { fatal: true }).decode(bytes),
-    encoding: 'utf8',
-  };
+  try {
+    const content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return { file: { path, content, encoding: 'utf8' }, recoded: false };
+  } catch {
+    // Files from older Windows editors are often saved as Windows-1250.
+    if (!textExtensions.test(path))
+      throw new Error(`Plik ${path} nie jest plikiem tekstowym ani obsługiwanym obrazem.`);
+    const content = new TextDecoder('windows-1250').decode(bytes);
+    return { file: { path, content, encoding: 'utf8' }, recoded: true };
+  }
+}
+export function bytesToFile(path: string, bytes: Uint8Array): ProjectFile {
+  return readProjectFile(path, bytes).file;
+}
+
+export interface ImportedProject {
+  files: ProjectFile[];
+  /** Archive entries left out because the project cannot hold them. */
+  skipped: string[];
+  /** Text files read as Windows-1250 and stored as UTF-8. */
+  recoded: string[];
+}
+
+/**
+ * Turns an unpacked archive into project files the way the checking server reads the same
+ * archive: system entries are dropped and a single enclosing folder is removed, so a page
+ * finds its images where the learner expects them.
+ */
+export function projectFromArchive(unpacked: Record<string, Uint8Array>): ImportedProject {
+  let entries = Object.entries(unpacked).filter(([path]) => !systemEntry(path));
+  const first = entries[0]?.[0].split('/')[0];
+  if (first && entries.every(([path]) => path.startsWith(`${first}/`)))
+    entries = entries.map(([path, bytes]) => [path.slice(first.length + 1), bytes]);
+  const result: ImportedProject = { files: [], skipped: [], recoded: [] };
+  for (const [path, bytes] of entries) {
+    try {
+      const { file, recoded } = readProjectFile(path, bytes);
+      result.files.push(file);
+      if (recoded) result.recoded.push(path);
+    } catch {
+      result.skipped.push(path);
+    }
+  }
+  if (!result.files.length)
+    throw new Error('Archiwum nie zawiera plików, które można wczytać do projektu.');
+  return result;
 }
 export function fileBytes(file: ProjectFile): Uint8Array {
   return file.encoding === 'base64'
     ? Uint8Array.from(atob(file.content), (c) => c.charCodeAt(0))
     : strToU8(file.content);
 }
-export async function importProject(files: FileList | File[]): Promise<ProjectFile[]> {
+export async function importProject(files: FileList | File[]): Promise<ImportedProject> {
   const list = Array.from(files);
   if (list.reduce((n, file) => n + file.size, 0) > MAX_UPLOAD_BYTES)
     throw new Error('Przesyłane pliki mogą zajmować maksymalnie 10 MiB.');
-  if (list.length === 1 && /\.zip$/i.test(list[0]!.name)) {
-    const unpacked = await extractBrowserZip(new Uint8Array(await list[0]!.arrayBuffer()));
-    return Object.entries(unpacked).map(([path, bytes]) => bytesToFile(path, bytes));
-  }
+  if (list.length === 1 && /\.zip$/i.test(list[0]!.name))
+    return projectFromArchive(
+      await extractBrowserZip(new Uint8Array(await list[0]!.arrayBuffer())),
+    );
   if (list.length > MAX_PROJECT_FILES)
     throw new Error('Projekt może zawierać maksymalnie 500 plików.');
   if (list.some((file) => /\.(zip|7z|rar|tar|gz)$/i.test(file.name)))
     throw new Error('Wybierz pojedynczy plik ZIP albo pliki projektu.');
   const result = await Promise.all(
-    list.map(async (file) => bytesToFile(file.name, new Uint8Array(await file.arrayBuffer()))),
+    list.map(async (file) => readProjectFile(file.name, new Uint8Array(await file.arrayBuffer()))),
   );
-  if (new Set(result.map((file) => file.path.toLocaleLowerCase('pl'))).size !== result.length)
+  if (new Set(result.map((item) => item.file.path.toLocaleLowerCase('pl'))).size !== result.length)
     throw new Error('Nazwy plików nie mogą się powtarzać.');
-  return result;
+  return {
+    files: result.map((item) => item.file),
+    skipped: [],
+    recoded: result.filter((item) => item.recoded).map((item) => item.file.path),
+  };
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

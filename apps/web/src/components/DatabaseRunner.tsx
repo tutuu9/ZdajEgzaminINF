@@ -22,6 +22,7 @@ import {
   type RunJob,
 } from '../sandbox-run';
 import { ErrorNotice, Notice } from './common';
+import { MissingAssets } from './MissingAssets';
 import '../database-runner.css';
 
 interface FieldRow {
@@ -161,7 +162,7 @@ function PageResult({
 }) {
   // The server returns markup only. Styles and images come from the local project, and the
   // frame keeps the same isolation as the ordinary preview: no network, no form target.
-  const html = useMemo(
+  const preview = useMemo(
     () =>
       page.html
         ? createPreview(files, entry, {
@@ -169,10 +170,11 @@ function PageResult({
             scripts,
             // After a redirect the markup belongs to another page, so its folder is the base.
             base: page.finalPath?.split(/[?#]/)[0]!.replace(/^\/+/, '') || entry,
-          }).html
-        : '',
+          })
+        : undefined,
     [files, entry, page.html, page.finalPath, scripts],
   );
+  const html = preview?.html ?? '';
   return (
     <div className="run-page">
       <h3>Strona {entry}</h3>
@@ -185,6 +187,7 @@ function PageResult({
         {page.redirect && ` Strona przekierowuje do ${page.redirect}; tego adresu nie otwarto.`}
         {page.truncated && ' Wynik został skrócony do 512 KiB.'}
       </p>
+      {preview && <MissingAssets missing={preview.missing} inexact={preview.inexact} />}
       {html ? (
         <iframe
           className="run-page-frame"
