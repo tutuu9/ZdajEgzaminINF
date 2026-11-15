@@ -197,3 +197,78 @@ test('the editor completes CSS and JavaScript, closes brackets, searches and res
     )
     .toBe('14px');
 });
+
+test('a script reads back the image address the learner wrote, not the embedded data', async () => {
+  await page.locator('input[type=file]').setInputFiles([
+    {
+      name: 'przelacznik.html',
+      mimeType: 'text/html',
+      buffer: Buffer.from(
+        `<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Galeria</title></head><body>
+<img id="foto" src="obraz1.jpg" alt="zdjęcie"><button id="dalej">Dalej</button><p id="out"></p>
+<script>
+var foto = document.getElementById('foto');
+document.getElementById('dalej').onclick = function () {
+  if (foto.src.endsWith('obraz1.jpg')) foto.src = 'obraz2.jpg';
+  else foto.setAttribute('src', 'obraz1.jpg');
+  document.getElementById('out').textContent = foto.getAttribute('src') + ' ' + new URL(foto.src).pathname;
+};
+</script></body></html>`,
+      ),
+    },
+    { name: 'obraz1.jpg', mimeType: 'image/jpeg', buffer: pixel },
+    { name: 'obraz2.jpg', mimeType: 'image/jpeg', buffer: pixel },
+  ]);
+  await expect(page.locator('.save-state')).toHaveText('Zapisano lokalnie');
+  await page
+    .getByRole('combobox', { name: 'Strona', exact: true })
+    .selectOption('przelacznik.html');
+  await page.getByRole('button', { name: 'Uruchom JS', exact: true }).click();
+  const frame = page.frameLocator('iframe[title="Podgląd projektu"]');
+  const loaded = () =>
+    frame
+      .locator('#foto')
+      .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0);
+  await frame.getByRole('button', { name: 'Dalej' }).click();
+  await expect(frame.locator('#out')).toHaveText('obraz2.jpg /obraz2.jpg');
+  await expect.poll(loaded).toBe(true);
+  await frame.getByRole('button', { name: 'Dalej' }).click();
+  await expect(frame.locator('#out')).toHaveText('obraz1.jpg /obraz1.jpg');
+  await expect.poll(loaded).toBe(true);
+});
+
+test('a ZIP wrapped in a folder shows its images, skips unusable files and flags letter case', async () => {
+  const { zipSync, strToU8 } = await import('fflate');
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'pliki7.zip',
+    mimeType: 'application/zip',
+    buffer: Buffer.from(
+      zipSync({
+        'pliki7/paczka.html': strToU8(
+          '<!doctype html><title>Paczka</title><img id="male" src="zdjecie.png" alt="a"><img id="wielkie" src="ZDJECIE.PNG" alt="b">',
+        ),
+        'pliki7/zdjecie.png': new Uint8Array(pixel),
+        'pliki7/stary.bmp': new Uint8Array(pixel),
+        'pliki7/Thumbs.db': new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]),
+        '__MACOSX/pliki7/._zdjecie.png': new Uint8Array([0, 5, 22, 7]),
+      }),
+    ),
+  });
+  await expect(page.locator('.save-state')).toHaveText('Zapisano lokalnie');
+  await expect(page.locator('.file-list button')).toHaveCount(2);
+  await expect(page.locator('.import-note')).toContainText('stary.bmp');
+  await expect(page.locator('.import-note')).not.toContainText('Thumbs.db');
+  const frame = page.frameLocator('iframe[title="Podgląd projektu"]');
+  for (const id of ['#male', '#wielkie'])
+    await expect
+      .poll(() =>
+        frame
+          .locator(id)
+          .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+      )
+      .toBe(true);
+  await expect(page.locator('.notice .missing-assets')).toHaveCount(0);
+  await expect(page.locator('.notice .inexact-assets li')).toHaveCount(1);
+  await expect(page.locator('.notice .inexact-assets')).toContainText('ZDJECIE.PNG');
+  await expect(page.locator('.notice .inexact-assets')).toContainText('zdjecie.png');
+});

@@ -111,6 +111,12 @@ export interface MissingAsset {
   /** A project file with the same name in another folder, when there is one. */
   suggestion?: string;
 }
+/** An address that reaches a project file only when letter case is ignored. */
+export interface InexactAsset {
+  value: string;
+  /** The file's real path. */
+  path: string;
+}
 
 /**
  * Finds project files the way the examination workstation (Windows) does: letter case is
@@ -150,19 +156,46 @@ export function rewriteCssUrls(text: string, replace: (url: string) => string) {
  * Learner JavaScript may set an image address after the page is built (img.src = '…',
  * innerHTML, style.backgroundImage). The frame has no network, so this trusted script,
  * placed before any learner script, swaps such addresses for the project's own files.
+ *
+ * The address the learner wrote is kept in data-preview-src / data-preview-poster, and
+ * getAttribute and the src property answer with it, so a script that reads or compares an
+ * image address (a gallery, a toggle) behaves as it does on a real server.
  */
 function runtimeAssetScript(images: Record<string, string>, entry: string) {
   const data = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
   return `(function(){var assets=${data(images)},base=${data(entry.split('/').slice(0, -1))};
+var getAttr=Element.prototype.getAttribute,setAttr=Element.prototype.setAttribute,removeAttr=Element.prototype.removeAttribute;
+var root='http://localhost/';for(var b=0;b<base.length;b++)root+=encodeURIComponent(base[b])+'/';
 function find(value){if(!value||/^(?:[a-z][a-z0-9+.-]*:|\\/\\/|#)/i.test(value))return null;
 var target=value.replace(/\\\\/g,'/').split(/[?#]/)[0];try{target=decodeURIComponent(target);}catch(e){}
 var parts=target.charAt(0)==='/'?[]:base.slice(),list=target.split('/');
 for(var i=0;i<list.length;i++){var part=list[i];if(part==='..'){if(!parts.length)return null;parts.pop();}else if(part&&part!=='.')parts.push(part);}
 var key=parts.join('/').toLowerCase();return Object.prototype.hasOwnProperty.call(assets,key)?assets[key]:null;}
-function attribute(element,name){var value=element.getAttribute(name),found=value?find(value):null;if(found)element.setAttribute(name,found);}
-function style(element){var value=element.getAttribute('style');if(!value||value.indexOf('url(')<0)return;
+function resource(element,key){return(key==='src'||key==='poster')&&element.tagName!=='SCRIPT'&&element.tagName!=='IFRAME';}
+function store(element,name,value){var found=find(value);
+if(found){setAttr.call(element,'data-preview-'+name,value);setAttr.call(element,name,found);}
+else{removeAttr.call(element,'data-preview-'+name);setAttr.call(element,name,value);}}
+function attribute(element,name){var value=getAttr.call(element,name);if(value&&find(value))store(element,name,value);}
+Element.prototype.getAttribute=function(name){var key=String(name).toLowerCase();
+if(resource(this,key)){var kept=getAttr.call(this,'data-preview-'+key);if(kept!==null)return kept;}
+return getAttr.apply(this,arguments);};
+Element.prototype.setAttribute=function(name,value){var key=String(name).toLowerCase();
+if(resource(this,key)){store(this,key,String(value));return;}
+return setAttr.apply(this,arguments);};
+Element.prototype.removeAttribute=function(name){var key=String(name).toLowerCase();
+if(resource(this,key))removeAttr.call(this,'data-preview-'+key);
+return removeAttr.apply(this,arguments);};
+function property(type,name){var proto=type&&type.prototype,native=proto&&Object.getOwnPropertyDescriptor(proto,name);
+if(!native||!native.get||!native.set)return;
+Object.defineProperty(proto,name,{configurable:true,enumerable:native.enumerable,
+get:function(){var kept=getAttr.call(this,'data-preview-'+name);if(kept===null)return native.get.call(this);
+try{return new URL(kept.replace(/\\\\/g,'/'),root).href;}catch(e){return kept;}},
+set:function(value){store(this,name,String(value));}});}
+property(window.HTMLImageElement,'src');property(window.HTMLInputElement,'src');property(window.HTMLSourceElement,'src');
+property(window.HTMLMediaElement,'src');property(window.HTMLVideoElement,'poster');
+function style(element){var value=getAttr.call(element,'style');if(!value||value.indexOf('url(')<0)return;
 var next=value.replace(/url\\(\\s*(?:"([^"]*)"|'([^']*)'|([^)'"\\s]+))\\s*\\)/gi,function(all,a,b,c){var found=find((a||b||c||'').trim());return found?'url("'+found+'")':all;});
-if(next!==value)element.setAttribute('style',next);}
+if(next!==value)setAttr.call(element,'style',next);}
 function fix(element){if(element.nodeType!==1)return;var tag=element.tagName;
 if(tag!=='SCRIPT'&&tag!=='IFRAME'&&element.hasAttribute('src'))attribute(element,'src');
 if(element.hasAttribute('poster'))attribute(element,'poster');
@@ -185,13 +218,31 @@ export function createPreview(
     /** Page whose folder relative addresses start from, when it differs from the entry. */
     base?: string;
   } = {},
-): { html: string; dispose: () => void; inspection?: InspectionIndex; missing: MissingAsset[] } {
+): {
+  html: string;
+  dispose: () => void;
+  inspection?: InspectionIndex;
+  missing: MissingAsset[];
+  inexact: InexactAsset[];
+} {
   const map = new Map(files.map((file) => [file.path, file]));
   const lookup = assetLookup(files);
   const missing: MissingAsset[] = [];
+  const inexact: InexactAsset[] = [];
+  /** Finds a project file and remembers an address that matches it only without letter case. */
+  const locate = (from: string, value: string) => {
+    const file = lookup.find(from, value);
+    if (
+      file &&
+      resolvePath(from, value) !== file.path &&
+      !inexact.some((item) => item.value === value)
+    )
+      inexact.push({ value, path: file.path });
+    return file;
+  };
   const source = map.get(entry);
   if (!source || source.encoding === 'base64' || !/\.(?:html?|php)$/i.test(entry))
-    return { html: '', dispose: () => undefined, missing };
+    return { html: '', dispose: () => undefined, missing, inexact };
   const origin = options.base ?? entry;
   const nonce = previewNonce();
   // Inspection owns its trusted bridge; learner JavaScript stays disabled. Measurement
@@ -208,7 +259,7 @@ export function createPreview(
     const address = value.trim();
     // Embedded images and same-document references need no file.
     if (/^data:/i.test(address) || address.startsWith('#')) return address;
-    const file = lookup.find(from, address);
+    const file = locate(from, address);
     if (file) return dataUri(file);
     if (resolvePath(from, address) !== null && !missing.some((item) => item.value === address))
       missing.push({ value: address, suggestion: lookup.suggest(address) });
@@ -233,7 +284,7 @@ export function createPreview(
     style.textContent = css(style.textContent || '', origin);
   });
   root.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"]').forEach((link) => {
-    const file = lookup.find(origin, link.getAttribute('href') || '');
+    const file = locate(origin, link.getAttribute('href') || '');
     const style = doc.createElement('style');
     style.textContent = file && file.encoding !== 'base64' ? css(file.content, file.path) : '';
     if (link.hasAttribute('media')) style.setAttribute('media', link.getAttribute('media')!);
@@ -258,7 +309,7 @@ export function createPreview(
     )
       return;
     const sourcePath = script.getAttribute('src');
-    const file = sourcePath ? lookup.find(origin, sourcePath) : undefined;
+    const file = sourcePath ? locate(origin, sourcePath) : undefined;
     const code = sourcePath
       ? file?.encoding !== 'base64'
         ? file?.content || ''
@@ -316,12 +367,18 @@ export function createPreview(
         if (element.tagName === 'IMG' && !element.getAttribute('src') && candidate)
           element.setAttribute('src', candidate);
         element.removeAttribute('srcset');
-        for (const name of ['src', 'poster', 'background'])
-          if (element.hasAttribute(name))
-            element.setAttribute(name, asset(origin, element.getAttribute(name) || ''));
+        for (const name of ['src', 'poster', 'background']) {
+          if (!element.hasAttribute(name)) continue;
+          const written = element.getAttribute(name) || '';
+          const address = asset(origin, written);
+          // Learner scripts read the address as written; see runtimeAssetScript.
+          if (scripts && name !== 'background' && address !== written)
+            element.setAttribute(`data-preview-${name}`, written);
+          element.setAttribute(name, address);
+        }
       });
   root.querySelectorAll('a[href]').forEach((link) => {
-    const path = lookup.find(origin, link.getAttribute('href') || '')?.path;
+    const path = locate(origin, link.getAttribute('href') || '')?.path;
     if (!preserveAttributes) link.setAttribute('href', '#');
     if (path && /\.(?:html?|php)$/i.test(path)) link.setAttribute('data-preview-path', path);
     link.removeAttribute('target');
@@ -344,7 +401,7 @@ export function createPreview(
     reporter.textContent = scriptText(consoleBridgeScript);
     csp.after(reporter);
   }
-  if (Object.keys(images).length) {
+  if (scripts) {
     const runtime = doc.createElement('script');
     runtime.setAttribute('nonce', nonce);
     runtime.textContent = scriptText(runtimeAssetScript(images, origin));
@@ -374,5 +431,6 @@ export function createPreview(
     dispose: () => undefined,
     inspection: prepared?.index,
     missing,
+    inexact,
   };
 }

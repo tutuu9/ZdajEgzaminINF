@@ -44,6 +44,7 @@ import { api, errorMessage } from '../api';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
+import { MissingAssets } from '../components/MissingAssets';
 import { PreviewConsole } from '../components/PreviewConsole';
 import { InspectorOverlay, PageInspector } from '../components/PageInspector';
 import '../inspector.css';
@@ -141,6 +142,7 @@ export function Workspace() {
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
+    [importNote, setImportNote] = useState(''),
     [saved, setSaved] = useState(true);
   const [selected, setSelectedState] = useState(''),
     [editorReveal, setEditorReveal] = useState<EditorReveal>(),
@@ -624,8 +626,10 @@ export function Workspace() {
     if (!list || !attempt || attempt.submittedAt || busy) return;
     setBusy(true);
     setError('');
+    setImportNote('');
     try {
-      const incoming = await importProject(list);
+      const imported = await importProject(list);
+      const incoming = imported.files;
       const current = attemptRef.current;
       if (!current || current.id !== attempt.id || current.submittedAt) return;
       // A ZIP with a page replaces the project. A ZIP of images or other additions (for
@@ -637,8 +641,13 @@ export function Workspace() {
       const files = replace
         ? incoming
         : [
+            // The checking server refuses names that differ only in letter case, so a
+            // file uploaded again under another spelling replaces the earlier one.
             ...(current.files ?? []).filter(
-              (old) => !incoming.some((item) => item.path === old.path),
+              (old) =>
+                !incoming.some(
+                  (item) => item.path.toLocaleLowerCase('pl') === old.path.toLocaleLowerCase('pl'),
+                ),
             ),
             ...incoming,
           ];
@@ -650,6 +659,16 @@ export function Workspace() {
         recovery: recoverySnapshot(latest, 'Import plików'),
       }));
       setSelected(incoming[0]?.path ?? '');
+      setImportNote(
+        [
+          imported.skipped.length &&
+            `Pominięto pliki, których projekt nie obsługuje: ${imported.skipped.join(', ')}. Obrazy zapisz jako JPG lub PNG.`,
+          imported.recoded.length &&
+            `Pliki odczytane w kodowaniu Windows-1250 zostały zapisane jako UTF-8: ${imported.recoded.join(', ')}.`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
       // Adding a script or an image must not switch the preview to another page.
       const pages = files.filter((item) => /\.(?:html?|php)$/i.test(item.path));
       const uploadedPage = incoming.find((item) => /\.(?:html?|php)$/i.test(item.path));
@@ -882,7 +901,7 @@ export function Workspace() {
               ref={uploadRef}
               type="file"
               multiple
-              accept=".zip,.html,.htm,.css,.js,.php,.sql,.txt,.json,.png,.jpg,.jpeg,.gif,.svg,.webp"
+              accept=".zip,.html,.htm,.css,.js,.php,.sql,.txt,.json,.png,.jpg,.jpeg,.gif,.svg,.webp,.ico"
               className="visually-hidden"
               onChange={(e) => void upload(e.target.files)}
             />
@@ -961,9 +980,9 @@ export function Workspace() {
               <File size={35} />
               <h3>{file.path}</h3>
               <p>Plik binarny zostanie przesłany razem z projektem.</p>
-              {/\.(png|jpe?g|gif|webp)$/i.test(file.path) && (
+              {/\.(png|jpe?g|gif|webp|ico)$/i.test(file.path) && (
                 <img
-                  src={`data:image/${/\.png$/i.test(file.path) ? 'png' : /\.webp$/i.test(file.path) ? 'webp' : /\.gif$/i.test(file.path) ? 'gif' : 'jpeg'};base64,${file.content}`}
+                  src={`data:image/${/\.png$/i.test(file.path) ? 'png' : /\.webp$/i.test(file.path) ? 'webp' : /\.gif$/i.test(file.path) ? 'gif' : /\.ico$/i.test(file.path) ? 'x-icon' : 'jpeg'};base64,${file.content}`}
                   alt={`Podgląd pliku ${file.path}`}
                 />
               )}
@@ -1159,29 +1178,7 @@ export function Workspace() {
             </div>
           )}
           {projectPreview.problem && <Notice>{projectPreview.problem}</Notice>}
-          {projectPreview.missing.length > 0 && (
-            <Notice>
-              Podgląd nie znalazł w projekcie{' '}
-              {projectPreview.missing.length === 1 ? 'pliku' : 'plików'}:
-              <ul className="missing-assets">
-                {projectPreview.missing.slice(0, 5).map((item) => (
-                  <li key={item.value}>
-                    <code>{item.value}</code>
-                    {item.suggestion && (
-                      <>
-                        {' '}
-                        — w projekcie jest <code>{item.suggestion}</code>. Popraw adres w kodzie
-                        albo przenieś plik.
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {projectPreview.missing.length > 5 &&
-                `Oraz ${projectPreview.missing.length - 5} innych. `}
-              Sprawdź nazwę i folder albo wczytaj brakujący plik przyciskiem „Wczytaj pliki / ZIP”.
-            </Notice>
-          )}
+          <MissingAssets missing={projectPreview.missing} inexact={projectPreview.inexact} />
           <div className="preview-run-options">
             <label>
               <input
@@ -1295,6 +1292,11 @@ export function Workspace() {
         </div>
       </div>
       <ErrorNotice message={error} />
+      {importNote && (
+        <div className="import-note" role="status">
+          <Notice>{importNote}</Notice>
+        </div>
+      )}
       {store?.get().error && (
         <div className="button-row">
           <button

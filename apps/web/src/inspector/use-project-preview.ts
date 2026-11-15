@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { AttemptSnapshot, ProjectFile } from '@zdaj/shared';
-import { createPreview, type MissingAsset } from '../preview';
+import { createPreview, type InexactAsset, type MissingAsset } from '../preview';
 import { readInspectionMessage } from './bridge';
 import type { InspectionIndex, InspectionSelection, InspectionSource } from './types';
 import { appendConsoleEntry, readConsoleMessage, type ConsoleEntry } from '../preview-console';
@@ -27,6 +27,7 @@ interface PreparedPreview {
   html: string;
   inspection?: InspectionIndex;
   missing: MissingAsset[];
+  inexact: InexactAsset[];
 }
 const sameContext = (a: PreviewContext, b: PreviewContext) =>
   a.id === b.id &&
@@ -138,6 +139,7 @@ export function useProjectPreview({
         html: document.html,
         inspection: document.inspection,
         missing: document.missing,
+        inexact: document.inexact,
       });
       return document.dispose;
     } catch {
@@ -240,6 +242,7 @@ export function useProjectPreview({
   return {
     html: fresh ? prepared.html : '',
     missing: fresh ? prepared.missing : [],
+    inexact: fresh ? prepared.inexact : [],
     index,
     selection,
     inspecting,
