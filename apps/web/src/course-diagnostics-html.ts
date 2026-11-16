@@ -11,7 +11,7 @@ import {
 import { parse } from 'parse5';
 import { adapter, type Htmlparser2TreeAdapterMap } from 'parse5-htmlparser2-tree-adapter';
 import type { CodeDiagnostic } from './code-diagnostic';
-import { attributeMatches } from './project-checks';
+import { attributeMatches, readableSelector } from './project-checks';
 
 type HtmlCheck = Extract<StudyCheckSpec, { kind: 'html' }>;
 type Element = Htmlparser2TreeAdapterMap['element'];
@@ -333,12 +333,13 @@ export function diagnoseHtmlCheck(
       ))
       ? containingElement(doc, branches)
       : undefined;
+  const selector = readableSelector(check.selector);
   const observation =
     count > 1
-      ? `Krok wymaga co najmniej ${count} elementów pasujących do ${check.selector}. W pliku znaleziono ${matched.length}.`
+      ? `Krok wymaga co najmniej ${count} elementów pasujących do ${selector}. W pliku znaleziono ${matched.length}.`
       : selected.length
-        ? `Liczba elementów pasujących do ${check.selector} w pliku ${path}: ${selected.length}. Żaden nie spełnia całego wymagania tego kroku.`
-        : `W pliku ${path} brakuje elementu pasującego do ${check.selector}.`;
+        ? `Liczba elementów pasujących do ${selector} w pliku ${path}: ${selected.length}. Żaden nie spełnia całego wymagania tego kroku.`
+        : `W pliku ${path} brakuje elementu pasującego do ${selector}.`;
   const requirement = check.attribute
     ? ` Sprawdź atrybut ${check.attribute}${check.equals !== undefined ? `="${check.equals}"` : ''}.`
     : '';

@@ -99,7 +99,7 @@ export async function checkProjectLocally(
                 (!check.text || element.textContent?.replace(/\s+/g, ' ').includes(check.text)),
             );
             result.status = matching.length >= (check.minCount ?? 1) ? 'passed' : 'failed';
-            result.evidence = `Znaleziono ${matching.length} pasujących elementów (${check.selector}).`;
+            result.evidence = htmlEvidence(matching.length, check.selector, check.minCount);
             result.recommendation =
               result.status === 'passed'
                 ? ''
@@ -181,4 +181,57 @@ async function computedValues(
     frame.remove();
     preview.dispose();
   }
+}
+
+const polishPlural = new Intl.PluralRules('pl');
+
+/** Shows a check selector the way a learner writes it: no case flags, alternatives joined. */
+export function readableSelector(selector: string): string {
+  const parts: string[] = [];
+  let depth = 0,
+    quote = '',
+    part = '';
+  for (let i = 0; i < selector.length; i++) {
+    const char = selector[i]!;
+    if (quote) {
+      part += char;
+      if (char === '\\') part += selector[++i] ?? '';
+      else if (char === quote) {
+        quote = '';
+        // Drop an attribute case flag after a quoted value: [lang="pl" i] -> [lang="pl"].
+        const flag = /^\s+[iIsS](?=\s*\])/.exec(selector.slice(i + 1));
+        if (flag) i += flag[0].length;
+      }
+    } else if (char === ',' && depth === 0) {
+      parts.push(part);
+      part = '';
+    } else {
+      if (char === '"' || char === "'") quote = char;
+      else if (char === '(' || char === '[') depth++;
+      else if (char === ')' || char === ']') depth = Math.max(0, depth - 1);
+      part += char;
+    }
+  }
+  parts.push(part);
+  return parts
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(' lub ');
+}
+
+/** Learner-facing title for a check; generated "HTML: selector" titles drop selector syntax noise. */
+export function readableCheckTitle(title: string): string {
+  return title.startsWith('HTML: ') ? `HTML: ${readableSelector(title.slice(6))}` : title;
+}
+
+export function htmlEvidence(count: number, selector: string, minCount = 1): string {
+  const rule = polishPlural.select(count);
+  const noun =
+    rule === 'one'
+      ? 'pasujący element'
+      : rule === 'few'
+        ? 'pasujące elementy'
+        : 'pasujących elementów';
+  const required = minCount > 1 ? ` Wymagane: co najmniej ${minCount}.` : '';
+  return `Znaleziono ${count} ${noun}: ${readableSelector(selector)}.${required}`;
 }

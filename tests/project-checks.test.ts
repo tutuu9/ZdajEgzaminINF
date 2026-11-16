@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { attributeMatches, filesHash } from '../apps/web/src/project-checks';
+import {
+  attributeMatches,
+  filesHash,
+  htmlEvidence,
+  readableCheckTitle,
+  readableSelector,
+} from '../apps/web/src/project-checks';
 import { staticPhpMarkup } from '../apps/web/src/preview';
 
 describe('project check evidence', () => {
@@ -30,5 +36,28 @@ describe('project check evidence', () => {
     expect(await filesHash(files)).not.toBe(
       await filesHash([{ path: 'a.html', content: 'changed' }, files[1]!]),
     );
+  });
+  it('describes HTML checks in learner language with correct Polish number forms', () => {
+    expect(htmlEvidence(1, 'header')).toBe('Znaleziono 1 pasujący element: header.');
+    expect(htmlEvidence(3, 'li')).toBe('Znaleziono 3 pasujące elementy: li.');
+    expect(htmlEvidence(5, 'li')).toBe('Znaleziono 5 pasujących elementów: li.');
+    expect(htmlEvidence(0, 'nav')).toBe('Znaleziono 0 pasujących elementów: nav.');
+    expect(htmlEvidence(22, 'li')).toBe('Znaleziono 22 pasujące elementy: li.');
+    expect(htmlEvidence(1, 'li', 3)).toBe(
+      'Znaleziono 1 pasujący element: li. Wymagane: co najmniej 3.',
+    );
+  });
+  it('removes selector case flags and joins alternatives without splitting nested commas', () => {
+    expect(readableSelector('meta[charset="UTF-8" i], meta[charset="utf8" i]')).toBe(
+      'meta[charset="UTF-8"] lub meta[charset="utf8"]',
+    );
+    expect(readableSelector('html[lang|="pl" i]')).toBe('html[lang|="pl"]');
+    expect(readableSelector('input[type="text"], input:not([type])')).toBe(
+      'input[type="text"] lub input:not([type])',
+    );
+    expect(readableSelector(':is(h1, h2) > a[title="a, b"]')).toBe(':is(h1, h2) > a[title="a, b"]');
+    expect(readableSelector('a[title="say \\" i]"]')).toBe('a[title="say \\" i]"]');
+    expect(readableCheckTitle('HTML: main, section')).toBe('HTML: main lub section');
+    expect(readableCheckTitle('Treść nagłówka')).toBe('Treść nagłówka');
   });
 });

@@ -20,7 +20,7 @@ import { api, ApiError, errorMessage } from '../api';
 import type { CodeDiagnostic } from '../code-diagnostic';
 import { diagnoseCourseChecks } from '../course-diagnostics';
 import { diagnoseFirmaChecks } from '../firma-diagnostics';
-import { checkProjectLocally, filesHash } from '../project-checks';
+import { checkProjectLocally, filesHash, readableCheckTitle } from '../project-checks';
 import type { ProjectStore } from '../project-store';
 import { ErrorNotice, Loading, Notice } from './common';
 import { Editor } from './Editor';
@@ -580,7 +580,7 @@ export function ProjectLesson({
                           {item.status === 'passed' ? '✓ ' : ''}
                           {diagnostic && item.status === 'failed'
                             ? `Do poprawy w pliku ${diagnostic.path}`
-                            : item.title}
+                            : readableCheckTitle(item.title)}
                         </strong>
                         {(!diagnostic ||
                           item.status !== 'failed' ||
