@@ -31,6 +31,69 @@ The v1.5.0 migration moves only former default limits from 12,000 to 48,000 inpu
 
 Run `npm run test:site-config` with the Docker Compose CLI to verify both blank-key and opt-in configurations using synthetic credentials. Verify consent, conversation context and failure handling with mocked browser/API tests first. For production acceptance, use a synthetic learner project and at most two real calls (a question and a follow-up), inspect the returned context summary and verify that reservations close correctly. An uncertain provider response must not be retried automatically. Disable AI before rolling back the image, retain all usage accounting and check the previous image against the migrated database; do not reverse migrations or restore old spending totals.
 
+## Manual deployment workflow (GitHub Actions)
+
+`.github/workflows/deploy-site.yml` automates the build-and-transfer and image-switch steps above for an **existing** deployment. It never runs on push: an owner starts it manually and types `deploy`. First-time installation, `compose.site.yaml` changes, `.env` secrets, nginx, certificates and backups remain manual.
+
+### What it does
+
+1. Refuses unless the run is on `refs/heads/main` and the `confirm` input is exactly `deploy`. Runs are serialized and never cancel each other.
+2. Refuses unless `ci.yml` (Checks) already succeeded for the exact commit. After merging a PR, wait for Checks on the `main` push to finish.
+3. Uses the `production` environment. Validates that the SSH secrets exist, writes the pinned host key and connects with `StrictHostKeyChecking yes`. No third-party actions handle the key.
+4. Builds `zdaj-inf-site:git-<sha>` for `linux/amd64` with the `org.opencontainers.image.revision` label, saves it as `zdaj-inf-site-<sha>.tar.gz` with a `.sha256` file and adds `infra/compose.site.yaml`.
+5. Uploads the files to `~/incoming/<sha>/` of the deploy user, verifies the checksum there and runs `sudo -n /opt/zdaj-egzamin-inf/deploy.sh <sha>`. It always removes `~/incoming/<sha>` afterwards, then checks `https://zdajegzamin.sbs/api/v1/health` with retries.
+
+`infra/site/deploy.sh` runs as root and works only on root-owned copies of the uploaded files. It holds a lock and, in order:
+
+- refuses if the uploaded `compose.site.yaml` differs from `/opt/zdaj-egzamin-inf/compose.site.yaml` (review and update the server copy manually first);
+- requires at least 8 GiB free for the deployment, Docker and backup directories and 1 GiB `MemAvailable`;
+- verifies the archive SHA-256; requires the archive to tag exactly one image, `zdaj-inf-site:git-<sha>`, so it cannot retag other images; loads it and checks the revision label and `amd64` architecture; keeps the archive and checksum in `/opt/zdaj-egzamin-inf/releases`;
+- exits successfully without changes if `.env` already selects this image;
+- runs `zdaj-egzamin-backup.service` and refuses unless a new `zdaj-*.dump` appears in `/var/backups/zdaj-egzamin-inf`;
+- saves `.env.before-<sha>` and atomically replaces only `SITE_IMAGE` (mode `0600`);
+- runs `initialize`; on failure restores `.env` and leaves the running API untouched;
+- recreates only `api` and checks `http://127.0.0.1:8081/api/v1/health`. On failure it does **not** roll back automatically and prints the rollback command instead; check schema compatibility of the previous image first;
+- appends time, SHA, image ID, archive checksum, previous image and backup name to `/opt/zdaj-egzamin-inf/deployments.log`.
+
+It never removes images, archives, volumes or backups, never reverses migrations and never prints `.env`. Initialization disables AI each time; re-enable it deliberately in `/admin`.
+
+### One-time server setup
+
+Run as root on the VPS. The deploy user is **not** in the `docker` group; its only privilege is the one sudo rule.
+
+```sh
+adduser --disabled-password --gecos '' deploy
+install -o root -g root -m 0700 deploy.sh /opt/zdaj-egzamin-inf/deploy.sh   # from infra/site/deploy.sh of the reviewed commit
+printf '%s\n' 'deploy ALL=(root) NOPASSWD: /opt/zdaj-egzamin-inf/deploy.sh' > /tmp/zdaj-egzamin-deploy
+visudo -cf /tmp/zdaj-egzamin-deploy && install -o root -g root -m 0440 /tmp/zdaj-egzamin-deploy /etc/sudoers.d/zdaj-egzamin-deploy
+rm /tmp/zdaj-egzamin-deploy
+install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
+```
+
+Install `sudo` first if the VPS has none (`apt-get install sudo`). Generate a dedicated ed25519 key pair without a passphrase on the owner's computer. Append the public key to `/home/deploy/.ssh/authorized_keys` (owner `deploy`, mode `0600`), preferably prefixed with `restrict `. The private key goes only into the GitHub secret. Update `deploy.sh` on the server manually whenever it changes in the repository.
+
+Record the host key from a trusted connection and compare its fingerprint with the one printed on the server:
+
+```sh
+ssh-keyscan -t ed25519 -p 22 HOST > known_hosts.txt   # on the owner's computer
+ssh-keygen -lf known_hosts.txt
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub      # on the VPS; fingerprints must match
+```
+
+### GitHub environment and secrets
+
+In **Settings → Environments** create `production`; optionally add required reviewers and restrict deployment branches to `main`. Add environment secrets:
+
+| Secret                   | Value                                                                   |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `DEPLOY_SSH_HOST`        | VPS IP address or host name                                             |
+| `DEPLOY_SSH_USER`        | `deploy`                                                                |
+| `DEPLOY_SSH_KEY`         | the whole private key file, including the `BEGIN`/`END` lines           |
+| `DEPLOY_SSH_KNOWN_HOSTS` | the verified `ssh-keyscan` line(s); `[host]:port` form for non-22 ports |
+| `DEPLOY_SSH_PORT`        | optional, default `22`                                                  |
+
+Start it from **Actions → Deploy public site → Run workflow** on `main`, typing `deploy`.
+
 ## Host capacity and startup
 
 Before deployment record disk, `MemAvailable`, swap, load and the start times of unrelated services. Require at least **8 GiB free disk and 1 GiB MemAvailable**. Do not reclaim another application's data to pass this gate. PostgreSQL is limited to 384 MiB and API to 512 MiB; these are limits, not guaranteed total VPS requirements.
