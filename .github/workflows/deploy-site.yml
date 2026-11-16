@@ -146,7 +146,18 @@ jobs:
             echo '  ServerAliveCountMax 6'
           } > "$SSH_CONFIG"
           chmod 0600 "$SSH_CONFIG"
-          ssh -F "$SSH_CONFIG" zdaj-deploy true
+          # Diagnose network problems without printing secrets (the host is masked in logs).
+          # shellcheck disable=SC2016 # $0/$1 expand in the inner shell.
+          if banner=$(timeout 15 bash -c 'exec 3<> "/dev/tcp/$0/$1" && head -n 1 <&3' \
+            "$DEPLOY_SSH_HOST" "$port" 2> /dev/null) && [[ $banner == SSH-2.0-* ]]; then
+            echo 'TCP connection works and the server sent an SSH banner.'
+          else
+            echo '::warning::No SSH banner within 15 seconds: the TCP connection or banner did not get through.'
+          fi
+          if ! timeout 90 ssh -v -F "$SSH_CONFIG" zdaj-deploy true; then
+            echo '::error::SSH login failed or timed out; the ssh -v lines above show the last completed stage.'
+            exit 1
+          fi
           echo 'SSH host key verified and login works.'
 
       - uses: actions/checkout@v7
