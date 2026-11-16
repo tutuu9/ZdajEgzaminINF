@@ -20,7 +20,9 @@ MEMINFO=/proc/meminfo
 BACKUP_SERVICE=zdaj-egzamin-backup.service
 LOCAL_HEALTH_URL=http://127.0.0.1:8081/api/v1/health
 MIN_FREE_KIB=$((8 * 1024 * 1024))
-MIN_MEM_AVAILABLE_KIB=$((1024 * 1024))
+# The API is already running during an update; only initialize (mem_limit 512m) starts
+# alongside it, so require its limit plus a 256 MiB margin.
+MIN_MEM_AVAILABLE_KIB=$((768 * 1024))
 
 ENV_STATE=untouched
 STAGING=''
@@ -131,8 +133,8 @@ for path in "$DEPLOYMENT_DIR" "$DOCKER_ROOT" "$BACKUP_DIR"; do
 done
 MEM_AVAILABLE=$(awk '$1 == "MemAvailable:" { print $2 }' "$MEMINFO")
 [[ $MEM_AVAILABLE =~ ^[0-9]+$ ]] || die 'Could not read MemAvailable.'
-[ "$MEM_AVAILABLE" -ge "$MIN_MEM_AVAILABLE_KIB" ] || die "MemAvailable is below 1 GiB ($((MEM_AVAILABLE / 1024)) MiB)."
-say 'Disk (>= 8 GiB) and MemAvailable (>= 1 GiB) checks passed.'
+[ "$MEM_AVAILABLE" -ge "$MIN_MEM_AVAILABLE_KIB" ] || die "MemAvailable is below 768 MiB ($((MEM_AVAILABLE / 1024)) MiB)."
+say 'Disk (>= 8 GiB) and MemAvailable (>= 768 MiB) checks passed.'
 
 # --- (c) Archive checksum ----------------------------------------------------------
 stage "$CHECKSUM_NAME"
