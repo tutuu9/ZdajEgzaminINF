@@ -146,6 +146,21 @@ jobs:
             echo '  ServerAliveCountMax 6'
           } > "$SSH_CONFIG"
           chmod 0600 "$SSH_CONFIG"
+          # Large packets between the hosted runner and the VPS are lost while small ones pass
+          # (SSH stalls at KEX_ECDH_REPLY). Use a small MTU only on this runner's route to the VPS;
+          # nothing on the server or other routes changes.
+          target=$(getent ahostsv4 "$DEPLOY_SSH_HOST" | awk 'NR == 1 { print $1 }' || true)
+          if [ -n "$target" ]; then
+            route=$(ip -4 route get "$target")
+            gateway=$(awk '{ for (i = 1; i < NF; i++) if ($i == "via") { print $(i + 1); exit } }' <<< "$route")
+            device=$(awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }' <<< "$route")
+            if [ -n "$gateway" ]; then
+              sudo ip route replace "$target/32" via "$gateway" dev "$device" mtu lock 1280 advmss 1200
+            else
+              sudo ip route replace "$target/32" dev "$device" mtu lock 1280 advmss 1200
+            fi
+            echo 'Using MTU 1280 on the route to the deployment host.'
+          fi
           # Diagnose network problems without printing secrets (the host is masked in logs).
           # shellcheck disable=SC2016 # $0/$1 expand in the inner shell.
           if banner=$(timeout 15 bash -c 'exec 3<> "/dev/tcp/$0/$1" && head -n 1 <&3' \
