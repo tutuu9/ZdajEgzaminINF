@@ -84,13 +84,13 @@ ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub      # on the VPS; fingerprints
 
 In **Settings → Environments** create `production`; optionally add required reviewers and restrict deployment branches to `main`. Add environment secrets:
 
-| Secret                   | Value                                                                   |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `DEPLOY_SSH_HOST`        | VPS IP address or host name                                             |
-| `DEPLOY_SSH_USER`        | `deploy`                                                                |
-| `DEPLOY_SSH_KEY`         | the whole private key file, including the `BEGIN`/`END` lines           |
-| `DEPLOY_SSH_KNOWN_HOSTS` | the verified `ssh-keyscan` line(s); `[host]:port` form for non-22 ports |
-| `DEPLOY_SSH_PORT`        | optional, default `22`                                                  |
+| Secret                   | Value                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `DEPLOY_SSH_HOST`        | VPS IP address or host name                                                                                                    |
+| `DEPLOY_SSH_USER`        | `deploy`                                                                                                                       |
+| `DEPLOY_SSH_KEY`         | the whole private key file including the `BEGIN`/`END` lines, or `base64 -w0` of it; line breaks lost in copying are tolerated |
+| `DEPLOY_SSH_KNOWN_HOSTS` | the verified `ssh-keyscan` line(s); `[host]:port` form for non-22 ports                                                        |
+| `DEPLOY_SSH_PORT`        | optional, default `22`                                                                                                         |
 
 Start it from **Actions → Deploy public site → Run workflow** on `main`, typing `deploy`.
 

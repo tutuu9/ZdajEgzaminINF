@@ -102,9 +102,28 @@ jobs:
           fi
           ssh_dir=$(dirname "$SSH_CONFIG")
           install -d -m 0700 "$ssh_dir"
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$ssh_dir/key"
+          # Accept the key as the original file, with line breaks or spaces lost or added by
+          # copying (e.g. on a phone), or as base64 of the whole file (base64 -w0).
+          begin='-----BEGINOPENSSHPRIVATEKEY-----'
+          end='-----ENDOPENSSHPRIVATEKEY-----'
+          compact=$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d ' \t\r\n')
+          if [[ $compact != *"$begin"* ]]; then
+            compact=$(printf '%s' "$compact" | base64 -d 2> /dev/null | tr -d ' \t\r\n' || true)
+          fi
+          if [[ $compact != *"$begin"*"$end"* ]]; then
+            echo '::error::DEPLOY_SSH_KEY must be an OpenSSH private key (BEGIN/END OPENSSH PRIVATE KEY) or base64 of it.'
+            exit 1
+          fi
+          body=${compact#*"$begin"}
+          body=${body%%"$end"*}
+          {
+            echo '-----BEGIN OPENSSH PRIVATE KEY-----'
+            printf '%s' "$body" | fold -w 70
+            echo
+            echo '-----END OPENSSH PRIVATE KEY-----'
+          } > "$ssh_dir/key"
           chmod 0600 "$ssh_dir/key"
-          if ! ssh-keygen -y -f "$ssh_dir/key" > /dev/null 2>&1; then
+          if ! ssh-keygen -y -P '' -f "$ssh_dir/key" > /dev/null 2>&1 < /dev/null; then
             echo '::error::DEPLOY_SSH_KEY is not a usable private key without a passphrase.'
             exit 1
           fi
