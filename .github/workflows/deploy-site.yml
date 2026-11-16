@@ -1,0 +1,194 @@
+name: Deploy public site
+
+# Manual production deployment of a main commit that already passed Checks.
+# The server side is infra/site/deploy.sh, installed by hand as /opt/zdaj-egzamin-inf/deploy.sh.
+# See docs/site-deployment.md, "Manual deployment workflow (GitHub Actions)".
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "deploy" to build this main commit and deploy it to zdajegzamin.sbs
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-site-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  deploy:
+    name: Build and deploy the verified main commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment:
+      name: production
+      url: https://zdajegzamin.sbs
+    env:
+      IMAGE: zdaj-inf-site:git-${{ github.sha }}
+      ARCHIVE: zdaj-inf-site-${{ github.sha }}.tar.gz
+    steps:
+      - name: Require main and explicit confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Deployments run only from refs/heads/main (got $GITHUB_REF)."
+            exit 1
+          fi
+          if [ "$CONFIRM" != deploy ]; then
+            echo '::error::Type exactly "deploy" in the confirm input.'
+            exit 1
+          fi
+          if ! [[ $GITHUB_SHA =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::Unexpected commit SHA format.'
+            exit 1
+          fi
+          {
+            echo "RELEASE_DIR=$RUNNER_TEMP/release"
+            echo "SSH_CONFIG=$RUNNER_TEMP/ssh/config"
+          } >> "$GITHUB_ENV"
+
+      - name: Require a successful Checks run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f head_sha="$GITHUB_SHA" -f status=success -f per_page=20)
+          count=$(jq --arg sha "$GITHUB_SHA" \
+            '[.workflow_runs[] | select(.head_sha == $sha and .conclusion == "success")] | length' \
+            <<< "$runs")
+          if [ "$count" -lt 1 ]; then
+            echo "::error::No successful ci.yml (Checks) run exists for $GITHUB_SHA. Wait for Checks on main to pass, then run this workflow again."
+            exit 1
+          fi
+          echo "Found $count successful Checks run(s) for $GITHUB_SHA."
+
+      - name: Validate SSH secrets and configure SSH
+        env:
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          missing=0
+          for name in DEPLOY_SSH_HOST DEPLOY_SSH_USER DEPLOY_SSH_KEY DEPLOY_SSH_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required secret $name is not set in the production environment."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+          port=${DEPLOY_SSH_PORT:-22}
+          if ! [[ $port =~ ^[0-9]{1,5}$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+            echo '::error::DEPLOY_SSH_PORT must be a TCP port number.'
+            exit 1
+          fi
+          if ! [[ $DEPLOY_SSH_HOST =~ ^[A-Za-z0-9.:-]+$ ]]; then
+            echo '::error::DEPLOY_SSH_HOST must be a plain host name or IP address.'
+            exit 1
+          fi
+          if ! [[ $DEPLOY_SSH_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+            echo '::error::DEPLOY_SSH_USER must be a plain Linux user name.'
+            exit 1
+          fi
+          ssh_dir=$(dirname "$SSH_CONFIG")
+          install -d -m 0700 "$ssh_dir"
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$ssh_dir/key"
+          chmod 0600 "$ssh_dir/key"
+          if ! ssh-keygen -y -f "$ssh_dir/key" > /dev/null 2>&1; then
+            echo '::error::DEPLOY_SSH_KEY is not a usable private key without a passphrase.'
+            exit 1
+          fi
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" | tr -d '\r' > "$ssh_dir/known_hosts"
+          chmod 0600 "$ssh_dir/known_hosts"
+          {
+            echo 'Host zdaj-deploy'
+            echo "  HostName $DEPLOY_SSH_HOST"
+            echo "  Port $port"
+            echo "  User $DEPLOY_SSH_USER"
+            echo "  IdentityFile $ssh_dir/key"
+            echo '  IdentitiesOnly yes'
+            echo "  UserKnownHostsFile $ssh_dir/known_hosts"
+            echo '  GlobalKnownHostsFile /dev/null'
+            echo '  StrictHostKeyChecking yes'
+            echo '  UpdateHostKeys no'
+            echo '  BatchMode yes'
+            echo '  ConnectTimeout 20'
+            echo '  ServerAliveInterval 30'
+            echo '  ServerAliveCountMax 6'
+          } > "$SSH_CONFIG"
+          chmod 0600 "$SSH_CONFIG"
+          ssh -F "$SSH_CONFIG" zdaj-deploy true
+          echo 'SSH host key verified and login works.'
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build the linux/amd64 image
+        run: |
+          [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ]
+          docker build --platform linux/amd64 -f infra/app.Dockerfile \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE" .
+          docker image inspect --format '{{ .Id }} {{ .Architecture }}' "$IMAGE"
+
+      - name: Package the image archive, checksum and Compose file
+        run: |
+          install -d -m 0700 "$RELEASE_DIR"
+          docker save "$IMAGE" | gzip -6 > "$RELEASE_DIR/$ARCHIVE"
+          (cd "$RELEASE_DIR" && sha256sum "$ARCHIVE" > "$ARCHIVE.sha256")
+          cp infra/compose.site.yaml "$RELEASE_DIR/compose.site.yaml"
+          ls -l "$RELEASE_DIR"
+          cat "$RELEASE_DIR/$ARCHIVE.sha256"
+
+      - name: Upload to the server and verify the checksum there
+        run: |
+          ssh -F "$SSH_CONFIG" zdaj-deploy \
+            "install -d -m 0700 incoming incoming/$GITHUB_SHA"
+          scp -F "$SSH_CONFIG" -q \
+            "$RELEASE_DIR/$ARCHIVE" "$RELEASE_DIR/$ARCHIVE.sha256" "$RELEASE_DIR/compose.site.yaml" \
+            "zdaj-deploy:incoming/$GITHUB_SHA/"
+          ssh -F "$SSH_CONFIG" zdaj-deploy \
+            "cd incoming/$GITHUB_SHA && sha256sum -c $ARCHIVE.sha256"
+
+      - name: Deploy on the server
+        run: ssh -F "$SSH_CONFIG" zdaj-deploy "sudo -n /opt/zdaj-egzamin-inf/deploy.sh $GITHUB_SHA"
+
+      - name: Remove the uploaded files from the server
+        if: always()
+        run: |
+          if [ -n "${SSH_CONFIG:-}" ] && [ -f "$SSH_CONFIG" ]; then
+            ssh -F "$SSH_CONFIG" zdaj-deploy "rm -rf -- incoming/$GITHUB_SHA"
+          else
+            echo 'SSH was not configured; nothing to remove.'
+          fi
+
+      - name: Check the public health endpoint
+        run: |
+          for attempt in $(seq 1 12); do
+            if curl -fsS --proto '=https' --max-time 15 -o /dev/null \
+              https://zdajegzamin.sbs/api/v1/health; then
+              echo "https://zdajegzamin.sbs/api/v1/health is healthy (attempt $attempt)."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::The public health endpoint did not respond successfully.'
+          exit 1
+
+      - name: Remove SSH material from the runner
+        if: always()
+        run: |
+          if [ -n "${SSH_CONFIG:-}" ]; then
+            rm -rf -- "$(dirname "$SSH_CONFIG")"
+          fi
