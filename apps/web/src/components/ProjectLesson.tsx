@@ -30,6 +30,11 @@ import { ChangeUnderstand, ChangeDiff, ChangeRestoreNotice } from './ChangeUnder
 import { ChangePreview } from './ChangePreview';
 import { EmmetLearning } from './EmmetLearning';
 
+const checkShortcutLabel =
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+    ? '⌘ Enter'
+    : 'Ctrl Enter';
+
 export type RevealCode = (
   path: string,
   range: CodeDiagnostic['range'],
@@ -146,6 +151,38 @@ export function ProjectLesson({
     setError('');
     setSection('step');
   }, [current?.id]);
+  // Ctrl+Enter (Cmd+Enter) checks the current step while writing code or reading the lesson.
+  const editorRegion = useRef<HTMLElement>(null);
+  const lessonRegion = useRef<HTMLElement>(null);
+  const checkShortcut = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Enter' ||
+        !(event.ctrlKey || event.metaKey) ||
+        event.shiftKey ||
+        event.altKey ||
+        event.repeat ||
+        event.isComposing
+      )
+        return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const inEditor = !!editorRegion.current?.contains(target) && !!target.closest('.cm-editor');
+      // Other text fields in the lesson (e.g. the assistant) keep their own Enter handling.
+      const inLesson =
+        !!lessonRegion.current?.contains(target) &&
+        !target.closest('textarea, input, select, [contenteditable="true"]');
+      if (!inEditor && !inLesson) return;
+      // Capture phase: runs before CodeMirror's own Mod-Enter (insert blank line), so the
+      // shortcut never edits the file, also while a check is already running.
+      event.preventDefault();
+      event.stopPropagation();
+      checkShortcut.current?.();
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, []);
   if (!guide || !current || !project.study)
     return error ? (
       <ErrorNotice
@@ -363,6 +400,13 @@ export function ProjectLesson({
       if (mounted.current) setBusy(false);
     }
   };
+  checkShortcut.current = blocked
+    ? undefined
+    : () => {
+        setSection('step');
+        if (phone) setPanel('lesson');
+        void check();
+      };
   const complete = async () => {
     if (!canComplete && !completedFresh) return;
     setBusy(true);
@@ -466,7 +510,7 @@ export function ProjectLesson({
       )}
       <ChangeRestoreNotice model={learning} taskId={project.taskId} />
       <div className={`cumulative-grid show-${panel}`}>
-        <aside className="course-instruction">
+        <aside className="course-instruction" ref={lessonRegion}>
           <div className="course-sidebar-heading">
             <label className="course-step-select">
               <span className="visually-hidden">Twój krok</span>
@@ -713,6 +757,8 @@ export function ProjectLesson({
                 className="button primary full"
                 disabled={blocked}
                 onClick={() => void check()}
+                aria-keyshortcuts="Control+Enter Meta+Enter"
+                title={`Skrót: ${checkShortcutLabel}`}
               >
                 {busy ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
                 {busy
@@ -720,6 +766,11 @@ export function ProjectLesson({
                   : coachEnabled && currentReport
                     ? 'Sprawdź ponownie'
                     : 'Sprawdź ten krok'}
+                {!busy && (
+                  <kbd className="course-check-shortcut" aria-hidden="true">
+                    {checkShortcutLabel}
+                  </kbd>
+                )}
               </button>
             </div>
           )}
@@ -770,7 +821,7 @@ export function ProjectLesson({
             </Notice>
           )}
         </aside>
-        <section className="course-editor">
+        <section className="course-editor" ref={editorRegion}>
           <ChangeDiff model={learning} onReveal={revealChange} />
           {editor}
         </section>
