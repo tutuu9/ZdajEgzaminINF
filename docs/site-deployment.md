@@ -46,7 +46,7 @@ Run `npm run test:site-config` with the Docker Compose CLI to verify both blank-
 `infra/site/deploy.sh` runs as root and works only on root-owned copies of the uploaded files. It holds a lock and, in order:
 
 - refuses if the uploaded `compose.site.yaml` differs from `/opt/zdaj-egzamin-inf/compose.site.yaml` (review and update the server copy manually first);
-- requires at least 8 GiB free for the deployment, Docker and backup directories and 1 GiB `MemAvailable`;
+- requires at least 8 GiB free for the deployment, Docker and backup directories and 768 MiB `MemAvailable` (the running API stays up and only `initialize`, limited to 512 MiB, starts beside it);
 - verifies the archive SHA-256; requires the archive to tag exactly one image, `zdaj-inf-site:git-<sha>`, so it cannot retag other images; loads it and checks the revision label and `amd64` architecture; keeps the archive and checksum in `/opt/zdaj-egzamin-inf/releases`;
 - exits successfully without changes if `.env` already selects this image;
 - runs `zdaj-egzamin-backup.service` and refuses unless a new `zdaj-*.dump` appears in `/var/backups/zdaj-egzamin-inf`;
@@ -96,7 +96,7 @@ Start it from **Actions → Deploy public site → Run workflow** on `main`, typ
 
 ## Host capacity and startup
 
-Before deployment record disk, `MemAvailable`, swap, load and the start times of unrelated services. Require at least **8 GiB free disk and 1 GiB MemAvailable**. Do not reclaim another application's data to pass this gate. PostgreSQL is limited to 384 MiB and API to 512 MiB; these are limits, not guaranteed total VPS requirements.
+Before deployment record disk, `MemAvailable`, swap, load and the start times of unrelated services. Require at least **8 GiB free disk and 1 GiB MemAvailable** for the first start; later image updates through `deploy.sh` require 768 MiB. Do not reclaim another application's data to pass this gate. PostgreSQL is limited to 384 MiB and API to 512 MiB; these are limits, not guaranteed total VPS requirements.
 
 Set `PUBLIC_TRUST_PROXY` temporarily to an exact loopback address only to let Compose resolve its environment. Start **only** PostgreSQL:
 
