@@ -752,25 +752,6 @@ export function Workspace() {
           </div>
         )}
         <div className="task-setup">
-          <section>
-            <h2>Co zbudujesz?</h2>
-            <ul className="requirements-list">
-              {task.requirements.map((requirement) => (
-                <li key={requirement}>
-                  <CheckCircle2 size={18} />
-                  {requirement}
-                </li>
-              ))}
-            </ul>
-            <Notice>
-              Pracuj w edytorze przeglądarkowym lub w swojej IDE. Możesz przesłać pojedyncze pliki
-              albo archiwum ZIP.{' '}
-              {data?.features.runsAvailable && usesDatabase(task)
-                ? 'SQL i PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
-                : 'PHP i SQL uruchom we własnym środowisku.'}{' '}
-              Zakończenie tej próby zapisuje pracę bez automatycznej oceny.
-            </Notice>
-          </section>
           <aside className="start-panel">
             <h2>Wybierz sposób pracy</h2>
             <ModePicker value={mode} onChange={setMode} />
@@ -790,6 +771,25 @@ export function Workspace() {
               Pliki i wynik tej próby zostaną zapisane w tej przeglądarce.
             </p>
           </aside>
+          <section>
+            <h2>Co zbudujesz?</h2>
+            <ul className="requirements-list">
+              {task.requirements.map((requirement) => (
+                <li key={requirement}>
+                  <CheckCircle2 size={18} />
+                  {requirement}
+                </li>
+              ))}
+            </ul>
+            <Notice>
+              Pracuj w edytorze przeglądarkowym lub w swojej IDE. Możesz przesłać pojedyncze pliki
+              albo archiwum ZIP.{' '}
+              {data?.features.runsAvailable && usesDatabase(task)
+                ? 'SQL i PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
+                : 'PHP i SQL uruchom we własnym środowisku.'}{' '}
+              Zakończenie tej próby zapisuje pracę bez automatycznej oceny.
+            </Notice>
+          </section>
         </div>
       </>
     );

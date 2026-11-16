@@ -13,6 +13,15 @@
 .task-setup > section {
   padding-top: 10px;
 }
+/* The start choice comes first in the document; wide screens show it in the side column. */
+.task-setup > .start-panel {
+  grid-column: 2;
+  grid-row: 1;
+}
+.task-setup > section {
+  grid-column: 1;
+  grid-row: 1;
+}
 .task-setup h2 {
   font-size: 23px;
   margin-bottom: 20px;
@@ -792,6 +801,11 @@
   .task-setup,
   .theory-setup {
     grid-template-columns: 1fr;
+  }
+  .task-setup > .start-panel,
+  .task-setup > section {
+    grid-column: auto;
+    grid-row: auto;
   }
   .task-setup > .start-panel {
     max-width: 100%;
