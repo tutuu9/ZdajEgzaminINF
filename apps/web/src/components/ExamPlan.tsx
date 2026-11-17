@@ -41,7 +41,7 @@ const STAGES = [
 
 export const EXAM_CHECKLIST = [
   'Folder i pliki mają dokładnie te nazwy, które podaje arkusz (wielkość liter i rozszerzenia).',
-  'Zrzuty ekranu są pełne, nieprzycięte, z widocznym paskiem zadań, i zapisane pod wymaganą nazwą.',
+  'Zrzuty ekranu spełniają warunki z arkusza (często: cały ekran z paskiem zadań, bez kadrowania) i mają wymaganą nazwę.',
   'kwerendy.txt zawiera wszystkie zapytania w kolejności z arkusza; każde kończy się średnikiem.',
   'Zapytania wybierają tylko wymagane kolumny — bez SELECT *, jeśli polecenie wymienia pola.',
   'W XAMPP działają Apache i MySQL; stronę PHP otwierasz przez http://localhost/…, nie przez file://.',

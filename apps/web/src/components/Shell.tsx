@@ -28,6 +28,7 @@ const staticTitles: Record<string, string> = {
   '/teoria': 'Teoria',
   '/moje-prace': 'Moje prace',
   '/faq': 'Pytania i odpowiedzi',
+  '/jak-wyglada-egzamin': 'Jak wygląda egzamin',
   '/admin': 'Administracja',
 };
 export function Shell() {

@@ -8,6 +8,7 @@ import {
   GraduationCap,
   Play,
   Settings2,
+  Timer,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context';
@@ -158,6 +159,14 @@ export function Home() {
           </div>
         </aside>
       </div>
+      <Link className="exam-day-callout glass-panel" to="/jak-wyglada-egzamin">
+        <Timer size={24} />
+        <span>
+          <strong>Jak wygląda egzamin?</strong>
+          Stanowisko, 150 minut pracy i oddanie płyty — krok po kroku.
+        </span>
+        <ChevronRight size={18} />
+      </Link>
       <div className="learning-footnote">
         <Code2 size={18} />
         <p>Omówienia pomagają w nauce. Oryginalne wymagania zawsze znajdziesz w arkuszu CKE.</p>

@@ -72,7 +72,7 @@ test('the exam shows the current stage and opens the checklist for the final che
   await openSeededExam(page, 15);
   await expect(plan).toContainText('Teraz: Kontrola końcowa');
   await expect(checklist).toHaveAttribute('open');
-  await expect(checklist).toContainText('nieprzycięte, z widocznym paskiem zadań');
+  await expect(checklist).toContainText('cały ekran z paskiem zadań');
   expect(created).toHaveLength(0);
 });
 

@@ -97,6 +97,9 @@ export function Faq() {
       <PageHeading title="Pytania i odpowiedzi">
         Od pierwszego zapisu po oddanie pracy. Znajdź odpowiedź i sprawdź jej źródło.
       </PageHeading>
+      <p className="faq-exam-day">
+        Wolisz całość po kolei? <Link to="/jak-wyglada-egzamin">Zobacz, jak wygląda egzamin</Link>.
+      </p>
       <div className="faq-filters" role="search" aria-label="Wyszukiwanie odpowiedzi">
         <label className="field faq-search-field">
           <span>Szukaj w pytaniach i odpowiedziach</span>
