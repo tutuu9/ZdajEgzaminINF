@@ -1,0 +1,192 @@
+.exam-day-page {
+  display: grid;
+  gap: 26px;
+  max-width: 920px;
+}
+.exam-day-legend {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.exam-day-legend p {
+  margin: 0;
+}
+.origin-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.origin-cke {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-ink);
+}
+.origin-sheet {
+  background: var(--purple-bg);
+  color: var(--purple);
+}
+.origin-advice {
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+.exam-day-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.exam-day-stage {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 16px;
+  position: relative;
+  padding-bottom: 26px;
+}
+.exam-day-stage:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 21px;
+  top: 44px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+.exam-day-number {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--action-bg);
+  color: #fff;
+  font-weight: 700;
+}
+.exam-day-body {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  min-width: 0;
+}
+.exam-day-when {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.exam-day-body h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.exam-day-body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.exam-day-body li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  line-height: 1.5;
+}
+.exam-day-body li .origin-badge {
+  margin-top: 2px;
+}
+.exam-day-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.exam-day-links a,
+.exam-day-sources a {
+  color: var(--accent-ink);
+}
+.exam-day-practice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.exam-day-rehearsal {
+  display: flex;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 18px;
+}
+.exam-day-rehearsal h2 {
+  font-size: 20px;
+}
+.exam-day-rehearsal p {
+  margin: 6px 0 10px;
+}
+.exam-day-rehearsal ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.exam-day-sources h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.exam-day-sources ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.exam-day-sources li a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.exam-day-sources li span {
+  display: block;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.exam-day-sources > p {
+  color: var(--muted);
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .exam-day-stage {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding-bottom: 18px;
+  }
+  .exam-day-stage::before {
+    display: none;
+  }
+  .exam-day-number {
+    width: 34px;
+    height: 34px;
+  }
+  .exam-day-body {
+    padding: 14px;
+  }
+  .exam-day-body li {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .exam-day-rehearsal {
+    flex-direction: column;
+  }
+}
