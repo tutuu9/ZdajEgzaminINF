@@ -557,5 +557,27 @@ export const catalog: CatalogEntry[] = [
     checkedAt: '2026-11-17T12:00:00.000Z',
     notes:
       'Sprawdzono kod PDF i kryteriów INF.03-02-25.06-SG, zawartość archiwum (3 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, kryteria zawierają znak wodny wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
+    handIn: {
+      page: 6,
+      files: [
+        'import.png',
+        'kw1.jpg',
+        'kw2.jpg',
+        'kw3.jpg',
+        'kw4.jpg',
+        'kwerendy.txt',
+        'notatki.html',
+        'obraz.jpg',
+        'przeglądarka.txt',
+        'styl.css',
+      ],
+      results: [
+        'operacje na bazie danych',
+        'zawartość witryny internetowej',
+        'działanie witryny internetowej',
+        'styl CSS witryny internetowej',
+        'skrypt',
+      ],
+    },
   },
 ];
