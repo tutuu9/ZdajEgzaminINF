@@ -43,6 +43,7 @@ import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
+import { ExamChecklist, ExamPlan } from '../components/ExamPlan';
 import { SqlPractice } from '../components/SqlPractice';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
@@ -763,6 +764,7 @@ export function Workspace() {
               </span>
               <span>{levelLabel(level)}</span>
             </div>
+            {mode === 'egzamin' && <ExamChecklist />}
             <ErrorNotice message={error} />
             <button className="button primary full" disabled={busy} onClick={() => void start()}>
               {busy ? <Loader2 className="spin" size={18} /> : <Play size={17} />}Rozpocznij{' '}
@@ -1403,6 +1405,9 @@ export function Workspace() {
           )}
         </aside>
         <section className="workspace-work">
+          {attempt.mode === 'egzamin' && !closed && attempt.deadlineAt && (
+            <ExamPlan deadlineAt={attempt.deadlineAt} durationMinutes={task.durationMinutes} />
+          )}
           <div className="workspace-tabs glass-panel" role="tablist" aria-label="Widok projektu">
             <button role="tab" aria-selected={tab === 'sheet'} onClick={() => setTab('sheet')}>
               <FileText size={17} />

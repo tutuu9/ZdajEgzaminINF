@@ -1,0 +1,96 @@
+.exam-plan {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.exam-plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+}
+.exam-plan-head span {
+  color: var(--muted);
+}
+.exam-plan-bar {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exam-plan-bar li {
+  flex-basis: 0;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+.exam-plan-bar li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exam-plan-bar li small {
+  color: var(--muted);
+}
+.exam-plan-bar li.done {
+  opacity: 0.55;
+}
+.exam-plan-bar li.current {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-ink);
+  font-weight: 650;
+}
+.exam-plan-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.exam-checklist {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.exam-checklist summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.exam-checklist ul {
+  margin: 10px 0 6px;
+  padding-left: 22px;
+  display: grid;
+  gap: 5px;
+  font-size: 14px;
+}
+.exam-checklist p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.start-panel .exam-checklist {
+  margin-top: 4px;
+}
+@media (max-width: 760px) {
+  .exam-plan-bar li span {
+    display: none;
+  }
+  .exam-plan-bar li {
+    padding: 6px 4px;
+    text-align: center;
+  }
+}
