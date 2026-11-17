@@ -43,6 +43,7 @@ import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
+import { SqlPractice } from '../components/SqlPractice';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
 import { MissingAssets } from '../components/MissingAssets';
@@ -1480,6 +1481,44 @@ export function Workspace() {
               />
             </Suspense>
           )}
+          {tab === 'database' &&
+            store &&
+            attempt.mode === 'nauka' &&
+            !closed &&
+            attempt.study?.guide && (
+              <SqlPractice
+                projectId={attempt.id}
+                guide={attempt.study.guide}
+                currentStep={attempt.study.current}
+                files={attempt.files ?? []}
+                readOnly={closed}
+                onAppendQuery={(statement) =>
+                  update((latest) => {
+                    const existing = (latest.files ?? []).find(
+                      (item) => item.path.toLowerCase() === 'kwerendy.txt',
+                    );
+                    const before = existing?.content ?? '';
+                    const content = `${before}${before && !before.endsWith('\n') ? '\n' : ''}${statement}\n`;
+                    const updated = { path: existing?.path ?? 'kwerendy.txt', content };
+                    return {
+                      ...latest,
+                      files: existing
+                        ? (latest.files ?? []).map((item) => (item === existing ? updated : item))
+                        : [...(latest.files ?? []), updated],
+                    };
+                  })
+                }
+                onAddFile={(added) =>
+                  update((latest) => ({
+                    ...latest,
+                    files: [
+                      ...(latest.files ?? []).filter((item) => item.path !== added.path),
+                      added,
+                    ],
+                  }))
+                }
+              />
+            )}
           {tab === 'database' && store && (
             <DatabaseRunner
               store={store}
