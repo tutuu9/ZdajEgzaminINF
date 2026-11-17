@@ -63,6 +63,19 @@ The 120-second deadline limits the command executing user code. Before it starts
 
 The worker removes the container and temporary source tree in cleanup paths. It also handles expired job leases after a restart. Source files are removed after processing; reports expire or are acknowledged separately.
 
+## Practice database without a server
+
+In Nauka, the "Baza i PHP" view also offers an approximate practice database (`apps/web/src/sql-practice.ts`, `SqlPractice`). It is meant for the public site, where server runs are disabled. **Nothing is executed.** The learner's last statement is parsed and compared with a reference statement assembled in the browser from the course step's own example code. That code is the same material shown in Pomoc, already delivered with the guide; no new answer key is added and the web app still does not import the content package. A SELECT and its later `WHERE`/`JOIN` fragments form one query; an expression such as `FLOOR(AVG(x)) AS …` replaces the column it wraps.
+
+The comparison is structural:
+
+- for SELECT it compares columns (aliases resolved, order only noted), required column aliases, `DISTINCT`, tables, join and filter conditions as one set (`JOIN … ON` equals a comma join with `WHERE`; sides of `=` and comparisons may be swapped; `a = 1 OR a = 2` equals `IN`), `GROUP BY`, `HAVING`, `ORDER BY` and `LIMIT`;
+- for `CREATE DATABASE`, `CREATE USER`, `GRANT`, `INSERT` and `ALTER TABLE` it compares the named parts.
+
+Differences become Polish hints (`SELECT *`, missing join condition, missing filter, extra columns, wrong privileges). A match is labelled "zgodne z przygotowanym wariantem" with the course's expected-result questions, never as a score; another correct solution is possible and must be checked in XAMPP. Steps that happen in the interface (unpacking, importing) have no reference. A separate lint flags common `kwerendy.txt` mistakes without a reference: missing semicolons between statements, `SELECT *`, unjoined tables, `= NULL`, and `LIKE` without wildcards.
+
+Table structure and up to 200 rows per table are read from the learner's own `.sql` file without executing it. The view is not offered in Trening, Egzamin or a closed attempt. The server runner below it is unchanged.
+
 ## Learner-initiated runs
 
 `runPlayground` in `packages/checker` executes a learner's own database and code. It is not a check: the result has no criterion, points or percentage, and nothing is compared with an expected answer. The workspace offers it as the "Baza i SQL" view for papers whose technologies include SQL or PHP; the tab is labelled "Baza i PHP".
