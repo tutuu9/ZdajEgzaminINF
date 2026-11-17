@@ -18,6 +18,8 @@ import { salonFixtures } from '../../fixtures/study/salon.js';
 import { motocykleFixtures } from '../../fixtures/study/motocykle.js';
 import { chatFixtures } from '../../fixtures/study/chat.js';
 import { rzekiFixtures } from '../../fixtures/study/rzeki.js';
+import { mojeZadaniaGuide } from '../../packages/content/src/study-project-moje-zadania.js';
+import { mojeZadaniaFixtures } from '../../fixtures/study/moje-zadania.js';
 
 const courses = [
   { name: 'Firma IT', guide: firmaGuide, fixtures: firmaFixtures },
@@ -25,6 +27,11 @@ const courses = [
   { name: 'Motocykle', guide: motocykleGuide, fixtures: motocykleFixtures },
   { name: 'Chat', guide: chatGuide, fixtures: chatFixtures },
   { name: 'Poziomy rzek', guide: rzekiGuide, fixtures: rzekiFixtures },
+];
+// Checked statically only: each attempt-creating course test above uses the shared API rate budget.
+const staticallyCheckedCourses = [
+  ...courses,
+  { name: 'Moje zadania', guide: mojeZadaniaGuide, fixtures: mojeZadaniaFixtures },
 ];
 
 const editor = (page: Page) => page.locator('.editor-pane .cm-content[contenteditable="true"]');
@@ -292,7 +299,7 @@ test.describe('actual browser HTML/CSS checker on all completed alternatives', (
     'This suite imports the actual Vite source modules; the managed CI server supplies them.',
   );
 
-  for (const course of courses) {
+  for (const course of staticallyCheckedCourses) {
     const checks = course.guide.steps.flatMap((section) =>
       section.activities!.flatMap((activity) => activity.checks ?? []),
     );

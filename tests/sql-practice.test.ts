@@ -21,7 +21,7 @@ const messages = (sql: string, ref: string) =>
     .join('\n');
 
 describe('SQL practice references', () => {
-  it('assembles a statement for every SQL step of the eight courses and matches itself', () => {
+  it('assembles a statement for every SQL step of the nine courses and matches itself', () => {
     const withSql = steps.filter((step) => step.reference);
     expect(withSql.length).toBeGreaterThanOrEqual(45);
     for (const step of withSql) {
@@ -49,6 +49,27 @@ describe('SQL practice references', () => {
       steps.find((step) => step.taskId === 'cke-wedkowanie' && step.id === 'database/archive')
         ?.reference,
     ).toBeNull();
+  });
+  it('assembles the four Moje zadania queries from their cumulative steps', () => {
+    const taskId = 'inf03-02-25-06-sg';
+    expect(reference(taskId, 'queries/person')).toMatch(
+      /^SELECT MIN\(priorytet\) FROM notatki\s+WHERE Osoby_id = 3;$/,
+    );
+    expect(reference(taskId, 'queries/priority')).toMatch(
+      /JOIN osoby ON notatki\.Osoby_id = osoby\.id\s+WHERE priorytet = 5;$/,
+    );
+    expect(reference(taskId, 'queries/group')).toMatch(
+      /^SELECT imie, COUNT\(notatki\.id\) FROM notatki JOIN osoby .*\s+GROUP BY imie;$/,
+    );
+    expect(
+      steps.find((step) => step.taskId === taskId && step.id === 'queries/group')?.database,
+    ).toBe('notatki');
+    expect(
+      comparePractice(
+        'select osoby.imie, count(notatki.id) from osoby inner join notatki on notatki.Osoby_id = osoby.id group by osoby.imie',
+        reference(taskId, 'queries/group'),
+      ).status,
+    ).toBe('match');
   });
 });
 
