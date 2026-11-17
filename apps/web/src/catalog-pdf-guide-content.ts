@@ -371,4 +371,43 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-02-25-06-sg': {
+    title: 'Moje zadania — INF.03-02-25.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761141596091_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 6 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki2.7z ma hasło #ToDoList@. Zapytania 3 i 4 wymagają relacji; zapytanie 4 liczy notatki dla każdego imienia.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Obraz i struktura',
+        focus: [
+          'Przeskaluj obraz.jpg z zachowaniem proporcji do 610 px wysokości. Lista ma 6 wpisów, każdy z przyciskiem Wykonane.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Style i skrypt',
+        focus: [
+          'Odróżnij wspólne cechy trzech pasków od bloku głównego. Wykonane przekreśla tylko swój wpis; Dodaj tworzy wpis z działającym przyciskiem.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Komplet rezultatów',
+        focus: ['Arkusz wymaga czterech zrzutów kw1.jpg–kw4.jpg, import.png i obraz.jpg.'],
+      },
+    ],
+  },
 };

@@ -8,11 +8,39 @@ import { salonGuide } from '../packages/content/src/study-project-salon.js';
 import { salonFixtures, salonHtmlMistakes } from '../fixtures/study/salon.js';
 import { chatGuide } from '../packages/content/src/study-project-chat.js';
 import { chatFixtures, chatHtmlMistakes } from '../fixtures/study/chat.js';
+import { mojeZadaniaGuide } from '../packages/content/src/study-project-moje-zadania.js';
+import { mojeZadaniaFixtures, mojeZadaniaHtmlMistakes } from '../fixtures/study/moje-zadania.js';
 
+/** runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet. */
 const courses = [
-  { guide: firmaGuide, fixtures: firmaFixtures, mistakes: firmaHtmlMistakes },
-  { guide: salonGuide, fixtures: salonFixtures, mistakes: salonHtmlMistakes },
-  { guide: chatGuide, fixtures: chatFixtures, mistakes: chatHtmlMistakes },
+  {
+    guide: firmaGuide,
+    fixtures: firmaFixtures,
+    mistakes: firmaHtmlMistakes,
+    runtimeCheck: 'runtime/runtime-check',
+    checkedAt: '2026-11-02',
+  },
+  {
+    guide: salonGuide,
+    fixtures: salonFixtures,
+    mistakes: salonHtmlMistakes,
+    runtimeCheck: 'runtime/runtime-check',
+    checkedAt: '2026-11-02',
+  },
+  {
+    guide: chatGuide,
+    fixtures: chatFixtures,
+    mistakes: chatHtmlMistakes,
+    runtimeCheck: 'runtime/runtime-check',
+    checkedAt: '2026-11-02',
+  },
+  {
+    guide: mojeZadaniaGuide,
+    fixtures: mojeZadaniaFixtures,
+    mistakes: mojeZadaniaHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-17',
+  },
 ];
 function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>) {
   const $ = load(source);
@@ -36,7 +64,7 @@ function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }
 }
 
 describe('new CKE JavaScript cumulative routes', () => {
-  for (const { guide, fixtures, mistakes } of courses) {
+  for (const { guide, fixtures, mistakes, runtimeCheck, checkedAt } of courses) {
     describe(guide.taskId, () => {
       it('pins version one and covers every cumulative action with a paper page', () => {
         expect(guide.version).toBe(1);
@@ -109,7 +137,7 @@ describe('new CKE JavaScript cumulative routes', () => {
           ).toBe(true);
         }
       });
-      it('uses one fixed behaviour scenario and keeps source assets explicitly manual', () => {
+      it('uses at most one fixed behaviour scenario and keeps source assets explicitly manual', () => {
         const runtime = guide.steps.flatMap((section) =>
           section.activities!.flatMap((activity) =>
             activity
@@ -117,13 +145,11 @@ describe('new CKE JavaScript cumulative routes', () => {
               .map((check) => ({ key: `${section.id}/${activity.id}`, check })),
           ),
         );
-        expect(runtime).toHaveLength(1);
-        expect(runtime[0]!.key).toBe('runtime/runtime-check');
+        expect(runtime.map((item) => item.key)).toEqual(runtimeCheck ? [runtimeCheck] : []);
         expect(fixtures[0]!.manualAssets.length).toBeGreaterThan(0);
         expect(
           guide.resources.every(
-            (resource) =>
-              resource.provenance === 'third-party' && resource.checkedAt === '2026-11-02',
+            (resource) => resource.provenance === 'third-party' && resource.checkedAt === checkedAt,
           ),
         ).toBe(true);
         expect(guide.variants).toEqual([]);

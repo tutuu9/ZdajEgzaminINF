@@ -328,4 +328,45 @@ export const catalog: CatalogEntry[] = [
     notes:
       'Sprawdzono kod PDF i kryteriów INF.03-02-24.06-SG, zawartość archiwum (4 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, w części kryteriów występują znaki wodne wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
   },
+  {
+    id: 'inf03-02-25-06-sg',
+    title: 'Moje zadania',
+    qualification: 'INF.03',
+    formula: '2019',
+    year: 2025,
+    session: 'Czerwiec',
+    identifier: 'INF.03-02-25.06-SG',
+    variant: '02',
+    topics: ['html-css', 'javascript', 'sql', 'graphics-security'],
+    technologies: ['HTML', 'CSS', 'JavaScript', 'SQL', 'Grafika'],
+    sourceUrl: 'https://www.kursinf.pl/arkusze/inf03/arkusz/89',
+    sourceName: 'Archiwum zewnętrzne — kopia CKE',
+    attachments: [
+      {
+        title: 'Arkusz CKE — zweryfikowana kopia archiwalna',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761141596091_sheet.pdf',
+        type: 'pdf',
+        sha256: 'f1fa2eb78660104e0fc402672b984f771fa4e2932b7636acc754b13b82bc5e37',
+      },
+      {
+        title: 'Dane wejściowe — pliki2.7z',
+        url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761141596733_files.7z',
+        type: '7z',
+        sha256: 'c85f92f08acc6ab714b27e2fe9217421082397d2c3437f40ff8c5ca52f1b463c',
+      },
+      {
+        title: 'Zasady oceniania CKE — kopia archiwalna',
+        url: 'https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-czerwiec-02/klucz-odpowiedzi.pdf',
+        type: 'pdf',
+        sha256: '3775f99b3098e7c8371c3e76b5ed2d2d23aa9546a1cad63485c471c0447aef9d',
+      },
+    ],
+    criteriaAvailability: 'available',
+    rightsStatus: 'unknown',
+    importStatus: 'metadata-only',
+    supportStatus: 'catalog-only',
+    checkedAt: '2026-11-17T12:00:00.000Z',
+    notes:
+      'Sprawdzono kod PDF i kryteriów INF.03-02-25.06-SG, zawartość archiwum (3 plików), nazwy, rozmiary i hasze. Kopie z archiwów zewnętrznych, kryteria zawierają znak wodny wydawcy kopii. Nie potwierdzono tożsamości bajtowej z serwerem CKE ani praw redystrybucji. Pełny kurs jest materiałem objaśniającym; nie zastępuje arkusza ani oficjalnej oceny.',
+  },
 ];

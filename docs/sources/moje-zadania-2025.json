@@ -1,0 +1,163 @@
+{
+  "slug": "moje-zadania",
+  "title": "Moje zadania",
+  "code": "INF.03-02-25.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/89",
+  "verifiedAt": "2026-11-17T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "moje-zadania",
+    "code": "INF.03-02-25.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "numberedPages": 6,
+        "textCharacters": 12802,
+        "coverCodeVerified": true,
+        "sha256": "f1fa2eb78660104e0fc402672b984f771fa4e2932b7636acc754b13b82bc5e37"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 7858,
+        "coverCodeVerified": true,
+        "sha256": "3775f99b3098e7c8371c3e76b5ed2d2d23aa9546a1cad63485c471c0447aef9d",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-02-25.06-SG"
+      }
+    ],
+    "archive": "pliki2.7z",
+    "archivePassword": "#ToDoList@",
+    "memberCount": 4,
+    "fileCount": 3,
+    "totalExtractedBytes": 61321,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki2/baza.sql",
+        "bytes": 2734,
+        "sha256": "b9ce2c182a64023296c59137878af132ad2858c93e7900a6bf5e9908e0bc7efe"
+      },
+      {
+        "path": "pliki2/obraz.jpg",
+        "bytes": 58470,
+        "sha256": "908ec39c3e1d57d2c3de94eaefabc25450326fa84c23641ef41d3ac606825b80",
+        "width": 480,
+        "height": 640,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki2/zadania.txt",
+        "bytes": 117,
+        "sha256": "f502ee821e3fdee86364df3d737f33fb45a93b065fdd72e9ad9d733163b6c942"
+      }
+    ]
+  },
+  "deliverables": [
+    "import.png",
+    "kw1.jpg",
+    "kw2.jpg",
+    "kw3.jpg",
+    "kw4.jpg",
+    "kwerendy.txt",
+    "notatki.html",
+    "obraz.jpg",
+    "przeglądarka.txt",
+    "styl.css"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Unpack pliki2.7z into the candidate folder. Create notatki with Polish collation, import baza.sql, full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "MIN(priorytet) for Osoby_id 3; nazwa and priorytet LIKE %na%; imie and nazwa via relation where priorytet 5; imie and COUNT per name via relation. Results verified against criteria R.1.3-R.1.6."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Przygotowanie grafiki",
+      "coverage": "Scale obraz.jpg 480x640 proportionally to height 610 px (width about 458 px)."
+    },
+    {
+      "id": "document-and-content",
+      "page": 3,
+      "heading": "Cechy witryny",
+      "coverage": "notatki.html, Polish HTML5, encoding, title Planer zadań, styl.css; aside/header/nav/main/footer; image alt notatki, h2 Moje zadania, input placeholder and Dodaj button, six-item ul each with a Wykonane button, footer h3 Notatki: with candidate number."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Verdana; aside 20%/610 px; image 100%/610 px; header, nav and footer MediumPurple, white, 80%, 50 px, centred, text-shadow 4px 4px DimGray; nav padding-top 10 px; main Thistle 80% 450 px overflow auto; list buttons; list margins, width, font, border, no markers; li padding, even rows, hover."
+    },
+    {
+      "id": "script",
+      "page": 4,
+      "heading": "Skrypt",
+      "coverage": "Wykonane strikes only its own entry in any order; Dodaj appends the field text with a working, identically styled Wykonane button; meaningful names. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 6,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przeglądarka.txt, listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "moje-zadania",
+      "code": "INF.03-02-25.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-czerwiec-02/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 658092,
+      "sha256": "3775f99b3098e7c8371c3e76b5ed2d2d23aa9546a1cad63485c471c0447aef9d",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "Arkusz pobrany z zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "moje-zadania",
+      "code": "INF.03-02-25.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761141596091_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 528843,
+      "sha256": "f1fa2eb78660104e0fc402672b984f771fa4e2932b7636acc754b13b82bc5e37",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction and cover review"
+    },
+    "input": {
+      "slug": "moje-zadania",
+      "code": "INF.03-02-25.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1761141596733_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 60144,
+      "sha256": "c85f92f08acc6ab714b27e2fe9217421082397d2c3437f40ff8c5ca52f1b463c"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}
