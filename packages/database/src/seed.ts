@@ -6,13 +6,17 @@ import {
   faq,
 } from '@zdaj/content';
 import { DEFAULT_SETTINGS } from '@zdaj/shared';
+
+/** Revision 4 adds each paper's hand-in list; earlier revisions stay published. */
+const CATALOG_REVISION = 4;
 import { db, Prisma } from './index.js';
 
 async function seed() {
   const groups = { task: tasks, lesson: lessons, question: questions, catalog, faq };
   for (const [kind, records] of Object.entries(groups)) {
     for (const record of records) {
-      const version = 'version' in record ? record.version : kind === 'catalog' ? 3 : 1;
+      const version =
+        'version' in record ? record.version : kind === 'catalog' ? CATALOG_REVISION : 1;
       await db.contentRevision.upsert({
         where: { kind_key_version: { kind, key: record.id, version } },
         create: {
