@@ -291,6 +291,18 @@ export interface CatalogEntry {
   supportStatus: 'full' | 'partial' | 'catalog-only';
   checkedAt: string | null;
   notes: string;
+  /**
+   * What the paper's final page asks to hand in (catalogue revision 4): the files of the
+   * results folder, as printed, and the assessed results. A file printed without an
+   * extension (e.g. "baner1") may have any extension.
+   */
+  handIn?: CatalogHandIn;
+}
+export interface CatalogHandIn {
+  /** Page of the original PDF that lists the files and results. */
+  page: number;
+  files: string[];
+  results: string[];
 }
 export interface CriterionResult {
   criterionId: string;

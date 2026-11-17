@@ -44,6 +44,8 @@ import { api, errorMessage } from '../api';
 import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { ExamChecklist, ExamPlan } from '../components/ExamPlan';
+import { ExamReport } from '../components/ExamReport';
+import { matchHandInFiles } from '../exam-report';
 import { SqlPractice } from '../components/SqlPractice';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
@@ -798,6 +800,13 @@ export function Workspace() {
     );
   const closed = !!attempt.submittedAt;
   const manual = task.supportStatus === 'catalog-only';
+  const paperHandIn = data?.catalog.find((entry) => entry.id === task.sourceCatalogId)?.handIn;
+  const examHandIn = paperHandIn
+    ? matchHandInFiles(paperHandIn.files, attempt.files ?? [])
+    : undefined;
+  const handInEntry = closed
+    ? data?.catalog.find((entry) => entry.id === task.sourceCatalogId && entry.handIn)
+    : undefined;
   const overtime = !!attempt.deadlineAt && Date.now() > Date.parse(attempt.deadlineAt);
   const inspectionChoice =
     inspectChoice?.generation === projectPreview.index?.generation
@@ -1406,7 +1415,11 @@ export function Workspace() {
         </aside>
         <section className="workspace-work">
           {attempt.mode === 'egzamin' && !closed && attempt.deadlineAt && (
-            <ExamPlan deadlineAt={attempt.deadlineAt} durationMinutes={task.durationMinutes} />
+            <ExamPlan
+              deadlineAt={attempt.deadlineAt}
+              durationMinutes={task.durationMinutes}
+              handIn={examHandIn}
+            />
           )}
           <div className="workspace-tabs glass-panel" role="tablist" aria-label="Widok projektu">
             <button role="tab" aria-selected={tab === 'sheet'} onClick={() => setTab('sheet')}>
@@ -1550,6 +1563,13 @@ export function Workspace() {
           )}
           {tab === 'report' && (
             <div className="report-pane">
+              {handInEntry && (
+                <ExamReport
+                  attempt={attempt}
+                  entry={handInEntry}
+                  limitMinutes={task.durationMinutes}
+                />
+              )}
               {manual ? (
                 <div className="manual-completion">
                   <CheckCircle2 size={32} />

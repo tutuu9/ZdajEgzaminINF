@@ -94,3 +94,22 @@
     text-align: center;
   }
 }
+.exam-checklist-files {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px;
+  font-size: 14px;
+}
+.exam-checklist-files p {
+  margin: 0;
+  line-height: 1.7;
+}
+.exam-checklist-files .hand-in-present code {
+  color: var(--success);
+}
+.exam-checklist-files .hand-in-wrong-case code {
+  color: var(--warning);
+}
+.exam-checklist-files small {
+  color: var(--muted);
+}

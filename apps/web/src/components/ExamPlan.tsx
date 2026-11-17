@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ClipboardCheck, Flag } from 'lucide-react';
+import type { HandInFile } from '../exam-report';
 import '../exam-plan.css';
 
 /**
@@ -41,7 +42,7 @@ const STAGES = [
 
 export const EXAM_CHECKLIST = [
   'Folder i pliki mają dokładnie te nazwy, które podaje arkusz (wielkość liter i rozszerzenia).',
-  'Zrzuty ekranu są pełne, nieprzycięte, z widocznym paskiem zadań, i zapisane pod wymaganą nazwą.',
+  'Zrzuty ekranu spełniają warunki z arkusza (często: cały ekran z paskiem zadań, bez kadrowania) i mają wymaganą nazwę.',
   'kwerendy.txt zawiera wszystkie zapytania w kolejności z arkusza; każde kończy się średnikiem.',
   'Zapytania wybierają tylko wymagane kolumny — bez SELECT *, jeśli polecenie wymienia pola.',
   'W XAMPP działają Apache i MySQL; stronę PHP otwierasz przez http://localhost/…, nie przez file://.',
@@ -50,7 +51,15 @@ export const EXAM_CHECKLIST = [
   'Połączenie z bazą jest zamykane, a w kodzie PHP nie ma błędów widocznych na stronie.',
 ];
 
-export function ExamChecklist({ open = false }: { open?: boolean }) {
+export function ExamChecklist({
+  open = false,
+  handIn,
+}: {
+  open?: boolean;
+  /** The paper's hand-in list compared with the project, when known. */
+  handIn?: HandInFile[];
+}) {
+  const inProject = handIn?.filter((file) => file.status === 'present').length ?? 0;
   return (
     <details className="exam-checklist" open={open}>
       <summary>
@@ -61,6 +70,24 @@ export function ExamChecklist({ open = false }: { open?: boolean }) {
           <li key={item}>{item}</li>
         ))}
       </ul>
+      {handIn && (
+        <div className="exam-checklist-files">
+          <strong>
+            Pliki z arkusza w projekcie: {inProject}/{handIn.length}
+          </strong>
+          <p>
+            {handIn.map((file, index) => (
+              <span key={file.name} className={`hand-in-${file.status}`}>
+                {index > 0 && ', '}
+                <code>{file.name}</code>
+                {file.status === 'present' ? ' ✓' : ''}
+                {file.status === 'wrong-case' ? ` (masz „${file.actual}”)` : ''}
+              </span>
+            ))}
+          </p>
+          <small>Zrzuty i obrazy możesz mieć tylko w swoim folderze — sprawdź je tam.</small>
+        </div>
+      )}
       <p>
         Zebrane z zasad oceniania arkuszy i porad zdających. To pomoc w ćwiczeniu, nie oficjalna
         lista CKE.
@@ -72,9 +99,11 @@ export function ExamChecklist({ open = false }: { open?: boolean }) {
 export function ExamPlan({
   deadlineAt,
   durationMinutes,
+  handIn,
 }: {
   deadlineAt: string;
   durationMinutes: number;
+  handIn?: HandInFile[];
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -113,7 +142,7 @@ export function ExamPlan({
         ))}
       </ol>
       <p className="exam-plan-hint">{current.hint}</p>
-      <ExamChecklist open={current === stages[stages.length - 1]} />
+      <ExamChecklist open={current === stages[stages.length - 1]} handIn={handIn} />
     </section>
   );
 }

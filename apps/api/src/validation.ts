@@ -145,6 +145,14 @@ export const catalogSchema = z
     supportStatus: z.enum(['full', 'partial', 'catalog-only']),
     checkedAt: z.string().nullable(),
     notes: z.string().max(10_000),
+    handIn: z
+      .object({
+        page: z.number().int().min(1).max(100),
+        files: z.array(z.string().min(1).max(120)).min(1).max(40),
+        results: z.array(z.string().min(1).max(200)).min(1).max(10),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 const schemas = { task, lesson, question, catalog: catalogSchema, faq: faqSchema };
