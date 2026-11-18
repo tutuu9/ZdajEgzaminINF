@@ -458,4 +458,50 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-02-25-01-sg': {
+    title: 'Panele podłogowe — INF.03-02-25.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753368464417_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 7 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki12 ma hasło P@neLePodLoGowe!+. Zapytanie 3 wymaga relacji i aliasu, zapytanie 4 usuwa kolumnę.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika',
+        focus: [
+          'Napis 400 × 50 px z kolorem z laminowane.png i zrzut kolor.png. Trzy obrazy skaluj dokładnie do 500 × 70 px, bez zachowania proporcji.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Trzy strony',
+        focus: [
+          'Wspólny układ na index.html, oferta.html i koszty.html. Tabela z ilustracji 4 ma scalenia rowspan i colspan.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Style i skrypt',
+        focus: [
+          'Plik nazywa się style.css. Body, a, table i td tylko selektorami znaczników. Koszt = pole × stawka z tabeli 1.',
+        ],
+      },
+      {
+        page: 7,
+        title: 'Komplet rezultatów',
+        focus: ['Zrzuty zapytań są w formacie PNG. Wymagane są trzy strony HTML i cztery grafiki.'],
+      },
+    ],
+  },
 };

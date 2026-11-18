@@ -1,0 +1,180 @@
+{
+  "slug": "panele",
+  "title": "Panele podłogowe",
+  "code": "INF.03-02-25.01-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/4",
+  "verifiedAt": "2026-11-18T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "panele",
+    "code": "INF.03-02-25.01-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "numberedPages": 7,
+        "textCharacters": 13000,
+        "coverCodeVerified": true,
+        "sha256": "5c52d74efe881e721b28c0d648dad08d05bb8a65a1fb1741bc7ce3831c797e6e"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 9011,
+        "coverCodeVerified": true,
+        "sha256": "3064004584a1a86f9e96da1e00eb51ba17e9e4168b1b566392d33fff680f61d3",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-02-25.01-SG"
+      }
+    ],
+    "archive": "pliki12.7z",
+    "archivePassword": "P@neLePodLoGowe!+",
+    "memberCount": 5,
+    "fileCount": 4,
+    "totalExtractedBytes": 670016,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki12/baza.sql",
+        "bytes": 3172,
+        "sha256": "ada95b107c7fcb954c257ae37f3607b5ea21361f6b002d1d926577ecb173b7af"
+      },
+      {
+        "path": "pliki12/deska.png",
+        "bytes": 216966,
+        "sha256": "3f4c1f32e693403912d9a50ac1e9c7c30d22b8ed32292e9154866ade2c7b598d",
+        "width": 480,
+        "height": 300,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki12/laminowane.png",
+        "bytes": 177226,
+        "sha256": "28a64d1212425982df7929e4f568c5c18e95bbb61b822171be05cf3c2325f3bb",
+        "width": 480,
+        "height": 300,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki12/winylowe.png",
+        "bytes": 272652,
+        "sha256": "3271927f1f794b560989381c65fad875de5136b9073fac10775ed00eeca72927",
+        "width": 480,
+        "height": 300,
+        "format": "PNG"
+      }
+    ]
+  },
+  "deliverables": [
+    "deska.png",
+    "import.png",
+    "index.html",
+    "koszty.html",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "laminowane.png",
+    "montaz_paneli.png",
+    "oferta.html",
+    "przeglądarka.txt",
+    "style.css",
+    "winylowe.png"
+  ],
+  "additionalEvidence": ["kolor.png (required on page 3, not repeated in the page 7 list)"],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create przewozy with Polish collation, import baza.sql (osoby, zadania), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Names starting with A (2 rows); tasks containing mebli ordered by date (2019-11-06, 2021-01-26); surnames with COUNT AS Liczba zadań via relation (4 rows, or 6 with LEFT JOIN); ALTER TABLE osoby DROP COLUMN telefon. Verified against criteria R.1.3-R.1.6 and the data."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Grafika",
+      "coverage": "montaz_paneli.png 400x50 transparent, bold sans-serif 27, colour picked from laminowane.png (kolor.png); laminowane/winylowe/deska.png scaled exactly to 500x70 (480x300 originals, proportions change)."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "index.html, oferta.html, koszty.html with shared Polish HTML5 head, title, style.css, header image, three-link nav, main, footer h5; home h1 with three images and paragraphs; offer h1 and 4x5 table with rowspan/colspan (illustration 4); calculator h1, two labelled number fields, Typ panelu, three radios in one group, Oblicz button, empty result paragraph."
+    },
+    {
+      "id": "css",
+      "page": 5,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Georgia for *; body centred; header/footer padding 30 px with opposite vertical gradients #A0522D/#F5DEB3; nav and main Wheat with padding 14/50 px; a Sienna, white, bold, no underline, padding 10, margin 20, underline on hover; table and td 1px solid Sienna collapsed; table 70% margin auto; td padding 5 px. Tag selectors only for body, a, table, td."
+    },
+    {
+      "id": "script",
+      "page": 5,
+      "heading": "Skrypt",
+      "coverage": "Read both fields (.value) and the radio group (.checked); area = width x length; cost = area x 12/14/18; message for empty fields; text shown in the paragraph under the button. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 7,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przeglądarka.txt, listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "panele",
+      "code": "INF.03-02-25.01-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-styczen-02/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 660774,
+      "sha256": "3064004584a1a86f9e96da1e00eb51ba17e9e4168b1b566392d33fff680f61d3",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "panele",
+      "code": "INF.03-02-25.01-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753368464417_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 521676,
+      "sha256": "5c52d74efe881e721b28c0d648dad08d05bb8a65a1fb1741bc7ce3831c797e6e",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered illustrations 4 and 5"
+    },
+    "input": {
+      "slug": "panele",
+      "code": "INF.03-02-25.01-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753368465090_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 668752,
+      "sha256": "604e742467605a67232958672460d80da3f125b8dff66547079c4c55577c78ca"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

@@ -12,6 +12,8 @@ import { mojeZadaniaGuide } from '../packages/content/src/study-project-moje-zad
 import { mojeZadaniaFixtures, mojeZadaniaHtmlMistakes } from '../fixtures/study/moje-zadania.js';
 import { systemyGuide } from '../packages/content/src/study-project-systemy.js';
 import { systemyFixtures, systemyHtmlMistakes } from '../fixtures/study/systemy.js';
+import { paneleGuide } from '../packages/content/src/study-project-panele.js';
+import { paneleFixtures, paneleHtmlMistakes } from '../fixtures/study/panele.js';
 
 /** runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet. */
 const courses = [
@@ -47,6 +49,13 @@ const courses = [
     guide: systemyGuide,
     fixtures: systemyFixtures,
     mistakes: systemyHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-18',
+  },
+  {
+    guide: paneleGuide,
+    fixtures: paneleFixtures,
+    mistakes: paneleHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-18',
   },
