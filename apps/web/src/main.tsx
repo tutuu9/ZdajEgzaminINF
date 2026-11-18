@@ -29,6 +29,9 @@ const Progress = lazy(() =>
 );
 const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })));
 const Faq = lazy(() => import('./pages/Faq').then((module) => ({ default: module.Faq })));
+const Handbook = lazy(() =>
+  import('./pages/Handbook').then((module) => ({ default: module.Handbook })),
+);
 
 function RouteAlias({ to, task = false }: { to: string; task?: boolean }) {
   const location = useLocation();
@@ -59,6 +62,9 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<RouteAlias to="/nauka" />} />
               <Route path="nauka" element={<LearningEntry />} />
               <Route path="nauka/podstawy" element={<Learn />} />
+              <Route path="nauka/podrecznik" element={<Handbook />} />
+              <Route path="nauka/podrecznik/:book" element={<Handbook />} />
+              <Route path="nauka/podrecznik/:book/:chapter" element={<Handbook />} />
               <Route path="nauka/:id" element={<Learn />} />
               <Route path="katalog" element={<RouteAlias to="/arkusze" />} />
               <Route path="praktyka" element={<RouteAlias to="/arkusze" />} />

@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BookMarked,
   BookOpen,
   Check,
   ChevronRight,
@@ -110,6 +111,14 @@ export function Home() {
           ))}
         </div>
       </section>
+      <Link className="handbook-callout glass-panel" to="/nauka/podrecznik">
+        <BookMarked size={24} />
+        <span>
+          <strong>Podręcznik: HTML, CSS, JavaScript i SQL</strong>
+          Krótkie rozdziały z działającymi przykładami — bez rozwiązywania całego arkusza.
+        </span>
+        <ChevronRight size={18} />
+      </Link>
       <div className="learning-secondary">
         <section className="foundation-section">
           <div className="section-heading">
