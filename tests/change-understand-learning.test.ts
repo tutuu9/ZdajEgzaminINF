@@ -56,9 +56,9 @@ const html = (selector: string, attribute?: string): Extract<StudyCheckSpec, { k
 const file = (path: string, content: string): ProjectFile => ({ path, content });
 
 describe('Zmień i zrozum teaching metadata', () => {
-  it('offers HTML and CSS explanations in each of the twelve pinned course guides without editing them', () => {
+  it('offers HTML and CSS explanations in each of the thirteen pinned course guides without editing them', () => {
     const original = JSON.stringify(examStudyGuides);
-    expect(examStudyGuides).toHaveLength(12);
+    expect(examStudyGuides).toHaveLength(13);
     for (const guide of examStudyGuides) {
       const lessons = guide.steps
         .flatMap((step) =>

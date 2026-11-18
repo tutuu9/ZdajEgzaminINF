@@ -552,4 +552,52 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-12-26-06-sg': {
+    title: 'Salon rowerowy — INF.03-12-26.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193567275_h5oml8_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 8 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Hasło archiwum pliki22 to {Row3RY} — razem z klamrami. Zapytanie 4 to UPDATE: wykonaj je tylko raz.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i układ',
+        focus: [
+          '1.jpg odbij względem osi pionowej i skaluj do 400 px szerokości. Ilustracja 3: nagłówek nad blokiem głównym i bocznym, dwie stopki.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Treść i style',
+        focus: [
+          'Etykiety z klasą klasa_etykiety i dymkiem title, suwak 100–220, akapity z dwiema klasami w jednym atrybucie. Nagłówek przypięty position: fixed.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Skrypty',
+        focus: [
+          'Współczynniki 0,26 / 0,3 / 0,28, dzielenie przez 2,54 i zaokrąglenie. Data w formacie DD.MM.RRRR po załadowaniu strony.',
+        ],
+      },
+      {
+        page: 8,
+        title: 'Komplet rezultatów',
+        focus: [
+          'Plik nazywa się przegladarka.txt — bez litery ę. Zrzuty zapytań są w formacie PNG.',
+        ],
+      },
+    ],
+  },
 };

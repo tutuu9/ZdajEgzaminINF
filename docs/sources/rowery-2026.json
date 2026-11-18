@@ -1,0 +1,194 @@
+{
+  "slug": "rowery",
+  "title": "Salon rowerowy",
+  "code": "INF.03-12-26.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/147",
+  "verifiedAt": "2026-11-18T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "rowery",
+    "code": "INF.03-12-26.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 12,
+        "numberedPages": 8,
+        "textCharacters": 18254,
+        "coverCodeVerified": true,
+        "sha256": "86570bdd94a84123b15c6d98c0712e2070ef085a5731661b732abdb9fa05707c"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 9101,
+        "coverCodeVerified": true,
+        "sha256": "21971944ba8082f9742b5059714ae6a6d3db0068de28f65bb7cb2ff59e31f3ab",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-12-26.06-SG"
+      }
+    ],
+    "archive": "pliki22.7z",
+    "archivePassword": "{Row3RY}",
+    "memberCount": 7,
+    "fileCount": 6,
+    "totalExtractedBytes": 1491062,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki22/1.jpg",
+        "bytes": 964698,
+        "sha256": "2f659f29746c6a36215803867cb1c131f3911eff155aa26e4190d9e7bb4fb81f",
+        "height": 919,
+        "width": 1200,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki22/2.jpg",
+        "bytes": 132342,
+        "sha256": "d9ee4b13915db59b66a6ce21b917572ec1dda9df4fc3bc429e697a42f36e1a2b",
+        "height": 306,
+        "width": 400,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki22/3.jpg",
+        "bytes": 112534,
+        "sha256": "0c5a9a29ac9117f8fe754b20fb3f48994a57c61818dbcea6f78ea3cc80c7a0c3",
+        "height": 306,
+        "width": 400,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki22/4.jpg",
+        "bytes": 138325,
+        "sha256": "22a177cee6061a047e668266f60c4045b926b31b91c9ab093592959eb47c6384",
+        "height": 306,
+        "width": 400,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki22/5.jpg",
+        "bytes": 124329,
+        "sha256": "da0c9e9ab07941217e661852a30199fafe702ce72cb872d70f20a821aa5fd35b",
+        "height": 306,
+        "width": 400,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki22/rowery.sql",
+        "bytes": 18834,
+        "sha256": "40ebc0faab995c2338a90e35e6ed9ef133efd84febec90ba7ab6c6c3cf2b69d6"
+      }
+    ]
+  },
+  "deliverables": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg",
+    "index.html",
+    "import.png",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "przegladarka.txt",
+    "styl.css"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create rowery with Polish collation, import rowery.sql (producenci 6, rowery 224), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Mountain bikes up to 4500 (9 rows Fuse Comp 22..Roscoe 6); MIN/AVG/MAX per producer with aliases via relation (6 rows); Carbon models in frame L (ids 5, 7, 13, 16, 18, 29, 52); UPDATE gravel price * 0.75 (5 rows). Verified against criteria R.1.3-R.1.6 and the data."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Cechy grafiki 1.jpg",
+      "coverage": "1.jpg 1200x919 mirrored about the vertical axis and scaled proportionally to width 400 px (about 306 px high)."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "index.html, Polish HTML5, encoding, title, styl.css; header, main, aside, two footers; five images alt rower; h1, two h2, three radios in labels with klasa_etykiety and title, first checked; range 100-220 value 150; number 150; Sprawdź with klasa_etykiety; result paragraph; aside h1 and five paragraphs with classes in one attribute; footer h4 lists with a nested list in the first item; 2x2 table with number and date cell."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "body 80% margin auto; header fixed top 0, 200 px, white, centred; main 60% 650 px padding left/right 2% margin-top 200 px; aside 20% 650 px shadow 0 0 100px #02220a margin-top 200 px; footers 50% 170 px #02220a white; img 16% margin 8 padding 3 radius 50%; .klasa_etykiety box with ForestGreen hover; .logo1, .logo2, .prawa, .srodek; ul without markers."
+    },
+    {
+      "id": "script",
+      "page": 5,
+      "heading": "Skrypty działające po stronie klienta",
+      "coverage": "Script 1 copies the range value to the number field; script 2 checks .checked, multiplies height by 0.26/0.3/0.28, divides by 2.54, rounds and prints the paper's sentence; script 3 creates Date and shows DD.MM.RRRR in the footer. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 8,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przegladarka.txt (spelled without ę in this paper), listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "rowery",
+      "code": "INF.03-12-26.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2026-czerwiec-12/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 815778,
+      "sha256": "21971944ba8082f9742b5059714ae6a6d3db0068de28f65bb7cb2ff59e31f3ab",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "rowery",
+      "code": "INF.03-12-26.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193567275_h5oml8_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 566831,
+      "sha256": "86570bdd94a84123b15c6d98c0712e2070ef085a5731661b732abdb9fa05707c",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered illustrations 2-3"
+    },
+    "input": {
+      "slug": "rowery",
+      "code": "INF.03-12-26.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193567715_8g0gef_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 1475856,
+      "sha256": "1e0cd068ad2c459a085dc9b7b4d8cf1c8e371d6a07e846ee059457727436cbee"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

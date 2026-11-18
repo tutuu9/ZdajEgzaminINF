@@ -12,7 +12,7 @@ describe('catalogue hand-in lists', () => {
       expect(page).toBeGreaterThan(1);
       expect(new Set(files).size, entry.id).toBe(files.length);
       // Every paper asks for the browser note; all but one print file extensions,
-      // and INF.03-11-26.06-SG prints its name without the Polish letter (przegladarka).
+      // and the June 2026 papers 11 and 12 print it without the Polish letter (przegladarka).
       expect(
         files.some((file) => /^przegl[ąa]darka(\.txt)?$/.test(file)),
         entry.id,
