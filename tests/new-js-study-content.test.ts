@@ -16,6 +16,8 @@ import { paneleGuide } from '../packages/content/src/study-project-panele.js';
 import { paneleFixtures, paneleHtmlMistakes } from '../fixtures/study/panele.js';
 import { atlasGuide } from '../packages/content/src/study-project-atlas.js';
 import { atlasFixtures, atlasHtmlMistakes } from '../fixtures/study/atlas.js';
+import { roweryGuide } from '../packages/content/src/study-project-rowery.js';
+import { roweryFixtures, roweryHtmlMistakes } from '../fixtures/study/rowery.js';
 
 /**
  * runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet.
@@ -75,6 +77,14 @@ const courses = [
     paperPages: 8,
     fixtures: atlasFixtures,
     mistakes: atlasHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-18',
+  },
+  {
+    guide: roweryGuide,
+    paperPages: 8,
+    fixtures: roweryFixtures,
+    mistakes: roweryHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-18',
   },
