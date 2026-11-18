@@ -6,5 +6,6 @@ Reviewed on 17–18 November 2026. New tasks and cumulative guides start at vers
 | ---------------- | ------------------ | --------------------------------- | -------------------------------------------------------- |
 | Moje zadania     | INF.03-02-25.06-SG | [Course](course-moje-zadania.md)  | [Provenance and SHA-256](sources/moje-zadania-2025.json) |
 | Systemy liczbowe | INF.03-06-25.01-SG | [Course](course-systemy.md)       | [Provenance and SHA-256](sources/systemy-2025.json)      |
+| Panele podłogowe | INF.03-02-25.01-SG | [Course](course-panele.md)        | [Provenance and SHA-256](sources/panele-2025.json)       |
 
 Courses without a runtime adapter keep JavaScript behaviour as a manual check; their fixtures are still verified statically (HTML and measured CSS in a real browser) and their tests assert that no runtime check is declared.
