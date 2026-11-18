@@ -113,3 +113,15 @@ The public profile has **not been certified on the unknown target VPS or by the 
 ## Adding a check
 
 Extend the fixed checker whitelist and implementation together. Add a meaningful positive case, at least one alternative correct implementation where allowed, and a focused negative case. Keep sensitive evaluator state outside the student's permissions. Return `manual` or `unchecked` for requirements that cannot be reliably proven, and make the limitation visible in Polish.
+
+## Paper images in the Projekt tab
+
+The "Grafika z arkusza" panel compares the learner's own image files with the paper's image requirements (catalogue revision 5). It runs entirely in the browser on files already stored in the project; nothing is uploaded or executed.
+
+- Name: matched like the hand-in list, so a letter-case difference is reported and a name printed without an extension accepts any extension.
+- Format: read from the file's bytes (PNG, JPEG, GIF), not from its extension; a renamed file is reported.
+- Size: exact sides must match exactly; a side that must follow the original's proportions is accepted within ±5 px, as the marking criteria allow.
+- Transparency: the file must be able to store it (PNG alpha or `tRNS`, GIF transparent colour), and at least one corner pixel of the decoded image must be fully transparent.
+- Animation: frame count and the delay of every frame from the GIF's graphic control extensions.
+
+What the image shows (text, colour, crop, mirroring) is not judged; the panel says so. The result is guidance for the learner, not a score.

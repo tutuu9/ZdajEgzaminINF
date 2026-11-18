@@ -50,6 +50,7 @@ import { SqlPractice } from '../components/SqlPractice';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
 import { useProjectPreview } from '../inspector/use-project-preview';
 import { MissingAssets } from '../components/MissingAssets';
+import { GraphicsCheck } from '../components/GraphicsCheck';
 import { PreviewConsole } from '../components/PreviewConsole';
 import { InspectorOverlay, PageInspector } from '../components/PageInspector';
 import '../inspector.css';
@@ -801,6 +802,7 @@ export function Workspace() {
   const closed = !!attempt.submittedAt;
   const manual = task.supportStatus === 'catalog-only';
   const paperHandIn = data?.catalog.find((entry) => entry.id === task.sourceCatalogId)?.handIn;
+  const paperGraphics = data?.catalog.find((entry) => entry.id === task.sourceCatalogId)?.graphics;
   const examHandIn = paperHandIn
     ? matchHandInFiles(paperHandIn.files, attempt.files ?? [])
     : undefined;
@@ -1560,6 +1562,9 @@ export function Workspace() {
               {editorPanel}
               {previewPanel}
             </div>
+          )}
+          {(tab === 'code' || tab === 'preview') && paperGraphics && (
+            <GraphicsCheck graphics={paperGraphics} files={attempt.files ?? []} />
           )}
           {tab === 'report' && (
             <div className="report-pane">

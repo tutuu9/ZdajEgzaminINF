@@ -110,6 +110,7 @@ const question = z
       value.options.some((x) => x.id === value.correctOptionId),
     'Odpowiedzi muszą mieć unikalne identyfikatory i treść oraz jeden poprawny wariant.',
   );
+const pixels = z.number().int().min(1).max(10_000);
 export const catalogSchema = z
   .object({
     id,
@@ -152,6 +153,28 @@ export const catalogSchema = z
         results: z.array(z.string().min(1).max(200)).min(1).max(10),
       })
       .strict()
+      .optional(),
+    graphics: z
+      .array(
+        z
+          .object({
+            file: z.string().min(1).max(120),
+            page: z.number().int().min(1).max(100),
+            formats: z
+              .array(z.enum(['jpeg', 'png', 'gif']))
+              .min(1)
+              .max(3),
+            width: pixels.optional(),
+            height: pixels.optional(),
+            original: z.object({ width: pixels, height: pixels }).strict().optional(),
+            transparent: z.boolean().optional(),
+            frames: z.number().int().min(2).max(200).optional(),
+            frameDelayMs: z.number().int().min(10).max(60_000).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(20)
       .optional(),
   })
   .strict();

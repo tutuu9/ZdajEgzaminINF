@@ -297,6 +297,34 @@ export interface CatalogEntry {
    * extension (e.g. "baner1") may have any extension.
    */
   handIn?: CatalogHandIn;
+  /** Image files the paper asks the learner to prepare, with their measurable properties. */
+  graphics?: CatalogGraphic[];
+}
+export type GraphicFormat = 'jpeg' | 'png' | 'gif';
+/**
+ * One image requirement from the paper. Only measurable properties are recorded; what the
+ * image shows (text, colour, crop) stays a visual comparison with the paper's illustration.
+ */
+export interface CatalogGraphic {
+  /** File name as printed; a name without an extension may have any extension. */
+  file: string;
+  /** Page of the original PDF that describes the image. */
+  page: number;
+  /** Accepted formats, e.g. ['png', 'gif'] for "a format that keeps transparency". */
+  formats: GraphicFormat[];
+  /** Exact size required by the paper, in pixels. */
+  width?: number;
+  height?: number;
+  /**
+   * Size of the archive original when only one side is given and proportions must be kept.
+   * The other side is then expected within ±5 px, as the marking criteria allow.
+   */
+  original?: { width: number; height: number };
+  /** The paper asks for a transparent background. */
+  transparent?: boolean;
+  /** Animation: number of frames and the delay of each frame. */
+  frames?: number;
+  frameDelayMs?: number;
 }
 export interface CatalogHandIn {
   /** Page of the original PDF that lists the files and results. */
