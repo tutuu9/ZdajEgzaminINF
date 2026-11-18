@@ -1,0 +1,285 @@
+{
+  "slug": "systemy",
+  "title": "Systemy liczbowe",
+  "code": "INF.03-06-25.01-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/8",
+  "verifiedAt": "2026-11-18T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "systemy",
+    "code": "INF.03-06-25.01-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "numberedPages": 6,
+        "textCharacters": 12993,
+        "coverCodeVerified": true,
+        "sha256": "55da817ce0badf21157a9e7c54feb005443768641e03d4d63e16744f1dfdcb26"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 8589,
+        "coverCodeVerified": true,
+        "sha256": "32b114fa2a51cd9b9ccdcff81aabcdfd8f9ab9e8441c6ab16cd770a23d29c411",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-06-25.01-SG"
+      }
+    ],
+    "archive": "pliki14 (7z)",
+    "archivePassword": "Cyf3rki#",
+    "memberCount": 18,
+    "fileCount": 18,
+    "totalExtractedBytes": 67953,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "0.png",
+        "bytes": 3905,
+        "sha256": "588adf846f882f96dcd21b0cf01ed8bfed8982a341ac5dc70ee6a7893a4d6e2e",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "1.png",
+        "bytes": 1416,
+        "sha256": "90920e75892d582d835a212b8e576f8f0f28a6adfd06b5845c8386ad7e8ece79",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "2a.png",
+        "bytes": 11938,
+        "sha256": "a1eeab7e9111d420ca6cc7088445670d4674915497427c87ddcdbfd03c0e5bee",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "3.png",
+        "bytes": 4118,
+        "sha256": "64537ca2319f557c5a0e14b8da17a1c254dd3e0878fceb824bbf8822d71fc995",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "4.png",
+        "bytes": 2138,
+        "sha256": "8ea60383b55f8b108bec51385c388bf3300e6d16f5bd72e31a94fdca288dad79",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "5.png",
+        "bytes": 3470,
+        "sha256": "5cf64a11764b925b46f9e9eaca736a139d91508f98ce411844593e611f6933f4",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "6.png",
+        "bytes": 4034,
+        "sha256": "b07c22f7a1726515c474a315a25a159f2ee16731c6f571a8d9f80482380e2992",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "7.png",
+        "bytes": 2978,
+        "sha256": "302a56237f13d241c22e08a2f687ab723dc6f9c5e295a0c2ab59a734f6fb0d34",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "8.png",
+        "bytes": 4397,
+        "sha256": "e42c5d4d526635dad39d0a9a9ae6d0711a2e4502d7885d64f4f36ae6d7e133d9",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "9.png",
+        "bytes": 4066,
+        "sha256": "ee8a8e68518b487827c3412d6169281e1f942e9ddc03d26d3e26646b4b818c28",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "A.png",
+        "bytes": 3342,
+        "sha256": "9b272e790c01e47abc26449858be2e32b027a06b2cf7cc7d397392f7dae368b9",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "B.png",
+        "bytes": 3367,
+        "sha256": "6e5413afce70b6ae14b2441e468ef00a678c481669c34ad7fb6742fd1b3486de",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "C.png",
+        "bytes": 4169,
+        "sha256": "c62a224d165b8528cd45a728135060f75f1d1abf443ffe7e1f41f54192eb4e6c",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "D.png",
+        "bytes": 3201,
+        "sha256": "c53aa4b81f4640831108b11cd52c55ceb23be76b5976a34a296534979f606f8c",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "E.png",
+        "bytes": 3085,
+        "sha256": "0478d3ebf97ab61389e2919da13157a4a43fcd3e108e40e560b9c7ce63756cd1",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "F.png",
+        "bytes": 2276,
+        "sha256": "e40b1f62e2294a87ffca69a5bd5ef67df2ded72a6bdea83eea09a464b818ebfb",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "systemy.txt",
+        "bytes": 421,
+        "sha256": "08f135b0aa34408b797f512d2c9ce11a2b35e4c14ae099cd4bcbd488e7f911f3"
+      },
+      {
+        "path": "szachy.sql",
+        "bytes": 5632,
+        "sha256": "7fb594a5fbaf3bb546bba854f8739aba0f265c8a74195184d2fd7028c0ab7ee5"
+      }
+    ]
+  },
+  "deliverables": [
+    "2.png",
+    "cyfry.gif",
+    "import.png",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "parametry_animacji.png",
+    "przeglądarka.txt",
+    "styl.css",
+    "systemy.html"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create szachy with Polish collation, import szachy.sql (94 rows in zawodnicy), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Titles won in July 2020 (3 rows); 3A with a non-empty title, compared with '' not NULL (4 rows); 10 lowest rankings (ASC or DESC accepted); DATEDIFF to today AS dni (30 rows). Verified against criteria R.1.3-R.1.6 and the data."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Grafika",
+      "coverage": "2.png: 2a.png mirrored about the vertical axis, digit 0000FF, transparent. cyfry.gif: 16 frames 0-F, 200x200, 750 ms, one frame per layer, documented in parametry_animacji.png."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "systemy.html, Polish HTML5, encoding, title, styl.css; header, three blocks side by side, footer; animation alt, h1; 3x7 table with th header row; number input with placeholder, button, result paragraph; h2 and dl with three terms, link on Heksadecymalny; footer number in em."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Georgia and white; header/footer #824555, centred, padding 20 px; left/middle 30% 350 px, #A26475/#824555; right #A26470 40% 350 px overflow auto; image float left 50 px; table, p, dt margin 10 px by tag selectors; dt padding-top 20 px; td/th 3px solid #824555, padding 5 px."
+    },
+    {
+      "id": "script",
+      "page": 5,
+      "heading": "Skrypt",
+      "coverage": "Read the field, convert to binary (K1-K6), groups of four digits from the right, (2) in sub, shown in the paragraph under the button. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 6,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przeglądarka.txt, listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "systemy",
+      "code": "INF.03-06-25.01-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2025-styczen-06/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 685597,
+      "sha256": "32b114fa2a51cd9b9ccdcff81aabcdfd8f9ab9e8441c6ab16cd770a23d29c411",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "systemy",
+      "code": "INF.03-06-25.01-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753370456641_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 584760,
+      "sha256": "55da817ce0badf21157a9e7c54feb005443768641e03d4d63e16744f1dfdcb26",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered page 4 (illustration 4 table)"
+    },
+    "input": {
+      "slug": "systemy",
+      "code": "INF.03-06-25.01-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753370457726_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 52084,
+      "sha256": "2278c0477e453cca6a4d365adc70188c8ee01182e76e896f60daaee2f966f971"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}
