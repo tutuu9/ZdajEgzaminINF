@@ -10,6 +10,8 @@ import { chatGuide } from '../packages/content/src/study-project-chat.js';
 import { chatFixtures, chatHtmlMistakes } from '../fixtures/study/chat.js';
 import { mojeZadaniaGuide } from '../packages/content/src/study-project-moje-zadania.js';
 import { mojeZadaniaFixtures, mojeZadaniaHtmlMistakes } from '../fixtures/study/moje-zadania.js';
+import { systemyGuide } from '../packages/content/src/study-project-systemy.js';
+import { systemyFixtures, systemyHtmlMistakes } from '../fixtures/study/systemy.js';
 
 /** runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet. */
 const courses = [
@@ -40,6 +42,13 @@ const courses = [
     mistakes: mojeZadaniaHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-17',
+  },
+  {
+    guide: systemyGuide,
+    fixtures: systemyFixtures,
+    mistakes: systemyHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-18',
   },
 ];
 function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>) {

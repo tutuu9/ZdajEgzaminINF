@@ -20,6 +20,8 @@ import { chatFixtures } from '../../fixtures/study/chat.js';
 import { rzekiFixtures } from '../../fixtures/study/rzeki.js';
 import { mojeZadaniaGuide } from '../../packages/content/src/study-project-moje-zadania.js';
 import { mojeZadaniaFixtures } from '../../fixtures/study/moje-zadania.js';
+import { systemyGuide } from '../../packages/content/src/study-project-systemy.js';
+import { systemyFixtures } from '../../fixtures/study/systemy.js';
 
 const courses = [
   { name: 'Firma IT', guide: firmaGuide, fixtures: firmaFixtures },
@@ -32,6 +34,7 @@ const courses = [
 const staticallyCheckedCourses = [
   ...courses,
   { name: 'Moje zadania', guide: mojeZadaniaGuide, fixtures: mojeZadaniaFixtures },
+  { name: 'Systemy liczbowe', guide: systemyGuide, fixtures: systemyFixtures },
 ];
 
 const editor = (page: Page) => page.locator('.editor-pane .cm-content[contenteditable="true"]');

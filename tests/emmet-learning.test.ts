@@ -194,9 +194,9 @@ describe('Pinned course Emmet guidance', () => {
     ).toEqual(['header', 'section']);
   });
 
-  it('maps appropriate HTML activities in all nine guides without altering their requirements', () => {
+  it('maps appropriate HTML activities in all ten guides without altering their requirements', () => {
     const before = JSON.stringify(examStudyGuides);
-    expect(examStudyGuides).toHaveLength(9);
+    expect(examStudyGuides).toHaveLength(10);
     for (const guide of examStudyGuides) {
       let count = 0;
       for (const { step, activity } of positions(guide)) {
@@ -238,7 +238,7 @@ describe('Pinned course Emmet guidance', () => {
         seen.add(guide.taskId);
       }
     }
-    expect(seen.size).toBe(9);
+    expect(seen.size).toBe(10);
     expect([...names].sort()).toEqual(['styl.css', 'styl7.css', 'styl_1.css', 'style.css']);
   });
 

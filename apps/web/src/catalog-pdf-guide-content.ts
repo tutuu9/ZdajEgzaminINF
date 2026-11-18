@@ -410,4 +410,52 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-06-25-01-sg': {
+    title: 'Systemy liczbowe — INF.03-06-25.01-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1753370456641_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 6 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki14 ma hasło Cyf3rki#. Zapytanie 2 porównuje tytuł z pustym napisem, a zapytanie 4 liczy dni od zdobycia tytułu do dziś.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Grafika i animacja',
+        focus: [
+          'Odbij 2a.png względem osi pionowej i zmień kolor na 0000FF. Animacja 16 cyfr, 750 ms na klatkę, zrzut parametry_animacji.png.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Struktura i style',
+        focus: [
+          'Tabela 3 × 7 z ilustracji 4, pole typu number, lista definicji z odnośnikiem. Styl tabeli, akapitu i terminu tylko selektorami znaczników.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Skrypt',
+        focus: [
+          'Algorytm K1–K6, grupy po cztery cyfry od prawej i (2) w indeksie dolnym — przykład dla 537 na ilustracji 5.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Komplet rezultatów',
+        focus: [
+          'Zrzuty zapytań są w formacie PNG. Wymagane są też 2.png, cyfry.gif i parametry_animacji.png.',
+        ],
+      },
+    ],
+  },
 };
