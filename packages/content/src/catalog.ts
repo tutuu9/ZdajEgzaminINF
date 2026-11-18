@@ -64,6 +64,15 @@ export const catalog: CatalogEntry[] = [
         'skrypt połączenia z bazą',
       ],
     },
+    graphics: [
+      {
+        file: 'ryba1.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 400,
+        original: { width: 600, height: 480 },
+      },
+    ],
   },
   {
     id: 'inf03-01-25-01-sg',
@@ -127,6 +136,7 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [{ file: 'baner.png', page: 3, formats: ['png'], width: 1000, height: 100 }],
   },
   {
     id: 'inf03-08-25-06-sg',
@@ -191,6 +201,15 @@ export const catalog: CatalogEntry[] = [
         'skrypty',
       ],
     },
+    graphics: [
+      {
+        file: 'smok1.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        height: 300,
+        original: { width: 3872, height: 2592 },
+      },
+    ],
   },
   {
     id: 'inf03-01-24-06-sg',
@@ -259,6 +278,15 @@ export const catalog: CatalogEntry[] = [
         'skrypt połączenia z bazą',
       ],
     },
+    graphics: [
+      {
+        file: 'droga1.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 640,
+        original: { width: 1000, height: 750 },
+      },
+    ],
   },
   {
     id: 'inf03-03-24-06-sg',
@@ -323,6 +351,7 @@ export const catalog: CatalogEntry[] = [
         'skrypt połączenia z bazą',
       ],
     },
+    graphics: [{ file: 'obraz1.png', page: 3, formats: ['png'], transparent: true }],
   },
   {
     id: 'inf03-01-24-01-sg',
@@ -386,6 +415,39 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: 'logo',
+        page: 2,
+        formats: ['png', 'gif'],
+        width: 100,
+        height: 100,
+        transparent: true,
+      },
+      {
+        file: 'baner1',
+        page: 2,
+        formats: ['png', 'gif'],
+        width: 1000,
+        height: 200,
+        transparent: true,
+      },
+      {
+        file: 'baner2',
+        page: 2,
+        formats: ['png', 'gif'],
+        width: 1000,
+        height: 200,
+        transparent: true,
+      },
+      {
+        file: 'animacja',
+        page: 3,
+        formats: ['gif'],
+        frames: 2,
+        frameDelayMs: 3000,
+      },
+    ],
   },
   {
     id: 'inf03-05-24-01-sg',
@@ -451,6 +513,22 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: 'obraz1.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 240,
+        original: { width: 352, height: 440 },
+      },
+      {
+        file: 'obraz2.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 700,
+        original: { width: 900, height: 381 },
+      },
+    ],
   },
   {
     id: 'inf03-02-24-06-sg',
@@ -516,6 +594,7 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [{ file: 'Jolka.jpg', page: 3, formats: ['jpeg'], width: 70, height: 70 }],
   },
   {
     id: 'inf03-02-25-06-sg',
@@ -579,6 +658,15 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: 'obraz.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        height: 610,
+        original: { width: 480, height: 640 },
+      },
+    ],
   },
   {
     id: 'inf03-06-25-01-sg',
@@ -644,6 +732,19 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      { file: '2.png', page: 3, formats: ['png'], width: 200, height: 200, transparent: true },
+      {
+        file: 'cyfry.gif',
+        page: 3,
+        formats: ['gif'],
+        width: 200,
+        height: 200,
+        transparent: true,
+        frames: 16,
+        frameDelayMs: 750,
+      },
+    ],
   },
   {
     id: 'inf03-02-25-01-sg',
@@ -712,6 +813,19 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: 'montaz_paneli.png',
+        page: 3,
+        formats: ['png'],
+        width: 400,
+        height: 50,
+        transparent: true,
+      },
+      { file: 'laminowane.png', page: 3, formats: ['png'], width: 500, height: 70 },
+      { file: 'winylowe.png', page: 3, formats: ['png'], width: 500, height: 70 },
+      { file: 'deska.png', page: 3, formats: ['png'], width: 500, height: 70 },
+    ],
   },
   {
     id: 'inf03-11-26-06-sg',
@@ -785,6 +899,15 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: 'dab.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 300,
+        original: { width: 1280, height: 853 },
+      },
+    ],
   },
   {
     id: 'inf03-12-26-06-sg',
@@ -852,5 +975,14 @@ export const catalog: CatalogEntry[] = [
         'skrypt',
       ],
     },
+    graphics: [
+      {
+        file: '1.jpg',
+        page: 3,
+        formats: ['jpeg'],
+        width: 400,
+        original: { width: 1200, height: 919 },
+      },
+    ],
   },
 ];

@@ -7,8 +7,8 @@ import {
 } from '@zdaj/content';
 import { DEFAULT_SETTINGS } from '@zdaj/shared';
 
-/** Revision 4 adds each paper's hand-in list; earlier revisions stay published. */
-const CATALOG_REVISION = 4;
+/** Revision 4 adds hand-in lists, revision 5 image requirements; earlier revisions stay published. */
+const CATALOG_REVISION = 5;
 import { db, Prisma } from './index.js';
 
 async function seed() {

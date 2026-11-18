@@ -1,0 +1,81 @@
+.graphics-check {
+  margin-top: 16px;
+  padding: 6px 18px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.graphics-check summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.graphics-check > ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 14px 22px;
+}
+.graphics-item {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.graphics-item p {
+  margin: 0;
+  color: var(--muted);
+}
+.graphics-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.graphics-name small {
+  color: var(--muted);
+}
+.graphics-item.ok .graphics-name svg,
+.graphics-checks .ok svg {
+  color: var(--green);
+}
+.graphics-item.wrong .graphics-name svg,
+.graphics-checks .wrong svg,
+.graphics-warning {
+  color: var(--warning);
+}
+.graphics-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 4px;
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.graphics-checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.graphics-checks svg {
+  flex: none;
+  margin-top: 2px;
+}
+.graphics-checks span {
+  color: var(--text);
+}
+.graphics-note {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.graphics-note svg {
+  flex: none;
+  margin-top: 2px;
+}
