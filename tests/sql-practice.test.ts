@@ -21,7 +21,7 @@ const messages = (sql: string, ref: string) =>
     .join('\n');
 
 describe('SQL practice references', () => {
-  it('assembles a statement for every SQL step of the eleven courses and matches itself', () => {
+  it('assembles a statement for every SQL step of the twelve courses and matches itself', () => {
     const withSql = steps.filter((step) => step.reference);
     expect(withSql.length).toBeGreaterThanOrEqual(45);
     for (const step of withSql) {

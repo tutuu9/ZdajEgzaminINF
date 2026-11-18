@@ -11,9 +11,10 @@ describe('catalogue hand-in lists', () => {
       expect(results, entry.id).toHaveLength(5);
       expect(page).toBeGreaterThan(1);
       expect(new Set(files).size, entry.id).toBe(files.length);
-      // Every paper asks for the browser note; all but one print file extensions.
+      // Every paper asks for the browser note; all but one print file extensions,
+      // and INF.03-11-26.06-SG prints its name without the Polish letter (przegladarka).
       expect(
-        files.some((file) => /^przeglądarka(\.txt)?$/.test(file)),
+        files.some((file) => /^przegl[ąa]darka(\.txt)?$/.test(file)),
         entry.id,
       ).toBe(true);
     }
