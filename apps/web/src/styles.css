@@ -912,7 +912,8 @@ input[type='radio'] {
   color: var(--muted);
 }
 /* Entry points on the home and FAQ pages. */
-.exam-day-callout {
+.exam-day-callout,
+.handbook-callout {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -922,18 +923,21 @@ input[type='radio'] {
   color: var(--ink);
   text-decoration: none;
 }
-.exam-day-callout span {
+.exam-day-callout span,
+.handbook-callout span {
   display: grid;
   gap: 2px;
   flex: 1;
   color: var(--muted);
   font-size: 14.5px;
 }
-.exam-day-callout strong {
+.exam-day-callout strong,
+.handbook-callout strong {
   color: var(--ink);
   font-size: 16px;
 }
-.exam-day-callout:hover strong {
+.exam-day-callout:hover strong,
+.handbook-callout:hover strong {
   color: var(--accent-ink);
 }
 .faq-exam-day {

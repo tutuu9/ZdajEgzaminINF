@@ -24,6 +24,7 @@ const navigation = [
 const staticTitles: Record<string, string> = {
   '/nauka': 'Nauka',
   '/nauka/podstawy': 'Lekcje',
+  '/nauka/podrecznik': 'Podręcznik',
   '/arkusze': 'Arkusze',
   '/teoria': 'Teoria',
   '/moje-prace': 'Moje prace',
