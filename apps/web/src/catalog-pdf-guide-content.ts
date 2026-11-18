@@ -504,4 +504,52 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-11-26-06-sg': {
+    title: 'Atlas drzew — INF.03-11-26.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193419002_ocmp1w_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 8 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki21 ma hasło @tSa5Drzew. Rodzaj 2 to drzewa iglaste; zapytanie 4 łączy trzy tabele.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Układ i blok boczny',
+        focus: [
+          'Ilustracja 3: blok boczny po lewej, nawigacja nad blokiem głównym. dab.jpg skaluj do 300 px szerokości.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Style',
+        focus: [
+          'Odsyłacze do dwóch plików PNG, akapit z klasą opis i strong. Ramki tylko obrazów w bloku bocznym, h1 tylko selektorem znacznika.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Skrypty',
+        focus: [
+          'Tablice z do_strony.txt mają wspólne indeksy. Elementy twórz funkcjami DOM — innerHTML += jest błędem.',
+        ],
+      },
+      {
+        page: 8,
+        title: 'Komplet rezultatów',
+        focus: [
+          'Plik nazywa się przegladarka.txt — bez litery ę. Zrzuty zapytań są w formacie PNG.',
+        ],
+      },
+    ],
+  },
 };

@@ -14,11 +14,17 @@ import { systemyGuide } from '../packages/content/src/study-project-systemy.js';
 import { systemyFixtures, systemyHtmlMistakes } from '../fixtures/study/systemy.js';
 import { paneleGuide } from '../packages/content/src/study-project-panele.js';
 import { paneleFixtures, paneleHtmlMistakes } from '../fixtures/study/panele.js';
+import { atlasGuide } from '../packages/content/src/study-project-atlas.js';
+import { atlasFixtures, atlasHtmlMistakes } from '../fixtures/study/atlas.js';
 
-/** runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet. */
+/**
+ * runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet.
+ * paperPages is the number of numbered pages in the paper; every step must point inside it.
+ */
 const courses = [
   {
     guide: firmaGuide,
+    paperPages: 7,
     fixtures: firmaFixtures,
     mistakes: firmaHtmlMistakes,
     runtimeCheck: 'runtime/runtime-check',
@@ -26,6 +32,7 @@ const courses = [
   },
   {
     guide: salonGuide,
+    paperPages: 7,
     fixtures: salonFixtures,
     mistakes: salonHtmlMistakes,
     runtimeCheck: 'runtime/runtime-check',
@@ -33,6 +40,7 @@ const courses = [
   },
   {
     guide: chatGuide,
+    paperPages: 7,
     fixtures: chatFixtures,
     mistakes: chatHtmlMistakes,
     runtimeCheck: 'runtime/runtime-check',
@@ -40,6 +48,7 @@ const courses = [
   },
   {
     guide: mojeZadaniaGuide,
+    paperPages: 6,
     fixtures: mojeZadaniaFixtures,
     mistakes: mojeZadaniaHtmlMistakes,
     runtimeCheck: null,
@@ -47,6 +56,7 @@ const courses = [
   },
   {
     guide: systemyGuide,
+    paperPages: 6,
     fixtures: systemyFixtures,
     mistakes: systemyHtmlMistakes,
     runtimeCheck: null,
@@ -54,8 +64,17 @@ const courses = [
   },
   {
     guide: paneleGuide,
+    paperPages: 7,
     fixtures: paneleFixtures,
     mistakes: paneleHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-18',
+  },
+  {
+    guide: atlasGuide,
+    paperPages: 8,
+    fixtures: atlasFixtures,
+    mistakes: atlasHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-18',
   },
@@ -82,7 +101,7 @@ function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }
 }
 
 describe('new CKE JavaScript cumulative routes', () => {
-  for (const { guide, fixtures, mistakes, runtimeCheck, checkedAt } of courses) {
+  for (const { guide, paperPages, fixtures, mistakes, runtimeCheck, checkedAt } of courses) {
     describe(guide.taskId, () => {
       it('pins version one and covers every cumulative action with a paper page', () => {
         expect(guide.version).toBe(1);
@@ -95,9 +114,9 @@ describe('new CKE JavaScript cumulative routes', () => {
         expect(new Set(guide.project!.coverage.flatMap((item) => item.activityIds))).toEqual(
           new Set(keys),
         );
-        expect(guide.project!.coverage.every((item) => item.page >= 2 && item.page <= 7)).toBe(
-          true,
-        );
+        expect(
+          guide.project!.coverage.every((item) => item.page >= 2 && item.page <= paperPages),
+        ).toBe(true);
         const known = new Set([
           ...guide.project!.starterFiles.map((file) => file.path),
           ...guide.project!.requiredFiles,

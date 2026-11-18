@@ -842,7 +842,7 @@ describe('real Nest API and PostgreSQL boundaries', () => {
   it('offers only reviewed CKE practice and theory while withholding authored exercises and private checks', async () => {
     const { status, data } = await learner.request<Bootstrap>('/bootstrap');
     expect(status).toBe(200);
-    expect(data.tasks).toHaveLength(11);
+    expect(data.tasks).toHaveLength(12);
     expect(data.questionCount).toBe(seed.officialQuestions.length);
     expect(data.questionCount).toBeLessThan(40);
     expect(data.exercises).toEqual([]);

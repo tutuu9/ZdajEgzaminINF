@@ -1,0 +1,261 @@
+{
+  "slug": "atlas",
+  "title": "Atlas drzew",
+  "code": "INF.03-11-26.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/146",
+  "verifiedAt": "2026-11-18T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "atlas",
+    "code": "INF.03-11-26.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 12,
+        "numberedPages": 8,
+        "textCharacters": 16591,
+        "coverCodeVerified": true,
+        "sha256": "a6c2ac8e6951791320fe7868e83e20355054a16b95ece22fa13c9608f06ec6a3"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 8495,
+        "coverCodeVerified": true,
+        "sha256": "4659a0d65de6eda1da536b396966ca5da9f9038bcd4d4ee3bff86f10c7a59ce0",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-11-26.06-SG"
+      }
+    ],
+    "archive": "pliki21.7z",
+    "archivePassword": "@tSa5Drzew",
+    "memberCount": 15,
+    "fileCount": 14,
+    "totalExtractedBytes": 4879615,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki21/atlasdrzew.sql",
+        "bytes": 18591,
+        "sha256": "40818df37a8ff79004b71a59cf24d2918c0da4ee60cfdef1a516293a1168b261"
+      },
+      {
+        "path": "pliki21/brzoza.jpg",
+        "bytes": 58048,
+        "sha256": "67a11198a45a5d515d692d4b957b3cb2bb1eaf4287dcd1c235dca6d10ef22e2f",
+        "height": 169,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/buk.jpg",
+        "bytes": 60154,
+        "sha256": "240b4696e03a1398adf02d1f9a3688f4e2e7fc20f6f388b9f3c3eba00d24980a",
+        "height": 200,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/dab.jpg",
+        "bytes": 454492,
+        "sha256": "5c34dbf831a7845de96b7187b89b78053e8fcee8cd62e5b12cb44ce7808915e3",
+        "height": 853,
+        "width": 1280,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/do_strony.txt",
+        "bytes": 5581,
+        "sha256": "9bafcfa1a6af4179b1d430daa8150c1ae87f2e62d4689d74e3eec911481d1612"
+      },
+      {
+        "path": "pliki21/iglaste.png",
+        "bytes": 1875550,
+        "sha256": "1726f415a36842d416a367b0557c82f1908b0e3920003f514512f43bfa9c5c0f",
+        "width": 1022,
+        "height": 903,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki21/jarzebina.jpg",
+        "bytes": 73058,
+        "sha256": "0d0d344cbe4501a1f8bd4843678a9729acbfacaae392e876f1021a674cef73e1",
+        "height": 200,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/kasztanowiec.jpg",
+        "bytes": 73939,
+        "sha256": "53a9625f4c8bdf760222e21ef0aa3b8a5e0c42cadec09eaa9c40a6a4b242c2ba",
+        "height": 210,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/klon.jpg",
+        "bytes": 61379,
+        "sha256": "59a833750ba92fbdb54f467bde3fa50f1b3c0d08e05a78a29950c6b6e28ec3bc",
+        "height": 200,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/lipa.jpg",
+        "bytes": 71490,
+        "sha256": "891915f9dbac67c23ddd3e028ccf7f4fe6dc04dcc6b44da67b5ec02f311bba0a",
+        "height": 207,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/magnolia.jpg",
+        "bytes": 74668,
+        "sha256": "798da37fc3188614757892d8c29c0a0b1ae5515a7df831176586694483c77a0e",
+        "height": 225,
+        "width": 300,
+        "format": "JPEG"
+      },
+      {
+        "path": "pliki21/naglowek.png",
+        "bytes": 386895,
+        "sha256": "73c897842d7494c33806916d64ee8aa7f0b19f13a1f1fd9bc8a00385a9a7ec4c",
+        "width": 1260,
+        "height": 170,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki21/owocowe.png",
+        "bytes": 1602814,
+        "sha256": "6af3f5e2511d759fc921450ab35d1542b7e0469c65d8abaa6bebd6c026efbccd",
+        "width": 941,
+        "height": 943,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki21/wierzba.jpg",
+        "bytes": 62956,
+        "sha256": "e58f53b7a669feb8a14cc0e6ce4802df9b669fcd4acc06080f3819c3dd824e30",
+        "height": 199,
+        "width": 300,
+        "format": "JPEG"
+      }
+    ]
+  },
+  "deliverables": [
+    "brzoza.jpg",
+    "buk.jpg",
+    "dab.jpg",
+    "iglaste.png",
+    "import.png",
+    "jarzebina.jpg",
+    "kasztanowiec.jpg",
+    "klon.jpg",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "lipa.jpg",
+    "lisciaste.html",
+    "magnolia.jpg",
+    "owocowe.png",
+    "przegladarka.txt",
+    "styl.css",
+    "wierzba.jpg"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create atlas_drzew with Polish collation, import atlasdrzew.sql (drzewa 250, gatunki 53, lokalizacje 10, rodzaje 3), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Conifers (rodzaj 2) by average life span DESC (8 rows Cis..Modrzew); trees planted 2008-06-06 with species via relation (ids 24, 95, 115); COUNT per rodzaj AS ilość (1 23, 2 8, 3 22); three-table join for 'Gdańsk, Polska' and names ending in a (9 rows). Verified against criteria R.1.3-R.1.6 and the data."
+    },
+    {
+      "id": "graphics",
+      "page": 3,
+      "heading": "Przygotowanie grafiki",
+      "coverage": "dab.jpg 1280x853 scaled proportionally to width 300 px (about 200 px high)."
+    },
+    {
+      "id": "document-and-content",
+      "pages": [3, 4],
+      "heading": "Cechy witryny",
+      "coverage": "lisciaste.html, Polish HTML5, encoding, title, styl.css; header, aside, nav, main, footer; h1; h3, nine images with alt from file names in an image block, search field with placeholder and Szukaj; three links to lisciaste.html, iglaste.png, owocowe.png in a ul; p.opis from do_strony.txt with strong; footer p with number."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Header background image and 170 px; aside 25% 720 px centred; nav and main 55%; nav 90 px; main padding 22, left margin 3%, shadow 0 0 25px Grey; image block and main 530 px overflow auto; footer Crimson; .opis 150%/150%/justify; li inline-block 30%; a block #382828 180% no underline uppercase; side images right/bottom 4px Crimson, radius 25 px, Teal on hover; h1 Chiller/fantasy Crimson 152 px, letter spacing 30 px, margin 0."
+    },
+    {
+      "id": "script",
+      "page": 5,
+      "heading": "Skrypty działające po stronie klienta",
+      "coverage": "Arrays from do_strony.txt; script 1 clears main and appends h2 and p.opis via DOM functions; script 2 reads the field, finds the name in the array, otherwise prints the paper's message. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 8,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przegladarka.txt (spelled without ę in this paper), listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "atlas",
+      "code": "INF.03-11-26.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2026-czerwiec-11/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 813515,
+      "sha256": "4659a0d65de6eda1da536b396966ca5da9f9038bcd4d4ee3bff86f10c7a59ce0",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "atlas",
+      "code": "INF.03-11-26.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193419002_ocmp1w_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 806975,
+      "sha256": "a6c2ac8e6951791320fe7868e83e20355054a16b95ece22fa13c9608f06ec6a3",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered illustrations 2-4"
+    },
+    "input": {
+      "slug": "atlas",
+      "code": "INF.03-11-26.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788193419405_e9by4c_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 4813121,
+      "sha256": "d26c73d00e4a60f51b85391de7d45a7e122d86ab046feba88b008e7dd9548a20"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

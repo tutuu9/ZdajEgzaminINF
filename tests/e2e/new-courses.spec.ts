@@ -24,6 +24,8 @@ import { systemyGuide } from '../../packages/content/src/study-project-systemy.j
 import { systemyFixtures } from '../../fixtures/study/systemy.js';
 import { paneleGuide } from '../../packages/content/src/study-project-panele.js';
 import { paneleFixtures } from '../../fixtures/study/panele.js';
+import { atlasGuide } from '../../packages/content/src/study-project-atlas.js';
+import { atlasFixtures } from '../../fixtures/study/atlas.js';
 
 const courses = [
   { name: 'Firma IT', guide: firmaGuide, fixtures: firmaFixtures },
@@ -38,6 +40,7 @@ const staticallyCheckedCourses = [
   { name: 'Moje zadania', guide: mojeZadaniaGuide, fixtures: mojeZadaniaFixtures },
   { name: 'Systemy liczbowe', guide: systemyGuide, fixtures: systemyFixtures },
   { name: 'Panele podłogowe', guide: paneleGuide, fixtures: paneleFixtures },
+  { name: 'Atlas drzew', guide: atlasGuide, fixtures: atlasFixtures },
 ];
 
 const editor = (page: Page) => page.locator('.editor-pane .cm-content[contenteditable="true"]');
