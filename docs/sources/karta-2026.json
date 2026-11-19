@@ -1,0 +1,166 @@
+{
+  "slug": "karta",
+  "title": "Karta produktu",
+  "code": "INF.03-03-26.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/136",
+  "verifiedAt": "2026-11-19T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "karta",
+    "code": "INF.03-03-26.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "numberedPages": 7,
+        "textCharacters": 13739,
+        "coverCodeVerified": true,
+        "sha256": "9797b7c2bbaca314a85fbe2cba917d44ce097c1dc3ce1f323d6613edf28ca948"
+      },
+      {
+        "kind": "criteria",
+        "pages": 3,
+        "textCharacters": 8203,
+        "coverCodeVerified": true,
+        "sha256": "296e05dcc1743a293abb2f7bfc00b73e434eac341a9c095a3c72cf7811ff21f5",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-03-26.06-SG"
+      }
+    ],
+    "archive": "pliki3.7z",
+    "archivePassword": "#Kart@ProduKtu",
+    "memberCount": 4,
+    "fileCount": 3,
+    "totalExtractedBytes": 301372,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki3/fotele.png",
+        "bytes": 295966,
+        "sha256": "737fa518eda74a1d18f879eae65becb58cdcec8e3cab27ec1aa28f4bcfb781f0",
+        "width": 1920,
+        "height": 1814,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki3/opisFotel.txt",
+        "bytes": 562,
+        "sha256": "8fe41d454c7dcf12f69317ddff70f3818c1b38db9158f8cac0938e97d8d7af51"
+      },
+      {
+        "path": "pliki3/sklep.sql",
+        "bytes": 4844,
+        "sha256": "67ecd4b87a3028150382fde2072d6b532dbc573289b6c32a00e11784d8e95afa"
+      }
+    ]
+  },
+  "deliverables": [
+    "fotel1.png",
+    "fotel2.png",
+    "fotel3.png",
+    "import.png",
+    "kartaProduktu.html",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "przeglądarka.txt",
+    "sklep.html",
+    "styl.css"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create sklep (utf8_polish_ci in the paper), import sklep.sql (klienci, meble, zakupy in an m:n relation), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "New furniture up to 1000 ordered by price (700, 800, 1000); CREATE VIEW komody for category 3 (ids 4-8); rounded AVG, MIN and MAX from the view with aliases (2180, 700, 4000); DELETE Tomasz Nowak from klienci (2 left). Verified against criteria R.1.3-R.1.7 and the data."
+    },
+    {
+      "id": "graphics",
+      "page": 4,
+      "heading": "Przygotowanie trzech grafik",
+      "coverage": "Cut three chairs from the first column of fotele.png (1920 x 1814) into fotel1-3.png, cropped to the chair edges, transparent, not scaled."
+    },
+    {
+      "id": "document-and-content",
+      "page": 4,
+      "heading": "Cechy strony kartaProduktu.html",
+      "coverage": "kartaProduktu.html and sklep.html; Polish HTML5, encoding, title Fotel, styl.css; header h1 and hr; main with section (main image .obraz, three .miniatury, .okno block with span.zamknij and img.obrazOkno) and article (h2, two paragraphs from opisFotel.txt, strong, select with three options, KUP TERAZ, link to sklep.html); footer hr and em number."
+    },
+    {
+      "id": "css",
+      "page": 5,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Century Gothic with sans-serif; Beige body 140%; header and footer centred with padding 20 px; section and article 50% 600 px; button Tan radius 20 padding 10 150%; .obraz 40% padding 20 border 1px Tan; .miniatury 15%; .okno rgba black 0.7, 80%, fixed at 0 0, positive z-index, display none; .obrazOkno margin auto block; .zamknij absolute top 15 right 35 Beige bold 40 px, pointer on hover."
+    },
+    {
+      "id": "script",
+      "page": 5,
+      "heading": "Skrypt działający po stronie klienta",
+      "coverage": "A thumbnail replaces the main image; the main image opens the window (display block) with its source; × closes it (display none). No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 7,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przeglądarka.txt, listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "karta",
+      "code": "INF.03-03-26.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2026-czerwiec-03/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 845649,
+      "sha256": "296e05dcc1743a293abb2f7bfc00b73e434eac341a9c095a3c72cf7811ff21f5",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "karta",
+      "code": "INF.03-03-26.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192072140_1pqgc3_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 780161,
+      "sha256": "9797b7c2bbaca314a85fbe2cba917d44ce097c1dc3ce1f323d6613edf28ca948",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered illustrations 2-4"
+    },
+    "input": {
+      "slug": "karta",
+      "code": "INF.03-03-26.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192072447_m1odx3_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 294944,
+      "sha256": "eeae9c1709f42146f46750fcbbdbf67acc5e219ed12e69348b155b722487dc46"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

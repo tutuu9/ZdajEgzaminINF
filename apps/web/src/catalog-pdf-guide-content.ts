@@ -639,4 +639,45 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-03-26-06-sg': {
+    title: 'Karta produktu — INF.03-03-26.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192072140_1pqgc3_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 7 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki3 ma hasło #Kart@ProduKtu. Zapytanie 2 tworzy widok komody, a zapytanie 3 musi z niego korzystać.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Grafika i struktura',
+        focus: [
+          'Wytnij trzy fotele z pierwszej kolumny fotele.png bez skalowania, z przezroczystością. Nie zmieniaj nazw klas obraz, miniatury, okno, zamknij, obrazOkno.',
+        ],
+      },
+      {
+        page: 5,
+        title: 'Style i skrypt',
+        focus: [
+          'Okno przypięte position: fixed, ukryte display: none; skrypt pokazuje je przez display: block i kopiuje src obrazu głównego.',
+        ],
+      },
+      {
+        page: 7,
+        title: 'Komplet rezultatów',
+        focus: [
+          'Oddajesz dwie strony (kartaProduktu.html i sklep.html), trzy pliki foteli i zrzuty PNG.',
+        ],
+      },
+    ],
+  },
 };

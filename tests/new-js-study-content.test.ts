@@ -20,6 +20,8 @@ import { roweryGuide } from '../packages/content/src/study-project-rowery.js';
 import { roweryFixtures, roweryHtmlMistakes } from '../fixtures/study/rowery.js';
 import { kolkoGuide } from '../packages/content/src/study-project-kolko.js';
 import { kolkoFixtures, kolkoHtmlMistakes } from '../fixtures/study/kolko.js';
+import { kartaGuide } from '../packages/content/src/study-project-karta.js';
+import { kartaFixtures, kartaHtmlMistakes } from '../fixtures/study/karta.js';
 
 /**
  * runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet.
@@ -95,6 +97,14 @@ const courses = [
     paperPages: 6,
     fixtures: kolkoFixtures,
     mistakes: kolkoHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-19',
+  },
+  {
+    guide: kartaGuide,
+    paperPages: 7,
+    fixtures: kartaFixtures,
+    mistakes: kartaHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-19',
   },
