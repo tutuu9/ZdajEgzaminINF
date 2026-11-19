@@ -1,15 +1,27 @@
-import { useState } from 'react';
-import { ArrowRight, BookOpen, ChevronDown, Clock3, FileCode2, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, BookOpen, ChevronDown, Clock3, FileCode2, Search, X } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context';
 import { resumeHref } from '../resume';
 import { EmptyState, Loading, PageHeading, Tags, plural } from '../components/common';
 import { CatalogSource } from './Catalog';
+import {
+  DEFAULT_FILTERS,
+  SAMPLE_YEAR,
+  filterPapers,
+  readFilters,
+  sessionLabel,
+  writeFilters,
+  yearOptions,
+  type PaperFilters,
+} from '../practice-filters';
 
 export function PracticeList() {
   const { data, loading, attempts } = useApp();
-  const [search, setSearch] = useState(''),
-    [technology, setTechnology] = useState('all');
+  const [params, setParams] = useSearchParams();
+  const filters = readFilters(params);
+  const update = (change: Partial<PaperFilters>) =>
+    setParams(writeFilters({ ...filters, ...change }), { replace: true });
+  const filtered = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
   if (!data)
     return loading ? (
       <Loading />
@@ -18,14 +30,9 @@ export function PracticeList() {
         Sprawdź połączenie z serwerem i spróbuj ponownie.
       </EmptyState>
     );
-  const tasks = data.tasks.filter(
-    (task) =>
-      `${task.title} ${task.id} ${task.technologies.join(' ')}`
-        .toLocaleLowerCase('pl')
-        .includes(search.toLocaleLowerCase('pl')) &&
-      (technology === 'all' || task.technologies.includes(technology)),
-  );
+  const tasks = filterPapers(data.tasks, data.catalog, filters);
   const technologies = [...new Set(data.tasks.flatMap((task) => task.technologies))];
+  const years = yearOptions(data.catalog);
   return (
     <div className="exam-library">
       <PageHeading title="Jeden arkusz. Wiele umiejętności.">
@@ -37,16 +44,16 @@ export function PracticeList() {
           <input
             aria-label="Szukaj arkusza"
             placeholder="Nazwa lub kod arkusza"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={filters.search}
+            onChange={(event) => update({ search: event.target.value })}
           />
         </label>
         <label className="library-filter">
           <span>Technologia</span>
           <select
-            value={technology}
+            value={filters.technology}
             aria-label="Technologia"
-            onChange={(event) => setTechnology(event.target.value)}
+            onChange={(event) => update({ technology: event.target.value })}
           >
             <option value="all">Wszystkie</option>
             {technologies.map((item) => (
@@ -54,7 +61,51 @@ export function PracticeList() {
             ))}
           </select>
         </label>
+        <label className="library-filter">
+          <span>Sesja</span>
+          <select
+            value={filters.year}
+            aria-label="Sesja"
+            onChange={(event) => update({ year: event.target.value })}
+          >
+            <option value="all">Wszystkie</option>
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+            <option value={SAMPLE_YEAR}>Przykład CKE</option>
+          </select>
+        </label>
+        <label className="library-filter">
+          <span>Kolejność</span>
+          <select
+            value={filters.order}
+            aria-label="Kolejność"
+            onChange={(event) => update({ order: event.target.value as PaperFilters['order'] })}
+          >
+            <option value="newest">Najnowsze</option>
+            <option value="oldest">Najstarsze</option>
+          </select>
+        </label>
+        <label className="library-check">
+          <input
+            type="checkbox"
+            checked={filters.withoutPhp}
+            onChange={(event) => update({ withoutPhp: event.target.checked })}
+          />
+          Bez PHP
+        </label>
         <span className="library-count">Liczba arkuszy: {tasks.length}</span>
+        {filtered && (
+          <button
+            type="button"
+            className="button quiet small library-reset"
+            onClick={() => setParams(new URLSearchParams(), { replace: true })}
+          >
+            <X size={15} /> Wyczyść
+          </button>
+        )}
       </div>
       <div className="exam-library-list">
         {tasks.map((task, index) => {
@@ -70,6 +121,7 @@ export function PracticeList() {
                 <div>
                   <span className="subtle-label">
                     {source?.identifier ?? 'Oficjalny przykład CKE'}
+                    {source?.year ? ` · ${sessionLabel(source)}` : ''}
                   </span>
                   <h2>{task.title}</h2>
                 </div>
@@ -114,7 +166,9 @@ export function PracticeList() {
         })}
       </div>
       {!tasks.length && (
-        <EmptyState title="Nie znaleziono arkusza">Zmień nazwę lub wybraną technologię.</EmptyState>
+        <EmptyState title="Nie znaleziono arkusza">
+          Zmień nazwę albo filtry — technologię, sesję lub „Bez PHP”.
+        </EmptyState>
       )}
       <p className="library-disclosure">
         Wybrane materiały CKE, nie pełna baza egzaminów. Projekty zachowujesz w tej przeglądarce.

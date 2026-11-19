@@ -998,6 +998,24 @@ input[type='radio'] {
   white-space: nowrap;
   color: var(--muted);
 }
+.library-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.library-toolbar {
+  flex-wrap: wrap;
+}
+.library-toolbar .search-field {
+  min-width: 230px;
+}
+.library-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .exam-library-list {
   display: grid;
   gap: 24px;
