@@ -1,4 +1,5 @@
 import { chatGuide } from './study-project-chat.js';
+import { kolkoGuide } from './study-project-kolko.js';
 import { roweryGuide } from './study-project-rowery.js';
 import { atlasGuide } from './study-project-atlas.js';
 import { paneleGuide } from './study-project-panele.js';
@@ -634,6 +635,8 @@ examStudyGuides.push(paneleGuide);
 examStudyGuides.push(atlasGuide);
 
 examStudyGuides.push(roweryGuide);
+
+examStudyGuides.push(kolkoGuide);
 
 export const allExamStudyGuides: ExamStudyGuide[] = [
   ...legacyExamStudyGuides,

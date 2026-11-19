@@ -600,4 +600,43 @@ export const catalogPdfGuides: Record<string, CatalogPdfGuide> = {
       },
     ],
   },
+  'inf03-07-26-06-sg': {
+    title: 'Kółko i krzyżyk — INF.03-07-26.06-SG',
+    sourceLabel: 'Zweryfikowana kopia arkusza CKE w archiwum zewnętrznym',
+    sourceUrl:
+      'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192675672_rvso0n_sheet.pdf',
+    pages: [
+      {
+        page: 1,
+        title: 'Oznaczenie i czas',
+        focus: ['Sprawdź kod, wariant i czas. Arkusz ma 6 stron.'],
+      },
+      {
+        page: 2,
+        title: 'Baza i cztery zapytania',
+        focus: [
+          'Archiwum pliki8 ma hasło KoLko+KrzyZyk. Zapytanie 3 wymaga podzapytania — ORDER BY z LIMIT 1 jest błędem.',
+        ],
+      },
+      {
+        page: 3,
+        title: 'Struktura',
+        focus: [
+          'Blok główny z trzema sekcjami, tabela 3 × 3 z obrazami nic.png i odnośnik otwierany w nowym oknie.',
+        ],
+      },
+      {
+        page: 4,
+        title: 'Style i skrypt',
+        focus: [
+          'Sekcję prawą ukryj przez visibility, nie display: none. Gra zaczyna się od kółka; zajęte pole się nie zmienia.',
+        ],
+      },
+      {
+        page: 6,
+        title: 'Komplet rezultatów',
+        focus: ['Zrzuty zapytań są w formacie PNG. Oddajesz też obrazy nic.png, o.png i x.png.'],
+      },
+    ],
+  },
 };

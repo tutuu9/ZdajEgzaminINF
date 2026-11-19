@@ -18,6 +18,8 @@ import { atlasGuide } from '../packages/content/src/study-project-atlas.js';
 import { atlasFixtures, atlasHtmlMistakes } from '../fixtures/study/atlas.js';
 import { roweryGuide } from '../packages/content/src/study-project-rowery.js';
 import { roweryFixtures, roweryHtmlMistakes } from '../fixtures/study/rowery.js';
+import { kolkoGuide } from '../packages/content/src/study-project-kolko.js';
+import { kolkoFixtures, kolkoHtmlMistakes } from '../fixtures/study/kolko.js';
 
 /**
  * runtimeCheck is the one activity with a fixed behaviour scenario, or null when none exists yet.
@@ -87,6 +89,14 @@ const courses = [
     mistakes: roweryHtmlMistakes,
     runtimeCheck: null,
     checkedAt: '2026-11-18',
+  },
+  {
+    guide: kolkoGuide,
+    paperPages: 6,
+    fixtures: kolkoFixtures,
+    mistakes: kolkoHtmlMistakes,
+    runtimeCheck: null,
+    checkedAt: '2026-11-19',
   },
 ];
 function accepts(source: string, check: Extract<StudyCheckSpec, { kind: 'html' }>) {
