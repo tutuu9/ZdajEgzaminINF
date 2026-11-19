@@ -28,6 +28,8 @@ import { atlasGuide } from '../../packages/content/src/study-project-atlas.js';
 import { atlasFixtures } from '../../fixtures/study/atlas.js';
 import { roweryGuide } from '../../packages/content/src/study-project-rowery.js';
 import { roweryFixtures } from '../../fixtures/study/rowery.js';
+import { kolkoGuide } from '../../packages/content/src/study-project-kolko.js';
+import { kolkoFixtures } from '../../fixtures/study/kolko.js';
 
 const courses = [
   { name: 'Firma IT', guide: firmaGuide, fixtures: firmaFixtures },
@@ -44,6 +46,7 @@ const staticallyCheckedCourses = [
   { name: 'Panele podłogowe', guide: paneleGuide, fixtures: paneleFixtures },
   { name: 'Atlas drzew', guide: atlasGuide, fixtures: atlasFixtures },
   { name: 'Salon rowerowy', guide: roweryGuide, fixtures: roweryFixtures },
+  { name: 'Kółko i krzyżyk', guide: kolkoGuide, fixtures: kolkoFixtures },
 ];
 
 const editor = (page: Page) => page.locator('.editor-pane .cm-content[contenteditable="true"]');

@@ -1,0 +1,170 @@
+{
+  "slug": "kolko",
+  "title": "Kółko i krzyżyk",
+  "code": "INF.03-07-26.06-SG",
+  "qualification": "INF.03",
+  "formula": 2019,
+  "variant": "SG",
+  "durationMinutes": 150,
+  "sourcePage": "https://www.kursinf.pl/arkusze/inf03/arkusz/140",
+  "verifiedAt": "2026-11-19T12:00:00.000Z",
+  "inputInspection": {
+    "slug": "kolko",
+    "code": "INF.03-07-26.06-SG",
+    "pdf": [
+      {
+        "kind": "paper",
+        "pages": 8,
+        "numberedPages": 6,
+        "textCharacters": 11982,
+        "coverCodeVerified": true,
+        "sha256": "56aeae582c752deadcc06db27d9078ba5fe2b3b3f52edd2fff5d2cef03328d04"
+      },
+      {
+        "kind": "criteria",
+        "pages": 2,
+        "textCharacters": 6987,
+        "coverCodeVerified": true,
+        "sha256": "69be1b87ec74b3b299001e0057bb1d3db047fe1ade3a2da1f027888acade7b8b",
+        "coverVerificationMethod": "text layer: Kod arkusza INF.03-07-26.06-SG"
+      }
+    ],
+    "archive": "pliki8.7z",
+    "archivePassword": "KoLko+KrzyZyk",
+    "memberCount": 5,
+    "fileCount": 4,
+    "totalExtractedBytes": 37578,
+    "duplicateAndCaseCollisionCheck": "passed",
+    "pathAndTypeCheck": "passed",
+    "files": [
+      {
+        "path": "pliki8/grytowarzyskie.sql",
+        "bytes": 2200,
+        "sha256": "f54fca1cc07ccc507a399f4ae8de242e4f87e0a3f40ce64b004679d7168dd144"
+      },
+      {
+        "path": "pliki8/nic.png",
+        "bytes": 6079,
+        "sha256": "240b0d803754769684c31c93c42c71faa201ec23944808e9251ad163d9d9cc84",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki8/o.png",
+        "bytes": 14976,
+        "sha256": "e1b5ea44136cb0b42a6555f065f9e90be7a176923aefdd114c5c27f13bf358cd",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      },
+      {
+        "path": "pliki8/x.png",
+        "bytes": 14323,
+        "sha256": "7522aa2c354c2653affb025195906d7da82f532254e85cc1dcd0eba2f04807ba",
+        "width": 200,
+        "height": 200,
+        "format": "PNG"
+      }
+    ]
+  },
+  "deliverables": [
+    "gra.html",
+    "import.png",
+    "kw1.png",
+    "kw2.png",
+    "kw3.png",
+    "kw4.png",
+    "kwerendy.txt",
+    "nic.png",
+    "o.png",
+    "przeglądarka.txt",
+    "styl.css",
+    "x.png"
+  ],
+  "requirements": [
+    {
+      "id": "setup-and-database",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Create gryTowarzyskie (utf8_polish_ci in the paper), import grytowarzyskie.sql (12 games; the archive spells the file in lower case), full-screen import.png."
+    },
+    {
+      "id": "queries",
+      "page": 2,
+      "heading": "Operacje na bazie danych",
+      "coverage": "Games for more than 4 players (Państwa - miasta, Kalambury); AVG play time for two players AS średnia w minutach (12.7500); longest games by a nested query (ORDER BY with LIMIT 1 is an error; 2 rows); card games for fewer than 4 players (Piotruś Pan, Pasjans, Tysiąc). Verified against criteria R.1.3-R.1.6 and the data."
+    },
+    {
+      "id": "document-and-content",
+      "page": 3,
+      "heading": "Cechy strony",
+      "coverage": "gra.html, Polish HTML5, encoding, title Gra, styl.css; header h1, main with three sections (h2 Gra kółko, 3 x 3 table of nic.png images, h2 Gra krzyżyk), footer link opening in a new window and paragraph with the number."
+    },
+    {
+      "id": "css",
+      "page": 4,
+      "heading": "Styl CSS witryny internetowej",
+      "coverage": "Lucida Console with monospace; HoneyDew body centred; header/footer padding 20 px; side sections PaleGreen 20% padding 80 px 0 radius 40 px; right section hidden with visibility (display: none is an error); middle 60% shadow 0 0 10px DarkGreen; img 80% margin 10 cursor pointer; table 90% margin 10 collapse; td 3px SeaGreen; clicked cell SeaGreen."
+    },
+    {
+      "id": "script",
+      "page": 4,
+      "heading": "Skrypt działający po stronie klienta",
+      "coverage": "Circle starts; a click on nic.png places o.png or x.png, swaps side sections and passes the move; occupied cells do not change. No runtime adapter: checked manually."
+    },
+    {
+      "id": "handover",
+      "page": 6,
+      "heading": "UWAGA: po zakończeniu pracy",
+      "coverage": "przeglądarka.txt, listed result files and disc hand-in."
+    }
+  ],
+  "files": {
+    "criteria": {
+      "slug": "kolko",
+      "code": "INF.03-07-26.06-SG",
+      "kind": "criteria",
+      "requestedUrl": "https://zawodowe.edu.pl/arkusz-praktyczny/inf03-2026-czerwiec-07/klucz-odpowiedzi.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 640272,
+      "sha256": "69be1b87ec74b3b299001e0057bb1d3db047fe1ade3a2da1f027888acade7b8b",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text layer identifier and criteria rows reviewed",
+      "watermark": "zawodowe.edu.pl"
+    },
+    "paper": {
+      "slug": "kolko",
+      "code": "INF.03-07-26.06-SG",
+      "kind": "paper",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192675672_rvso0n_sheet.pdf",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "contentType": "application/pdf",
+      "status": "downloaded",
+      "bytes": 382331,
+      "sha256": "56aeae582c752deadcc06db27d9078ba5fe2b3b3f52edd2fff5d2cef03328d04",
+      "exactCodeVerified": true,
+      "verificationMethod": "Text extraction, cover review and rendered illustrations 2-3"
+    },
+    "input": {
+      "slug": "kolko",
+      "code": "INF.03-07-26.06-SG",
+      "kind": "input",
+      "requestedUrl": "https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192675972_wituip_files.7z",
+      "author": "CKE",
+      "distribution": "third-party copy",
+      "redistributionRights": "unknown",
+      "status": "downloaded",
+      "bytes": 26768,
+      "sha256": "b710d71ceb82d610a7d666d0f84a2506e1960ee200b5cb9b694026d07b999e86"
+    }
+  },
+  "watermarks": "The criteria copy carries the zawodowe.edu.pl watermark. Source files are preserved unchanged and not redistributed.",
+  "officialByteIdentity": "unknown"
+}

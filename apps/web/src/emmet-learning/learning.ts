@@ -301,6 +301,23 @@ export const emmetGuideBindings: Record<string, GuideTips> = {
       'footers/table': tip('table'),
     },
   },
+  'inf03-07-26-06-sg': {
+    id: 'kolko-krzyzyk-study',
+    version: 1,
+    activities: {
+      'structure/document': tip('document'),
+      'structure/title': text('title'),
+      'structure/style-link': tip('stylesheet'),
+      'structure/header': tip('child', 'header>h1'),
+      'structure/sections': tip('child', 'main>section*3'),
+      'structure/footer': element('footer'),
+      'content/players': text('h2'),
+      'content/first-row': tip('table'),
+      'content/rows': tip('cells'),
+      'content/link': tip('link'),
+      'content/author': text('p'),
+    },
+  },
   'inf03-03-24-06-sg': {
     id: 'poziomy-rzek-study',
     version: 1,

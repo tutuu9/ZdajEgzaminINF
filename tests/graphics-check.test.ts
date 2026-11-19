@@ -230,8 +230,14 @@ describe('comparing a project image with the paper', () => {
 });
 
 describe('catalogue image requirements', () => {
-  it('every reviewed paper lists its graphics, and each is a file to hand in', () => {
+  it('every paper with an image task lists its graphics, and each is a file to hand in', () => {
+    // These papers ask for no prepared image; their pictures come ready in the archive.
+    const withoutImageTask = new Set(['inf03-07-26-06-sg']);
     for (const entry of catalog) {
+      if (withoutImageTask.has(entry.id)) {
+        expect(entry.graphics, entry.id).toBeUndefined();
+        continue;
+      }
       expect(entry.graphics?.length, entry.id).toBeGreaterThan(0);
       const handIn = new Set(entry.handIn!.files);
       for (const graphic of entry.graphics!) {
