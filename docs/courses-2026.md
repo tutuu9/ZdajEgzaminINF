@@ -7,5 +7,6 @@ Reviewed on 18–19 November 2026. New tasks and cumulative guides start at vers
 | Atlas drzew     | INF.03-11-26.06-SG | [Course](course-atlas.md)         | [Provenance and SHA-256](sources/atlas-2026.json)  |
 | Salon rowerowy  | INF.03-12-26.06-SG | [Course](course-rowery.md)        | [Provenance and SHA-256](sources/rowery-2026.json) |
 | Kółko i krzyżyk | INF.03-07-26.06-SG | [Course](course-kolko.md)         | [Provenance and SHA-256](sources/kolko-2026.json)  |
+| Karta produktu  | INF.03-03-26.06-SG | [Course](course-karta.md)         | [Provenance and SHA-256](sources/karta-2026.json)  |
 
 Courses without a runtime adapter keep JavaScript behaviour as a manual check; their fixtures are still verified statically (HTML and measured CSS in a real browser) and their tests assert that no runtime check is declared.

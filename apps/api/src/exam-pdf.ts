@@ -102,6 +102,12 @@ export const REVIEWED_EXAM_PDFS: Readonly<Record<string, ReviewedExamSource>> = 
     provenance: 'archive-copy',
     sha256: '56aeae582c752deadcc06db27d9078ba5fe2b3b3f52edd2fff5d2cef03328d04',
   },
+  'inf03-03-26-06-sg': {
+    url: 'https://nuwaflrhlwnsdvnciltx.supabase.co/storage/v1/object/public/kursinf_main/exam_sheets/inf03/1788192072140_1pqgc3_sheet.pdf',
+    sourceLabel: 'Kopia archiwalna CKE — INF.03-03-26.06-SG',
+    provenance: 'archive-copy',
+    sha256: '9797b7c2bbaca314a85fbe2cba917d44ce097c1dc3ce1f323d6613edf28ca948',
+  },
 });
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 25_000;
