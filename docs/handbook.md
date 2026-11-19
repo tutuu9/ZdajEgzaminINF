@@ -18,3 +18,7 @@ HTML, CSS and JavaScript examples render in a sandboxed `iframe` (`sandbox="allo
 ## Progress
 
 "Przeczytane" is stored per chapter in this browser (`localStorage` key `zdaj:handbook:read`); the handbook works without storage.
+
+## Links from course steps
+
+The "Pomoc" tab of a course step shows "Więcej w podręczniku: …" when the step's topic has a chapter. `apps/web/src/handbook/match.ts` chooses the book from the step's target file (`.html`/`.php` → HTML, `.css` → CSS, `.js` → JavaScript, `kwerendy.txt` → SQL) and the chapter from ordered patterns in the step's example code (for example `JOIN` → relations, `createElement` → new elements, `rowspan` → tables). PHP code, graphics, screenshots and hand-in steps get no link, because the handbook has no chapter for them. Pinned guides are not changed; the link is derived in the browser. A unit test checks known matches on real course steps and that every chapter is reached from at least one course; the link opens in a new tab, so the course stays in place.
