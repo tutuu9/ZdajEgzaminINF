@@ -692,3 +692,25 @@
     font-size: 14px;
   }
 }
+.course-handbook-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+}
+.course-handbook-link:hover {
+  border-color: var(--accent-ink);
+}
+.course-handbook-link span {
+  flex: 1;
+}
+.course-handbook-link svg {
+  flex: none;
+  color: var(--accent-ink);
+}

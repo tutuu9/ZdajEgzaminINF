@@ -29,6 +29,7 @@ import type { InspectionSource } from '../inspector/types';
 import { ChangeUnderstand, ChangeDiff, ChangeRestoreNotice } from './ChangeUnderstand';
 import { ChangePreview } from './ChangePreview';
 import { EmmetLearning } from './EmmetLearning';
+import { HandbookHint } from './HandbookHint';
 
 const checkShortcutLabel =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -682,6 +683,7 @@ export function ProjectLesson({
               <p className="course-section-intro">
                 Zajrzyj do przykładu lub skrótów, potem wróć do własnego kodu.
               </p>
+              <HandbookHint activity={activity} fileName={current.step.fileName} />
               {coachEnabled && (
                 <EmmetLearning
                   key={`${project.id}:${guide.version}:${current.id}`}
