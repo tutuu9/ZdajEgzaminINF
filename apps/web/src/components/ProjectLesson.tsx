@@ -30,6 +30,7 @@ import { ChangeUnderstand, ChangeDiff, ChangeRestoreNotice } from './ChangeUnder
 import { ChangePreview } from './ChangePreview';
 import { EmmetLearning } from './EmmetLearning';
 import { HandbookHint } from './HandbookHint';
+import { studySequence } from '../study-progress';
 
 const checkShortcutLabel =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -133,14 +134,8 @@ export function ProjectLesson({
     };
   }, [project.files]);
   const guide = project.study?.guide;
-  const positions =
-    guide?.steps.flatMap((step) =>
-      (step.activities ?? []).map((activity) => ({
-        id: `${step.id}/${activity.id}`,
-        step,
-        activity,
-      })),
-    ) ?? [];
+  const focusedStep = project.study?.focusStepId;
+  const positions = guide ? studySequence(guide, focusedStep) : [];
   const current = positions.find((item) => item.id === project.study?.current) ?? positions[0];
   const learning = useChangeUnderstand(store, project, current);
   useEffect(() => {
@@ -454,7 +449,7 @@ export function ProjectLesson({
       <div className="course-overview">
         <div className="course-heading">
           <div>
-            <h2>Nauka krok po kroku</h2>
+            <h2>{focusedStep ? 'Powtórka etapu' : 'Nauka krok po kroku'}</h2>
             <span className="course-kicker">
               Krok {index + 1} z {positions.length}
             </span>
@@ -818,7 +813,9 @@ export function ProjectLesson({
           {Object.keys(progress.completed).length === positions.length && (
             <Notice>
               <CheckCircle2 />
-              Przeszedłeś cały kurs. Pobierz pliki i porównaj komplet pracy z oryginalnym PDF.
+              {focusedStep
+                ? 'Etap ukończony. Pobierz pliki lub porównaj je z oryginalnym PDF.'
+                : 'Przeszedłeś cały kurs. Pobierz pliki i porównaj komplet pracy z oryginalnym PDF.'}{' '}
               Potwierdzenia kroków nie są oceną CKE.
             </Notice>
           )}

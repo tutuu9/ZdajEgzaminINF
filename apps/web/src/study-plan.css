@@ -1,0 +1,51 @@
+.study-plan {
+  padding: clamp(16px, 3vw, 26px);
+  margin-bottom: 24px;
+}
+.study-plan-heading,
+.study-plan-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: space-between;
+  align-items: center;
+}
+.study-plan h2,
+.study-plan h3 {
+  margin: 0 0 4px;
+}
+.study-plan h2 {
+  font-size: 21px;
+}
+.study-plan h3 {
+  font-size: 16px;
+}
+.study-plan p {
+  margin: 0;
+  color: var(--muted);
+}
+.study-plan-action,
+.study-plan-form {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.study-plan-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+  max-width: 480px;
+  margin-bottom: 12px;
+}
+.study-plan-fields .field,
+.study-plan-fields input {
+  min-width: 0;
+}
+.study-plan-fields input,
+.study-plan .button {
+  min-height: 44px;
+}
+.study-plan p.study-plan-error {
+  color: var(--danger);
+  margin-bottom: 12px;
+}

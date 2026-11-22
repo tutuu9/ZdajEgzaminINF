@@ -1,0 +1,72 @@
+.short-practice {
+  max-width: 800px;
+  margin-inline: auto;
+}
+
+.short-practice-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: clamp(16px, 4vw, 30px);
+}
+
+.short-practice-code {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+
+.short-practice-schema {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.short-practice-schema > div {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.short-practice-schema dt {
+  font-weight: 650;
+}
+
+.short-practice-schema dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.short-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.short-practice-note {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.short-practice-findings {
+  margin: 7px 0 0;
+  padding-inline-start: 20px;
+}
+
+.short-practice-details {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.short-practice-details summary {
+  min-height: 44px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.short-practice-details > :not(summary) {
+  margin: 0 14px 14px;
+}

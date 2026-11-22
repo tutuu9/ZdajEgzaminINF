@@ -7,8 +7,14 @@ const chapters = handbookBooks.flatMap((book) =>
 );
 
 describe('handbook content', () => {
-  it('has four books of distinct, complete chapters', () => {
-    expect(handbookBooks.map((book) => book.id)).toEqual(['html', 'css', 'javascript', 'sql']);
+  it('has five books of distinct, complete chapters', () => {
+    expect(handbookBooks.map((book) => book.id)).toEqual([
+      'html',
+      'css',
+      'javascript',
+      'sql',
+      'php',
+    ]);
     for (const book of handbookBooks) {
       const ids = book.chapters.map((chapter) => chapter.id);
       expect(new Set(ids).size, book.id).toBe(ids.length);
@@ -61,6 +67,7 @@ describe('handbook content', () => {
     expect(found.previous?.id).toBe('kolory-tekst');
     expect(found.next?.id).toBe('uklad');
     expect(findChapter('sql', undefined)!.chapter.id).toBe('select');
-    expect(findChapter('php', 'x')).toBeUndefined();
+    expect(findChapter('php', undefined)!.chapter.id).toBe('xampp');
+    expect(findChapter('unknown', 'x')).toBeUndefined();
   });
 });

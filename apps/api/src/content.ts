@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { db } from '@zdaj/database';
-import { topics, lessons as seedLessons } from '@zdaj/content';
+import { topics, lessons as seedLessons, sqlJoinPractice } from '@zdaj/content';
 import {
   DEFAULT_SETTINGS,
   toPublicTask,
@@ -85,9 +85,16 @@ export async function bootstrap(): Promise<Bootstrap> {
       lessonOrder(a) - lessonOrder(b) ||
       a.title.localeCompare(b.title, 'pl'),
   );
+  const reviewQuestionIds = questions.filter(isCkeQuestion).map((question) => question.id);
+  const publicTasks = tasks.filter(isCkeTask).map(toPublicTask);
+  const shortPracticeAvailable = [sqlJoinPractice.example, sqlJoinPractice.exercise].every(
+    ({ source: { catalogId } }) =>
+      publicTasks.some((task) => task.sourceCatalogId === catalogId) &&
+      catalog.some((entry) => entry.id === catalogId),
+  );
   return {
     topics,
-    tasks: tasks.filter(isCkeTask).map(toPublicTask),
+    tasks: publicTasks,
     lessons: lessons.map((lesson) => ({ ...lesson, exerciseIds: [] })),
     catalog: catalog.map(({ sourcePdf: _untrustedSourcePdf, ...entry }) => {
       const source = Object.hasOwn(REVIEWED_EXAM_PDFS, entry.id)
@@ -107,7 +114,9 @@ export async function bootstrap(): Promise<Bootstrap> {
       };
     }),
     exercises: [],
-    questionCount: questions.filter(isCkeQuestion).length,
+    questionCount: reviewQuestionIds.length,
+    reviewQuestionIds,
+    ...(shortPracticeAvailable ? { shortPractice: sqlJoinPractice } : {}),
     features: {
       aiAvailable: options.aiEnabled && Boolean(config.deepseekKey),
       checkingAvailable: options.checkingEnabled && (await workerAvailable()),

@@ -3,7 +3,7 @@
  * tasks, questions or answer keys; practice always happens on the original CKE papers, which
  * each chapter links to.
  */
-export type HandbookBookId = 'html' | 'css' | 'javascript' | 'sql';
+export type HandbookBookId = 'html' | 'css' | 'javascript' | 'sql' | 'php';
 
 /** A live example: the parts are joined into one sandboxed preview document. */
 export interface WebExample {
@@ -22,11 +22,16 @@ export interface SqlExample {
   result?: { columns: string[]; rows: string[][]; source: string };
 }
 
+export interface PhpExample {
+  kind: 'php';
+  code: string;
+}
+
 export interface HandbookSection {
   heading: string;
   /** Markdown: paragraphs, lists and inline code. */
   body: string;
-  example?: WebExample | SqlExample;
+  example?: WebExample | SqlExample | PhpExample;
 }
 
 /** A paper in the catalogue where the chapter's topic is required. */

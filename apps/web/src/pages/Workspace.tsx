@@ -45,6 +45,7 @@ import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { ExamChecklist, ExamPlan } from '../components/ExamPlan';
 import { ExamReport } from '../components/ExamReport';
+import { studySequence } from '../study-progress';
 import { matchHandInFiles } from '../exam-report';
 import { SqlPractice } from '../components/SqlPractice';
 import { downloadProject, importProject, readAttempt, safePath, saveAttempt } from '../storage';
@@ -392,51 +393,69 @@ export function Workspace() {
     if (!attemptRef.current || attemptRef.current.submittedAt || busy) return;
     void update((current) => ({ ...current, files })).catch(() => undefined);
   };
-  const start = async (copyFiles?: ProjectFile[]) => {
-    if (!task) return;
+  const start = async (copyFiles?: ProjectFile[], focusStepId?: string) => {
+    if (!task || busy) return;
+    const studyTask = focusStepId
+      ? (data?.tasks.find((item) => item.id === task.id) ?? task)
+      : task;
+    const startMode = focusStepId ? 'nauka' : mode;
     setBusy(true);
     setError('');
     try {
       const ticket = await api<AttemptTicket>('/attempts', {
         method: 'POST',
-        body: { taskId: task.id, taskVersion: task.version, mode, level },
+        body: { taskId: studyTask.id, taskVersion: studyTask.version, mode: startMode, level },
       });
       const now = new Date().toISOString();
       const next: AttemptSnapshot = {
         id: ticket.id,
-        taskId: task.id,
-        taskVersion: task.version,
-        title: task.title,
+        taskId: studyTask.id,
+        taskVersion: studyTask.version,
+        title: studyTask.title,
         kind: 'practice',
-        mode,
+        mode: startMode,
         level,
         createdAt: now,
         updatedAt: now,
         deadlineAt: ticket.deadlineAt,
         ticket,
-        files: structuredClone(copyFiles ?? task.starterFiles),
+        files: structuredClone(copyFiles ?? studyTask.starterFiles),
         hintCount: 0,
         revealedHints: [],
       };
-      if (mode === 'nauka' && !copyFiles && task.sourceCatalogId) {
+      let focusFile: string | undefined;
+      let focusPage: number | undefined;
+      if (startMode === 'nauka' && (!copyFiles || focusStepId) && studyTask.sourceCatalogId) {
         const response = await api<ExamStudyResponse>(`/attempts/${ticket.id}/study`, {
           method: 'POST',
           body: { token: ticket.token },
         });
-        next.files = structuredClone(response.guide.project?.starterFiles ?? task.starterFiles);
+        const first = studySequence(response.guide, focusStepId)[0];
+        if (!first) throw new Error('Brakuje tego etapu w dostępnej wersji kursu.');
+        if (!copyFiles)
+          next.files = structuredClone(
+            response.guide.project?.starterFiles ?? studyTask.starterFiles,
+          );
+        if (focusStepId) {
+          next.title = `${studyTask.title} · ${first.step.title}`;
+          const path = first.activity.targetFiles?.[0] ?? first.step.fileName;
+          focusFile = next.files?.find((file) => file.path === path)?.path;
+          focusPage = first.step.page;
+        }
         next.study = {
           guide: response.guide,
-          current: `${response.guide.steps[0]?.id}/${response.guide.steps[0]?.activities?.[0]?.id}`,
+          current: first.id,
+          ...(focusStepId ? { focusStepId } : {}),
           completed: {},
           viewedExamples: [],
         };
         next.hintCount = response.hintCount;
       }
       next.workspace = {
-        view: mode === 'nauka' ? 'study' : 'code',
+        view: startMode === 'nauka' ? 'study' : 'code',
         studyPanel: 'lesson',
-        sheetPage,
-        activeFile: next.files?.[0]?.path ?? '',
+        sheetPage: focusPage ?? sheetPage,
+        activeFile: focusFile ?? next.files?.[0]?.path ?? '',
         previewEntry: next.files?.find((f) => /\.(?:html?|php)$/i.test(f.path))?.path ?? '',
         editors: {},
       };
@@ -448,7 +467,7 @@ export function Workspace() {
       setAttempt(next);
       setParams({
         proba: next.id,
-        ...(mode === 'nauka' ? { widok: 'nauka' } : {}),
+        ...(startMode === 'nauka' ? { widok: 'nauka' } : {}),
       });
       await refreshProgress();
       void navigator.storage?.persist?.().catch(() => false);
@@ -1573,6 +1592,8 @@ export function Workspace() {
                   attempt={attempt}
                   entry={handInEntry}
                   limitMinutes={task.durationMinutes}
+                  practicing={busy}
+                  onPractice={(stepId) => void start(attempt.files ?? [], stepId)}
                 />
               )}
               {manual ? (

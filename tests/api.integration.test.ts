@@ -864,6 +864,38 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     expect(data.lessons.every((lesson) => lesson.exerciseIds.length === 0)).toBe(true);
   });
 
+  it('serves the JOIN practice only with both reviewed paper sources', async () => {
+    const { status, data } = await learner.request<Bootstrap>('/bootstrap');
+    expect(status).toBe(200);
+    expect(data.shortPractice).toEqual(seed.sqlJoinPractice);
+    const practice = data.shortPractice!;
+    for (const { source } of [practice.example, practice.exercise]) {
+      expect(data.tasks.some((task) => task.sourceCatalogId === source.catalogId)).toBe(true);
+      expect(data.catalog.find(({ id }) => id === source.catalogId)?.sourcePdf).toMatchObject({
+        url: expect.stringMatching(/^https:\/\//),
+        sourceKind: 'archive-copy',
+      });
+    }
+
+    const sources = await db.contentRevision.findMany({
+      where: { kind: 'catalog', key: practice.exercise.source.catalogId, status: 'published' },
+      select: { id: true },
+    });
+    const sourceIds = sources.map(({ id }) => id);
+    await db.contentRevision.updateMany({
+      where: { id: { in: sourceIds } },
+      data: { status: 'draft' },
+    });
+    try {
+      expect((await learner.request<Bootstrap>('/bootstrap')).data.shortPractice).toBeUndefined();
+    } finally {
+      await db.contentRevision.updateMany({
+        where: { id: { in: sourceIds } },
+        data: { status: 'published' },
+      });
+    }
+  });
+
   it('requires CSRF and administrator identity on modifying routes', async () => {
     const missingCsrf = await learner.request('/attempts', 'POST', {}, { 'X-CSRF-Token': '' });
     expect(missingCsrf.status).toBe(403);
@@ -1086,6 +1118,38 @@ describe('real Nest API and PostgreSQL boundaries', () => {
         (result) => result.question.source?.catalogId === 'cke-inf03-informator-2022',
       ),
     ).toBe(true);
+  });
+
+  it('starts an ordered review of current CKE questions without releasing the key', async () => {
+    const questionIds = [seed.officialQuestions[4]!.id, seed.officialQuestions[0]!.id];
+    const { data: catalogue } = await learner.request<Bootstrap>('/bootstrap');
+    expect(catalogue.reviewQuestionIds).toEqual(expect.arrayContaining(questionIds));
+    expect(catalogue.reviewQuestionIds).toHaveLength(catalogue.questionCount);
+    const repeat = await learner.request<TheoryTicket>('/theory/start', 'POST', {
+      mode: 'trening',
+      questionIds,
+    });
+    expect(repeat.status).toBe(201);
+    expect(repeat.data.questions.map(({ id }) => id)).toEqual(questionIds);
+    expect(repeat.data.questions.every((item) => item.source && !('correctOptionId' in item))).toBe(
+      true,
+    );
+    for (const selection of [
+      [questionIds[0], questionIds[0]],
+      [seed.questions[0]!.id],
+      catalogue.reviewQuestionIds.slice(0, 6),
+    ])
+      expect(
+        (
+          await learner.request('/theory/start', 'POST', {
+            mode: 'trening',
+            questionIds: selection,
+          })
+        ).status,
+      ).toBe(400);
+    expect(
+      (await learner.request('/theory/start', 'POST', { mode: 'egzamin', questionIds })).status,
+    ).toBe(503);
   });
 
   it('renews an expired learning series for the same questions and refuses anything else', async () => {

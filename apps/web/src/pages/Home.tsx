@@ -4,6 +4,7 @@ import {
   BookOpen,
   Check,
   ChevronRight,
+  Clock3,
   Code2,
   FileCode2,
   GraduationCap,
@@ -15,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context';
 import { resumeHref, resumeStep } from '../resume';
 import { EmptyState, LevelPicker, Loading, TopicIcon } from '../components/common';
+import { StudyPlanCard } from '../components/StudyPlanCard';
 
 export function Home() {
   const { data, loading, level, setLevel, attempts, completed } = useApp();
@@ -73,6 +75,17 @@ export function Home() {
           </Link>
         </section>
       )}
+      <StudyPlanCard />
+      {data.shortPractice && (
+        <Link className="learning-callout glass-panel" to="/nauka/15-minut/join">
+          <Clock3 size={24} aria-hidden="true" />
+          <span>
+            <strong>Mam 15 minut</strong>
+            Przećwicz złączenia SQL na dwóch arkuszach CKE.
+          </span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </Link>
+      )}
       <section className="learning-projects surface-panel">
         <div className="section-heading">
           <div>
@@ -111,11 +124,11 @@ export function Home() {
           ))}
         </div>
       </section>
-      <Link className="handbook-callout glass-panel" to="/nauka/podrecznik">
+      <Link className="learning-callout glass-panel" to="/nauka/podrecznik">
         <BookMarked size={24} />
         <span>
-          <strong>Podręcznik: HTML, CSS, JavaScript i SQL</strong>
-          Krótkie rozdziały z działającymi przykładami — bez rozwiązywania całego arkusza.
+          <strong>Podręcznik: HTML, CSS, JavaScript, SQL i PHP</strong>
+          Wyjaśnienia i krótkie przykłady powiązane z arkuszami CKE.
         </span>
         <ChevronRight size={18} />
       </Link>
@@ -168,7 +181,7 @@ export function Home() {
           </div>
         </aside>
       </div>
-      <Link className="exam-day-callout glass-panel" to="/jak-wyglada-egzamin">
+      <Link className="learning-callout glass-panel" to="/jak-wyglada-egzamin">
         <Timer size={24} />
         <span>
           <strong>Jak wygląda egzamin?</strong>

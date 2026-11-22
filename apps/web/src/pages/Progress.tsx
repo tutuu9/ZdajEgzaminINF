@@ -17,6 +17,8 @@ import { useApp } from '../context';
 import { exportProgress, importProgress, removeAttempt } from '../storage';
 import { errorMessage } from '../api';
 import { resumeHref } from '../resume';
+import { theoryReviewQuestions } from '../theory-review';
+import { TheoryReviewButton } from '../components/TheoryReviewButton';
 import {
   EmptyState,
   ErrorNotice,
@@ -58,6 +60,7 @@ export function Progress() {
         weak.set(topic, (weak.get(topic) ?? 0) + 1);
       }
   const weakTopics = [...weak].sort((a, b) => b[1] - a[1]);
+  const reviewQuestions = theoryReviewQuestions(attempts, data?.reviewQuestionIds);
   const backup = async () => {
     setError('');
     try {
@@ -222,6 +225,15 @@ export function Progress() {
         <aside>
           <section className="repeat-panel">
             <h2>Warto powtórzyć</h2>
+            {reviewQuestions.length > 0 && (
+              <div className="theory-review-action">
+                <p>
+                  Krótka seria z poprzednich prób ·{' '}
+                  {plural(reviewQuestions.length, 'pytanie', 'pytania', 'pytań')}
+                </p>
+                <TheoryReviewButton questionIds={reviewQuestions} />
+              </div>
+            )}
             {weakTopics.length ? (
               <div className="weak-topics">
                 {weakTopics.map(([topic, count]) => (

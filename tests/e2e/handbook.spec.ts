@@ -3,10 +3,13 @@ import { handbookBooks, previewDocument } from '../../apps/web/src/handbook';
 
 test('the handbook opens from the learning page and remembers read chapters', async ({ page }) => {
   await page.goto('/nauka');
-  await page.getByRole('link', { name: /Podręcznik: HTML, CSS, JavaScript i SQL/ }).click();
+  await page.getByRole('link', { name: /Podręcznik: HTML, CSS, JavaScript, SQL i PHP/ }).click();
   await expect(page).toHaveURL(/\/nauka\/podrecznik$/);
-  await expect(page.getByRole('heading', { name: 'HTML, CSS, JavaScript i SQL' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'HTML, CSS, JavaScript, SQL i PHP' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'SQL', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'PHP', exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: 'Model pudełkowy' }).click();
   await expect(page).toHaveURL(/\/nauka\/podrecznik\/css\/pudelko$/);
@@ -32,6 +35,9 @@ test('the handbook opens from the learning page and remembers read chapters', as
   await expect(page).toHaveURL(/\/nauka\/podrecznik\/css\/uklad$/);
   await page.getByRole('link', { name: 'Podręcznik', exact: true }).click();
   await expect(page.getByText('Przeczytane: 1 z 5')).toBeVisible();
+  await page.getByRole('link', { name: 'Uruchomienie w XAMPP' }).click();
+  await expect(page.getByRole('article').locator('pre code')).toContainText("echo 'PHP działa'");
+  await expect(page.getByRole('article').locator('iframe')).toHaveCount(0);
 });
 
 test('every live example runs without errors and shows its result', async ({ page }) => {

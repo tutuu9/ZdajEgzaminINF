@@ -32,14 +32,14 @@ function Example({
   example: NonNullable<HandbookSection['example']>;
   title: string;
 }) {
-  if (example.kind === 'sql')
+  if (example.kind !== 'web')
     return (
       <figure className="handbook-example">
-        <figcaption>SQL</figcaption>
+        <figcaption>{example.kind === 'sql' ? 'SQL' : 'PHP · uruchom lokalnie'}</figcaption>
         <pre>
           <code>{example.code}</code>
         </pre>
-        {example.result && (
+        {example.kind === 'sql' && example.result && (
           <div className="handbook-result">
             <table>
               <caption>Wynik — {example.result.source}</caption>
@@ -175,7 +175,7 @@ function Chapter({
 }
 
 /**
- * A small handbook of HTML, CSS, JavaScript and SQL: explanations and live examples, each
+ * A small handbook of HTML, CSS, JavaScript, SQL and PHP, each
  * chapter linked to the CKE papers that require it. No tasks or questions are authored here.
  */
 export function Handbook() {
@@ -188,7 +188,7 @@ export function Handbook() {
   if (!found)
     return (
       <div className="handbook-page">
-        <PageHeading kicker="Podręcznik" title="HTML, CSS, JavaScript i SQL">
+        <PageHeading kicker="Podręcznik" title="HTML, CSS, JavaScript, SQL i PHP">
           Krótkie rozdziały z przykładami, które działają od razu. Czytaj w dowolnej kolejności —
           każdy rozdział wskazuje arkusze CKE, w których jest potrzebny.
         </PageHeading>
