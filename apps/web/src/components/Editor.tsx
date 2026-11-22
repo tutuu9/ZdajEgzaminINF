@@ -135,6 +135,7 @@ export function Editor({
   onViewChange,
   reveal,
   onRun,
+  tabMovesFocus = false,
 }: {
   value: string;
   path: string;
@@ -148,6 +149,8 @@ export function Editor({
   reveal?: EditorReveal;
   /** Ctrl+Enter (Cmd+Enter) action, e.g. executing the statements being written. */
   onRun?: () => void;
+  /** Uses browser focus navigation for Tab in short exercises. */
+  tabMovesFocus?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | null>(null),
@@ -339,6 +342,9 @@ export function Editor({
     };
     // A file switch starts an independent editing session. Value updates are applied below.
   }, [path, sessionKey]);
+  useEffect(() => {
+    view.current?.setTabFocusMode(tabMovesFocus);
+  }, [path, sessionKey, tabMovesFocus]);
   useEffect(() => {
     const instance = view.current,
       config = compartments.current;

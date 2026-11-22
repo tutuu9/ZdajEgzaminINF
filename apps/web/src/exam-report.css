@@ -94,7 +94,18 @@
 }
 .exam-report-results [role='radiogroup'] {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+.exam-result-practice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  flex-basis: 100%;
+}
+.exam-result-practice .button {
+  min-height: 44px;
 }
 .exam-report-results label {
   display: inline-flex;

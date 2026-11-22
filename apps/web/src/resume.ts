@@ -1,8 +1,12 @@
 import type { AttemptSnapshot } from '@zdaj/shared';
 
-export function resumeHref(attempt: AttemptSnapshot): string {
+export function resumeHref(
+  attempt: AttemptSnapshot,
+  requestedView?: NonNullable<AttemptSnapshot['workspace']>['view'],
+): string {
   if (attempt.kind === 'theory') return `/teoria?proba=${encodeURIComponent(attempt.id)}`;
   const view =
+    requestedView ??
     attempt.workspace?.view ??
     (attempt.study
       ? 'study'

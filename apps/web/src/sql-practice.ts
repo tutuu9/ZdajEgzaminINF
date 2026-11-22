@@ -536,6 +536,7 @@ export function parseStatement(tokens: Token[], source: string): ParsedStatement
 export interface PracticeFinding {
   level: 'error' | 'warning' | 'info';
   message: string;
+  code?: 'missing-condition';
 }
 export interface PracticeComparison {
   status: 'match' | 'different' | 'empty';
@@ -611,7 +612,11 @@ function compareSelect(mine: SelectQuery, reference: SelectQuery): PracticeFindi
         'Tabele nie są połączone warunkiem (ON lub WHERE). Bez niego każdy wiersz łączy się z każdym.',
     });
   if (missingConditions.length)
-    findings.push({ level: 'error', message: `Brakuje warunków: ${list(missingConditions)}.` });
+    findings.push({
+      level: 'error',
+      message: `Brakuje warunków: ${list(missingConditions)}.`,
+      code: 'missing-condition',
+    });
   if (remaining.length)
     findings.push({
       level: 'warning',
@@ -717,6 +722,16 @@ export function comparePractice(learnerSql: string, referenceSql: string): Pract
     status: findings.some((finding) => finding.level !== 'info') ? 'different' : 'match',
     findings,
   };
+}
+
+export function compareSingleSelect(learnerSql: string, referenceSql: string): PracticeComparison {
+  const statements = splitStatements(learnerSql);
+  if (statements.length !== 1 || !isWord(statements[0]?.tokens[0], 'SELECT'))
+    return {
+      status: 'different',
+      findings: [{ level: 'error', message: 'Wpisz jedno zapytanie SELECT.' }],
+    };
+  return comparePractice(learnerSql, referenceSql);
 }
 
 /** Common kwerendy.txt mistakes that do not depend on a reference. */

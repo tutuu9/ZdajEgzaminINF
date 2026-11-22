@@ -302,12 +302,21 @@ export function validateProjectState(item: Record<string, unknown>): void {
         fail();
     }
   }
+  let validatedStudy: ReturnType<typeof validateCachedGuide> | undefined;
   if (item.study !== undefined) {
     if (item.kind !== 'practice' || (item.mode === 'egzamin' && item.submittedAt === undefined))
       fail();
     const study = record(item.study);
-    fields(study, ['guide', 'current', 'completed', 'viewedExamples']);
-    const { guide, activityIds } = validateCachedGuide(study.guide);
+    fields(study, ['guide', 'current', 'completed', 'viewedExamples', 'focusStepId']);
+    const { guide, activityIds: allActivityIds } = validateCachedGuide(study.guide);
+    const focusStepId = study.focusStepId === undefined ? undefined : id(study.focusStepId);
+    const focus = guide.steps.find((step) => step.id === focusStepId);
+    if (focusStepId && (item.mode !== 'nauka' || !guide.project || !focus?.activities?.length))
+      fail();
+    const activityIds = focus
+      ? new Set(focus.activities?.map((activity) => `${focus.id}/${activity.id}`))
+      : allActivityIds;
+    validatedStudy = { guide, activityIds };
     if (
       guide.taskId !== item.taskId ||
       guide.taskVersion !== item.taskVersion ||
@@ -338,11 +347,11 @@ export function validateProjectState(item: Record<string, unknown>): void {
       validateProjectFiles(recovery.files);
     }
   if (item.studyComparison !== undefined) {
-    if (item.kind !== 'practice' || item.mode !== 'nauka' || item.study === undefined) fail();
+    if (item.kind !== 'practice' || item.mode !== 'nauka' || !validatedStudy) return fail();
     const comparison = record(item.studyComparison);
     fields(comparison, ['checkpoints', 'restorationId']);
     if (comparison.restorationId !== undefined) id(comparison.restorationId);
-    const { guide, activityIds } = validateCachedGuide(record(item.study).guide);
+    const { guide, activityIds } = validatedStudy;
     if (!guide.project) fail();
     const checkpointIds = new Set<string>();
     const checkpointActivities = new Set<string>();

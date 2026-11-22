@@ -25,6 +25,12 @@ describe('course steps point to handbook chapters', () => {
     expect(find('inf03-12-26-06-sg', 'script/date')).toBe('javascript/obliczenia-data');
     expect(find('inf03-11-26-06-sg', 'details/hover')).toBe('css/selektory');
     expect(find('inf03-11-26-06-sg', 'structure/style-link')).toBe('html/szkielet');
+    expect(find('inf03-08-25-06-sg', 'structure/head')).toBe('html/szkielet');
+    expect(find('inf03-08-25-06-sg', 'php-connection/region')).toBe('php/xampp');
+    expect(find('inf03-08-25-06-sg', 'php-connection/connection')).toBe('php/polaczenie');
+    expect(find('inf03-08-25-06-sg', 'php-filter/guard')).toBe('php/formularze');
+    expect(find('inf03-08-25-06-sg', 'php-filter/prepare')).toBe('php/wyniki');
+    expect(find('inf03-01-24-06-sg', 'php-count/browser-check')).toBe('php/bledy');
   });
 
   it('gives no chapter to graphics, screenshots and hand-in steps', () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Check,
   ClipboardList,
   ExternalLink as ExternalIcon,
@@ -15,6 +16,7 @@ import {
   type ExamReview,
   type ResultReview,
 } from '../exam-report';
+import { practiceStepForResult } from '../practice-results';
 import '../exam-report.css';
 
 const REVIEW_OPTIONS: { value: ResultReview; label: string }[] = [
@@ -31,10 +33,14 @@ export function ExamReport({
   attempt,
   entry,
   limitMinutes,
+  practicing,
+  onPractice,
 }: {
   attempt: AttemptSnapshot;
   entry: CatalogEntry;
   limitMinutes: number;
+  practicing: boolean;
+  onPractice: (stepId: string) => void;
 }) {
   const handIn = entry.handIn!;
   const [review, setReview] = useState<ExamReview>(() => loadReview(attempt.id));
@@ -118,29 +124,51 @@ export function ExamReport({
           oceniania i zaznacz, co według Ciebie jest gotowe.
         </p>
         <ul className="exam-report-results">
-          {handIn.results.map((result) => (
-            <li key={result}>
-              <span>{result}</span>
-              <div role="radiogroup" aria-label={`Samoocena: ${result}`}>
-                {REVIEW_OPTIONS.map((option) => (
-                  <label key={option.value} className={`review-${option.value}`}>
-                    <input
-                      type="radio"
-                      name={`review-${result}`}
-                      checked={review.results[result] === option.value}
-                      onChange={() =>
-                        update({
-                          ...review,
-                          results: { ...review.results, [result]: option.value },
-                        })
-                      }
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </li>
-          ))}
+          {handIn.results.map((result) => {
+            const status = review.results[result];
+            const stepId =
+              status === 'partial' || status === 'missing'
+                ? practiceStepForResult(entry.id, result)
+                : undefined;
+            return (
+              <li key={result}>
+                <span>{result}</span>
+                <div role="radiogroup" aria-label={`Samoocena: ${result}`}>
+                  {REVIEW_OPTIONS.map((option) => (
+                    <label key={option.value} className={`review-${option.value}`}>
+                      <input
+                        type="radio"
+                        name={`review-${result}`}
+                        checked={status === option.value}
+                        onChange={() =>
+                          update({
+                            ...review,
+                            results: { ...review.results, [result]: option.value },
+                          })
+                        }
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+                {stepId && (
+                  <div className="exam-result-practice">
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={practicing}
+                      onClick={() => onPractice(stepId)}
+                      aria-label={`Przećwicz ten etap – ${result}`}
+                    >
+                      Przećwicz ten etap
+                      <ArrowRight size={17} aria-hidden />
+                    </button>
+                    <small>Otworzysz naukę z kopią swoich plików.</small>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
         {reviewed.length === handIn.results.length && (
           <p className="exam-report-summary" role="status">

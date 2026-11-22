@@ -387,6 +387,30 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   aiOutputPricePerMillion: 1.2,
   queueLimit: 20,
 };
+export interface ShortPracticeSource {
+  catalogId: string;
+  page: number;
+  queryNumber: number;
+}
+
+/** Public teaching material based on two reviewed CKE paper fragments. */
+export interface SqlJoinPractice {
+  id: string;
+  example: {
+    source: ShortPracticeSource;
+    sql: string;
+    explanation: string;
+  };
+  exercise: {
+    source: ShortPracticeSource;
+    prompt: string;
+    tables: { name: string; columns: string[] }[];
+    starterSql: string;
+    exampleSql: string;
+    hint: string;
+  };
+}
+
 export interface Bootstrap {
   topics: Topic[];
   tasks: PublicTask[];
@@ -395,6 +419,9 @@ export interface Bootstrap {
   catalog: CatalogEntry[];
   features: { aiAvailable: boolean; checkingAvailable: boolean; runsAvailable: boolean };
   questionCount: number;
+  /** IDs of the current CKE questions. Answers and revisions are served through theory tickets. */
+  reviewQuestionIds: string[];
+  shortPractice?: SqlJoinPractice;
 }
 export interface AttemptTicket {
   id: string;
@@ -404,6 +431,11 @@ export interface AttemptTicket {
 export interface TheoryTicket extends AttemptTicket {
   questions: PublicQuestion[];
 }
+export const THEORY_REVIEW_LIMIT = 5;
+export type TheoryStartRequest = { mode: 'nauka' | 'trening'; level: Level } & (
+  | { count?: number; topicId?: string; questionIds?: never }
+  | { questionIds: string[]; count?: never; topicId?: never }
+);
 export interface AttemptSnapshot {
   id: string;
   taskId?: string;
@@ -441,6 +473,8 @@ export interface AttemptSnapshot {
   study?: {
     guide: ExamStudyGuide;
     current: string;
+    /** A separate practice attempt for one stage of the pinned course. */
+    focusStepId?: string;
     completed: Record<
       string,
       {

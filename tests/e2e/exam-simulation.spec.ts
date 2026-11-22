@@ -109,3 +109,43 @@ test('the report after hand-in shows time, files and a self-review without a sco
   await expect(page.getByRole('status')).toContainText('gotowe: 4 z 5 rezultatów');
   expect(created).toHaveLength(0);
 });
+
+test('a missing result opens the matching course stage with a separate copy of the exam', async ({
+  page,
+}) => {
+  const original = await seedExam(page, { minutesLeft: -5, handedInAfter: 128 });
+  // The full suite shares a per-IP creation limit. Use a test ticket for this extra attempt.
+  const guide = examStudyGuides.find((item) => item.taskId === original.taskId)!;
+  const ticket = { id: randomUUID(), token: randomUUID(), deadlineAt: null };
+  await page.route('**/api/v1/attempts', async (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({
+      taskId: original.taskId,
+      taskVersion: guide.taskVersion,
+      mode: 'nauka',
+    });
+    await route.fulfill({ status: 201, json: ticket });
+  });
+  await page.route(`**/api/v1/attempts/${ticket.id}/study`, (route) =>
+    route.fulfill({ status: 201, json: { guide, hintCount: 1 } }),
+  );
+  await page.getByRole('tab', { name: /Raport/ }).click();
+  const report = page.getByRole('region', { name: 'Podsumowanie próby' });
+  const practice = report.getByRole('button', { name: /Przećwicz ten etap – skrypt/ });
+  await expect(practice).toHaveCount(0);
+  await report.getByRole('radiogroup', { name: 'Samoocena: skrypt' }).getByLabel('Brak').check();
+  await practice.click();
+  await expect(page.getByRole('heading', { name: 'Powtórka etapu' })).toBeVisible();
+  const step = page.getByLabel('Twój krok');
+  await expect(step).toHaveValue(/^send-script\//);
+  const url = new URL(page.url());
+  expect(url.searchParams.get('proba')).toBe(ticket.id);
+  await page.reload();
+  await expect(step).toHaveValue(/^send-script\//);
+  await expect(page.getByRole('heading', { name: 'Powtórka etapu' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'jolka.jpg', exact: true })).toBeVisible();
+  await page.goto(`/praktyka/${original.taskId}?proba=${original.id}&widok=report`);
+  await expect(report).toContainText('Oddano po 128 z 150 minut.');
+  await expect(
+    report.getByRole('radiogroup', { name: 'Samoocena: skrypt' }).getByLabel('Brak'),
+  ).toBeChecked();
+});

@@ -11,6 +11,13 @@ type Rule = [pattern: RegExp, chapterId: string];
 
 /** Ordered from the most specific pattern to the most general one within each book. */
 const RULES: Record<HandbookBookId, Rule[]> = {
+  php: [
+    [/XAMPP|kontrola lokalnego projektu|ręczny test formularza/i, 'bledy'],
+    [/\$_(?:POST|GET)\b/, 'formularze'],
+    [/mysqli_(?:connect|set_charset|close)\s*\(|\bnew\s+(?:mysqli|PDO)\b/i, 'polaczenie'],
+    [/mysqli_(?:query|prepare|stmt_\w+|fetch_assoc)\s*\(|htmlspecialchars\s*\(|<\?=/i, 'wyniki'],
+    [/<\?php\b/i, 'xampp'],
+  ],
   sql: [
     [
       /\b(CREATE\s+(VIEW|USER|DATABASE)|GRANT|INSERT|UPDATE|DELETE|ALTER|DROP)\b|^--\s*(Import|Archiwum)/im,
@@ -60,10 +67,14 @@ export function chapterForActivity(
   activity: Pick<StudyActivity, 'exampleCode' | 'targetFiles'>,
   fileName: string,
 ) {
-  const bookId = bookFor(activity.targetFiles?.[0] ?? fileName);
-  if (!bookId) return undefined;
+  const path = activity.targetFiles?.[0] ?? fileName;
   const code = activity.exampleCode ?? '';
-  const rule = RULES[bookId].find(([pattern]) => pattern.test(code));
+  const phpRule = /\.php$/i.test(path)
+    ? RULES.php.find(([pattern]) => pattern.test(code))
+    : undefined;
+  const bookId = phpRule ? 'php' : bookFor(path);
+  if (!bookId) return undefined;
+  const rule = phpRule ?? RULES[bookId].find(([pattern]) => pattern.test(code));
   if (!rule) return undefined;
   const book = handbookBooks.find((item) => item.id === bookId)!;
   const chapter = book.chapters.find((item) => item.id === rule[1]);

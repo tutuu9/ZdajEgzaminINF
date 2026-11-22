@@ -25,7 +25,8 @@ import type {
 } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, ApiError, errorMessage } from '../api';
-import { readAttempt, saveAttempt, updateAttempt } from '../storage';
+import { readAttempt, updateAttempt } from '../storage';
+import { createTheoryAttempt, theoryReviewQuestions, theoryReviewTitle } from '../theory-review';
 import {
   EmptyState,
   ErrorNotice,
@@ -112,7 +113,7 @@ function FeedbackOptions({
 }
 
 export function Theory() {
-  const { data, level, refreshProgress } = useApp();
+  const { data, level, attempts, refreshProgress } = useApp();
   const [params, setParams] = useSearchParams();
   const id = params.get('proba');
   const [attempt, setAttempt] = useState<AttemptSnapshot | null>(null),
@@ -170,11 +171,6 @@ export function Theory() {
     moved.current = true;
     setIndex(next);
   };
-  const update = useCallback(async (value: AttemptSnapshot) => {
-    ref.current = value;
-    setAttempt(value);
-    await saveAttempt(value);
-  }, []);
   /** Saves a change on top of what is stored, so a second tab's answers are not lost. */
   const patch = useCallback(async (change: (stored: AttemptSnapshot) => AttemptSnapshot) => {
     const current = ref.current;
@@ -225,8 +221,9 @@ export function Theory() {
     },
     [patch],
   );
-  const start = async () => {
-    if (mode === 'egzamin') {
+  const start = async (questionIds?: string[]) => {
+    if (busy) return;
+    if (!questionIds && mode === 'egzamin') {
       setError(
         'Pełny egzamin jest wyłączony: opublikowany zestaw CKE jest niepełny, a źródłowe informatory zawierają odpowiedzi. Wybierz naukę lub trening.',
       );
@@ -235,31 +232,20 @@ export function Theory() {
     setBusy(true);
     setError('');
     try {
-      const ticket = await api<TheoryTicket>('/theory/start', {
-        method: 'POST',
-        body: {
-          mode,
-          topicId: topic === 'all' ? undefined : topic,
-          // The server accepts at most 40 questions in one series.
-          count: Math.min(count, data?.questionCount ?? count, 40),
-        },
-      });
-      const now = new Date().toISOString();
-      const snapshot: AttemptSnapshot = {
-        id: ticket.id,
-        kind: 'theory',
-        title: `Przykłady CKE: ${topic === 'all' ? 'wszystkie tematy' : (data?.topics.find((t) => t.id === topic)?.title ?? 'wybrany temat')}`,
-        mode,
-        level,
-        createdAt: now,
-        updatedAt: now,
-        deadlineAt: ticket.deadlineAt,
-        ticket: { id: ticket.id, token: ticket.token, deadlineAt: ticket.deadlineAt },
-        questions: ticket.questions,
-        answers: {},
-        hintCount: 0,
-      };
-      await update(snapshot);
+      const snapshot = questionIds
+        ? await createTheoryAttempt({ mode: 'trening', level, questionIds }, theoryReviewTitle)
+        : await createTheoryAttempt(
+            {
+              mode: mode === 'trening' ? 'trening' : 'nauka',
+              level,
+              topicId: topic === 'all' ? undefined : topic,
+              count: Math.min(count, data?.questionCount ?? count, 40),
+            },
+            `Przykłady CKE: ${topic === 'all' ? 'wszystkie tematy' : (data?.topics.find((t) => t.id === topic)?.title ?? 'wybrany temat')}`,
+          );
+      ref.current = snapshot;
+      setAttempt(snapshot);
+      setMode(snapshot.mode);
       setParams({ proba: snapshot.id });
       setIndex(0);
       await refreshProgress();
@@ -361,7 +347,8 @@ export function Theory() {
     }
   };
   if (loading) return <Loading label="Otwieranie zapisanej próby…" />;
-  if (!attempt)
+  if (!attempt) {
+    const questionIds = theoryReviewQuestions(attempts, data?.reviewQuestionIds);
     return (
       <div className="theory-landing">
         <PageHeading title="Teoria w małych porcjach.">
@@ -400,6 +387,22 @@ export function Theory() {
             {busy ? <Loader2 className="spin" size={17} /> : <ArrowRight size={17} />}Rozpocznij{' '}
             {mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
           </button>
+          {questionIds.length > 0 && (
+            <div className="theory-review-action">
+              <p>
+                Powtórka z poprzednich serii ·{' '}
+                {plural(questionIds.length, 'pytanie', 'pytania', 'pytań')}
+              </p>
+              <button
+                className="button secondary full"
+                disabled={busy}
+                onClick={() => void start(questionIds)}
+              >
+                <RotateCcw size={17} aria-hidden />
+                Powtórz błędy
+              </button>
+            </div>
+          )}
           <details className="theory-set-options">
             <summary>
               Zmień zestaw
@@ -456,6 +459,7 @@ export function Theory() {
         </details>
       </div>
     );
+  }
   const result = attempt.theoryResult;
   if (result) {
     const visible = result.results.filter((item) => filter === 'all' || !item.correct);

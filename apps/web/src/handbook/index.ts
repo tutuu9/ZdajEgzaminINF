@@ -1,13 +1,13 @@
 import { cssBook } from './css';
 import { htmlBook } from './html';
 import { javascriptBook } from './javascript';
+import { phpBook } from './php';
 import { sqlBook } from './sql';
 import type { HandbookBook, HandbookChapter, WebExample } from './types';
 
 export type { HandbookBook, HandbookChapter } from './types';
 
-/** Reading order: structure, appearance, behaviour, data. */
-export const handbookBooks: HandbookBook[] = [htmlBook, cssBook, javascriptBook, sqlBook];
+export const handbookBooks: HandbookBook[] = [htmlBook, cssBook, javascriptBook, sqlBook, phpBook];
 
 export function findChapter(bookId: string | undefined, chapterId: string | undefined) {
   const book = handbookBooks.find((item) => item.id === bookId);

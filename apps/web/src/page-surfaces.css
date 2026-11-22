@@ -46,6 +46,18 @@
 .theory-set-options {
   margin-top: 17px;
 }
+.theory-review-action {
+  margin: 16px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.theory-review-action p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+.theory-review-action .button {
+  min-height: 44px;
+}
 .theory-set-options > summary {
   display: flex;
   align-items: center;

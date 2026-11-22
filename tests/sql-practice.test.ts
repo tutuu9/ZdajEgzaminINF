@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   comparePractice,
+  compareSingleSelect,
   lintQueries,
   parseDump,
   practiceSteps,
 } from '../apps/web/src/sql-practice';
 import { examStudyGuides } from '../packages/content/src/exam-study.js';
+import { sqlJoinPractice } from '../packages/content/src/short-practice.js';
 
 const steps = examStudyGuides.flatMap((guide) =>
   practiceSteps(guide).map((step) => ({ taskId: guide.taskId, ...step })),
@@ -19,6 +21,50 @@ const messages = (sql: string, ref: string) =>
   comparePractice(sql, ref)
     .findings.map((finding) => finding.message)
     .join('\n');
+
+describe('short JOIN practice', () => {
+  const { example, exercise } = sqlJoinPractice;
+  const check = (sql: string) => compareSingleSelect(sql, exercise.exampleSql);
+
+  it('uses query 3 on page 2 of each paper and leaves the joins out of the starter', () => {
+    expect(example.source).toEqual({ catalogId: 'inf03-02-24-06-sg', page: 2, queryNumber: 3 });
+    expect(example.sql).toBe(`${reference(example.source.catalogId, 'queries/prefix')};`);
+    expect(exercise.source).toEqual({ catalogId: 'inf03-08-25-06-sg', page: 2, queryNumber: 3 });
+    expect(exercise.exampleSql).toBe(reference(exercise.source.catalogId, 'sql/group-years'));
+    expect(exercise.starterSql).not.toMatch(/\bJOIN\b/);
+    expect(check(exercise.starterSql).status).toBe('different');
+  });
+
+  it.each([
+    exercise.exampleSql,
+    "SELECT p.rok, AVG(s.dlugosc) AS 'Średnia długość' FROM parada p INNER JOIN udzial u ON p.id = u.id_parada INNER JOIN smok s ON s.id = u.id_smok WHERE p.rok > 2005 GROUP BY p.rok;",
+    "SELECT rok, AVG(dlugosc) 'Średnia długość' FROM parada, udzial, smok WHERE parada.id = id_parada AND id_smok = smok.id AND rok > 2005 GROUP BY rok;",
+  ])('accepts the course example and equivalent relationships (%#)', (sql) => {
+    expect(check(sql).status).toBe('match');
+  });
+
+  it('identifies missing conditions when the key points to the wrong table column', () => {
+    const wrongKey = exercise.exampleSql.replace(
+      'udzial.id_smok = smok.id',
+      'udzial.id_parada = smok.id',
+    );
+    const comparison = check(wrongKey);
+    expect(comparison.status).toBe('different');
+    expect(comparison.findings).toContainEqual(
+      expect.objectContaining({ code: 'missing-condition' }),
+    );
+  });
+
+  it.each(['', 'SHOW TABLES;', `SELECT 1;\n${exercise.exampleSql}`])(
+    'requires one SELECT statement (%#)',
+    (sql) => {
+      expect(check(sql)).toMatchObject({
+        status: 'different',
+        findings: [{ message: 'Wpisz jedno zapytanie SELECT.' }],
+      });
+    },
+  );
+});
 
 describe('SQL practice references', () => {
   it('assembles a statement for every SQL step of the fifteen courses and matches itself', () => {

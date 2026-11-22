@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { db, Prisma } from '@zdaj/database';
 import { validateProjectFiles } from '@zdaj/checker';
 import {
+  THEORY_REVIEW_LIMIT,
   toPublicQuestion,
   type AttemptTicket,
   type ProjectFile,
@@ -113,27 +114,21 @@ export async function startTheory(body: unknown, req: Request): Promise<TheoryTi
         mode: modeSchema,
         topicId: z.string().optional(),
         count: z.number().int().min(1).max(40).optional(),
+        questionIds: z.array(z.string().min(1).max(200)).min(1).max(THEORY_REVIEW_LIMIT).optional(),
         level: levelSchema.optional(),
       })
       .strict(),
     body,
   );
   await rateLimit(`theory:${requestIpKey(req)}`, 60, 3_600_000);
-  const pool = (await published<QuestionRevision>('question')).filter(
-    (q) =>
-      isCkeQuestion(q) &&
-      (value.mode === 'egzamin' || !value.topicId || q.topicId === value.topicId),
-  );
   if (value.mode === 'egzamin')
     throw new ServiceUnavailableException(
       'Opublikowane przykłady CKE zawierają odpowiedzi w dokumencie źródłowym. Są dostępne do nauki i treningu; pełny egzamin z ukrytym kluczem nie jest jeszcze dostępny.',
     );
-  const count = Math.min(value.count ?? 10, pool.length);
-  if (pool.length < count || count === 0)
+  const pool = (await published<QuestionRevision>('question')).filter(isCkeQuestion);
+  const selected = selectTheoryQuestions(pool, value);
+  if (!selected.length)
     throw new ServiceUnavailableException('Brakuje opublikowanych pytań dla tego zestawu.');
-  const selected = shuffle(pool)
-    .slice(0, count)
-    .map((q) => ({ ...q, options: q.source ? q.options : shuffle(q.options) }));
   const token = secretToken();
   const deadlineAt = null;
   const row = await db.attemptTicket.create({
@@ -156,6 +151,31 @@ export async function startTheory(body: unknown, req: Request): Promise<TheoryTi
     deadlineAt: null,
     questions: selected.map(toPublicQuestion),
   };
+}
+
+function selectTheoryQuestions(
+  pool: QuestionRevision[],
+  { questionIds, topicId, count }: { questionIds?: string[]; topicId?: string; count?: number },
+): QuestionRevision[] {
+  if (!questionIds) {
+    const topicPool = topicId ? pool.filter((question) => question.topicId === topicId) : pool;
+    return shuffle(topicPool).slice(0, count ?? 10);
+  }
+  if (
+    count !== undefined ||
+    topicId !== undefined ||
+    new Set(questionIds).size !== questionIds.length
+  )
+    throw new BadRequestException('Powtórka wymaga listy różnych pytań, bez dodatkowego filtra.');
+  const byId = new Map(pool.map((question) => [question.id, question]));
+  return questionIds.map((id) => {
+    const question = byId.get(id);
+    if (!question)
+      throw new BadRequestException(
+        'Jedno z pytań do powtórki jest już niedostępne. Odśwież stronę.',
+      );
+    return question;
+  });
 }
 type QuestionRef = { key: string; version: number; optionOrder: string[] };
 /**
