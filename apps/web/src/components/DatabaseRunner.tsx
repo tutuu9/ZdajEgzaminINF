@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Database, Loader2, Play, Plus, Trash2, Upload } from 'lucide-react';
 import type {
   ProjectFile,
+  SandboxRunRequest,
   SandboxRunResponse,
   SandboxRunResult,
   SandboxRunStatement,
@@ -9,6 +10,7 @@ import type {
 import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS } from '@zdaj/shared';
 import { api, errorMessage } from '../api';
 import { createPreview } from '../preview';
+import { phpActionRequest, phpResultEntry, readPhpAction } from '../php-preview';
 import { Editor } from './Editor';
 import type { ProjectStore } from '../project-store';
 import {
@@ -37,6 +39,13 @@ interface Draft {
   method: 'GET' | 'POST';
   fields: FieldRow[];
   scripts: boolean;
+}
+type RunView = 'sql' | 'php';
+type PageRequest = NonNullable<SandboxRunRequest['php']>;
+interface CompletedRun {
+  value: SandboxRunResult;
+  request: SandboxRunRequest;
+  files: ProjectFile[];
 }
 const emptyDraft: Draft = {
   database: '',
@@ -154,31 +163,55 @@ function PageResult({
   entry,
   files,
   scripts,
+  enabled,
+  onRequest,
+  onError,
 }: {
   page: NonNullable<SandboxRunResult['php']>;
   entry: string;
   files: ProjectFile[];
   scripts: boolean;
+  enabled: boolean;
+  onRequest: (request: PageRequest) => void;
+  onError: (message: string) => void;
 }) {
-  // The server returns markup only. Styles and images come from the local project, and the
-  // frame keeps the same isolation as the ordinary preview: no network, no form target.
-  const preview = useMemo(
-    () =>
-      page.html
-        ? createPreview(files, entry, {
-            markup: page.html,
-            scripts,
-            // After a redirect the markup belongs to another page, so its folder is the base.
-            base: page.finalPath?.split(/[?#]/)[0]!.replace(/^\/+/, '') || entry,
-          })
-        : undefined,
-    [files, entry, page.html, page.finalPath, scripts],
-  );
+  const frame = useRef<HTMLIFrameElement>(null);
+  const pages = useMemo(() => pageFilePaths(files), [files]);
+  const base = phpResultEntry(page.finalPath, pages);
+  const interactive =
+    enabled &&
+    !scripts &&
+    !!base &&
+    !page.truncated &&
+    /^text\/html\b/i.test(page.contentType ?? '');
+  const { preview, generation } = useMemo(() => {
+    const generation = interactive ? crypto.randomUUID() : undefined;
+    const preview = page.html
+      ? createPreview(files, entry, { markup: page.html, scripts, base, phpGeneration: generation })
+      : undefined;
+    return { preview, generation };
+  }, [files, entry, page, base, scripts, interactive]);
+  useEffect(() => {
+    const finalPath = page.finalPath;
+    if (!generation || !finalPath) return;
+    const receive = (event: MessageEvent) => {
+      if (event.origin !== 'null' || event.source !== frame.current?.contentWindow) return;
+      const action = readPhpAction(event.data, generation);
+      if (!action) return;
+      try {
+        onRequest(phpActionRequest(action, finalPath, pages));
+      } catch (cause) {
+        onError(errorMessage(cause));
+      }
+    };
+    window.addEventListener('message', receive);
+    return () => window.removeEventListener('message', receive);
+  }, [generation, page.finalPath, pages, onRequest, onError]);
   const html = preview?.html ?? '';
   return (
     <div className="run-page">
       <h3>Strona {entry}</h3>
-      <p className="run-note">
+      <p className="run-note" aria-live="polite">
         {page.error === 'timeout'
           ? 'Strona nie odpowiedziała w ciągu 10 sekund. Sprawdź, czy kod nie zawiera nieskończonej pętli.'
           : page.error
@@ -190,18 +223,22 @@ function PageResult({
       {preview && <MissingAssets missing={preview.missing} inexact={preview.inexact} />}
       {html ? (
         <iframe
+          ref={frame}
           className="run-page-frame"
           title={`Wynik strony ${entry}`}
-          sandbox={scripts ? 'allow-scripts' : ''}
+          sandbox={generation ? 'allow-scripts allow-forms' : scripts ? 'allow-scripts' : ''}
           srcDoc={html}
         />
       ) : (
         !page.error && <p className="run-note">Strona nie zwróciła żadnej treści.</p>
       )}
-      <p className="run-note">
-        Odnośniki i formularze w tym podglądzie nie wysyłają żądań. Aby sprawdzić formularz, wpisz
-        jego pola powyżej i uruchom ponownie.
-      </p>
+      {html && (interactive || scripts) && (
+        <p className="run-note">
+          {interactive
+            ? 'Użyj lokalnego odnośnika lub formularza na stronie, aby wysłać kolejne żądanie.'
+            : 'Przełącz na podgląd formularzy, aby wysłać kolejne żądanie PHP.'}
+        </p>
+      )}
       {page.messages.trim() && (
         <details className="run-messages" open>
           <summary>Komunikaty PHP</summary>
@@ -215,15 +252,11 @@ function PageResult({
 function RunResult({
   result,
   dumpPath,
-  entry,
-  files,
-  scripts,
+  children,
 }: {
   result: SandboxRunResult;
   dumpPath: string;
-  entry: string;
-  files: ProjectFile[];
-  scripts: boolean;
+  children: ReactNode;
 }) {
   return (
     <section className="run-result" aria-label="Wynik uruchomienia">
@@ -261,7 +294,7 @@ function RunResult({
           ))}
         </ol>
       )}
-      {result.php && <PageResult page={result.php} entry={entry} files={files} scripts={scripts} />}
+      {children}
       {result.omittedStatements > 0 && (
         <p className="run-note">
           Wykonano pierwsze 30 instrukcji. Pominięte instrukcje: {result.omittedStatements}.
@@ -281,33 +314,35 @@ function RunResult({
 export function DatabaseRunner({
   store,
   files,
+  visible,
   available,
   readOnly,
+  pageSelection,
   onAddFile,
   onResult,
 }: {
   store: ProjectStore;
   files: ProjectFile[];
+  visible: boolean;
   available: boolean;
   readOnly: boolean;
+  pageSelection: { path: string } | null;
   onAddFile: (file: ProjectFile) => Promise<void>;
-  /** Lets the page keep the last run after this view is closed. */
+  /** Supplies the existing assistant with the last result for this attempt. */
   onResult?: (result: SandboxRunResult) => void;
 }) {
   const attemptId = store.get().project.id;
+  const id = useId();
   const [draft, setDraft] = useState<Draft>(() => loadDraft(attemptId));
+  const [view, setView] = useState<RunView>('sql');
   const [busy, setBusy] = useState(false),
     [status, setStatus] = useState<SandboxRunResponse['status'] | ''>(''),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
-    [result, setResult] = useState<{
-      value: SandboxRunResult;
-      dumpPath: string;
-      entry: string;
-      files: ProjectFile[];
-      scripts: boolean;
-    } | null>(null);
+    [results, setResults] = useState<Partial<Record<RunView, CompletedRun>>>({});
   const mounted = useRef(true),
+    running = useRef(false),
+    selectedSql = useRef(''),
     upload = useRef<HTMLInputElement>(null);
   useEffect(() => {
     mounted.current = true;
@@ -316,17 +351,31 @@ export function DatabaseRunner({
     };
   }, []);
   useEffect(() => {
+    if (!pageSelection) return;
+    setView('php');
+    setDraft((current) => ({ ...current, entry: pageSelection.path }));
+  }, [pageSelection]);
+  useEffect(() => {
     try {
       localStorage.setItem(draftKey(attemptId), JSON.stringify(draft));
     } catch {
       /* The form still works without a remembered draft. */
     }
   }, [attemptId, draft]);
+  // Retain the run and its polling when switching tabs, without mounting a second editor.
+  if (!visible) return null;
   const dumps = sqlFilePaths(files);
   const dumpPath = dumps.includes(draft.dumpPath) ? draft.dumpPath : '';
   const queries = files.find((file) => file.path.toLowerCase() === 'kwerendy.txt');
   const pages = pageFilePaths(files);
   const entry = pages.includes(draft.entry) ? draft.entry : '';
+  const database = draft.database.trim();
+  const result = results[view];
+  const stale =
+    !!result &&
+    (result.files !== files ||
+      result.request.database !== database ||
+      result.request.dumpPath !== (dumpPath || null));
   const changeField = (index: number, patch: Partial<FieldRow>) =>
     change({
       fields: draft.fields.map((row, position) =>
@@ -336,7 +385,7 @@ export function DatabaseRunner({
   const change = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
 
   const addDump = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || readOnly || running.current) return;
     setError('');
     setNotice('');
     try {
@@ -356,7 +405,13 @@ export function DatabaseRunner({
     }
   };
 
-  const run = async () => {
+  const run = async (
+    sql: string,
+    php: SandboxRunRequest['php'] = null,
+    previous?: CompletedRun,
+  ) => {
+    if (running.current || readOnly || !available || !database) return;
+    running.current = true;
     setBusy(true);
     setError('');
     setNotice('');
@@ -364,31 +419,37 @@ export function DatabaseRunner({
     try {
       await store.flush();
       const project = store.get().project;
-      const input = runInputFiles(project.files ?? []);
-      const selectedDump = sqlFilePaths(input).includes(draft.dumpPath) ? draft.dumpPath : null;
-      const selectedEntry = pageFilePaths(input).includes(draft.entry) ? draft.entry : null;
-      const php = selectedEntry
-        ? { entry: selectedEntry, method: draft.method, fields: requestFields(draft.fields) }
-        : null;
+      const snapshot = project.files ?? [];
+      if (previous && previous.files !== snapshot)
+        throw new Error('Pliki projektu zmieniły się. Otwórz stronę ponownie.');
+      const input = runInputFiles(snapshot);
+      if (
+        (dumpPath && !sqlFilePaths(input).includes(dumpPath)) ||
+        (php && !pageFilePaths(input).includes(php.entry))
+      )
+        throw new Error('Wybrany plik nie jest już częścią projektu. Wybierz plik ponownie.');
+      const request: SandboxRunRequest = { database, dumpPath: dumpPath || null, sql, php };
       const finished = await awaitRun(
         {
           submit: () =>
-            store.request((latest) =>
-              api<RunJob>(`/attempts/${latest.ticket.id}/runs`, {
+            store.request((latest) => {
+              if (
+                latest.submittedAt ||
+                (latest.deadlineAt && Date.parse(latest.deadlineAt) <= Date.now())
+              )
+                throw new Error('Czas pracy minął lub próba została już oddana.');
+              if (latest.files !== project.files)
+                throw new Error('Projekt zmienił się przed wysłaniem. Uruchom ponownie.');
+              return api<RunJob>(`/attempts/${latest.ticket.id}/runs`, {
                 method: 'POST',
                 body: {
                   token: latest.ticket.token,
-                  projectRevision: project.revision ?? 0,
-                  run: {
-                    database: draft.database.trim(),
-                    dumpPath: selectedDump,
-                    sql: draft.sql,
-                    php,
-                  },
+                  projectRevision: latest.revision ?? 0,
+                  run: request,
                   files: input,
                 },
-              }),
-            ),
+              });
+            }),
           poll: (job) =>
             api<SandboxRunResponse>(`/runs/${job.id}`, { headers: { 'X-Run-Token': job.token } }),
           acknowledge: (job) =>
@@ -396,19 +457,17 @@ export function DatabaseRunner({
         },
         { onStatus: (next) => mounted.current && setStatus(next), active: () => mounted.current },
       );
-      if (finished) onResult?.(finished);
-      if (finished && mounted.current)
-        setResult({
-          value: finished,
-          dumpPath: selectedDump ?? '',
-          entry: selectedEntry ?? '',
-          // The page is shown with the files it was executed with, not with later edits.
-          files: project.files ?? [],
-          scripts: draft.scripts,
-        });
+      if (finished && mounted.current) {
+        setResults((current) => ({
+          ...current,
+          [view]: { value: finished, request, files: snapshot },
+        }));
+        onResult?.(finished);
+      }
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
     } finally {
+      running.current = false;
       if (mounted.current) {
         setBusy(false);
         setStatus('');
@@ -416,15 +475,28 @@ export function DatabaseRunner({
     }
   };
 
-  const nothingToRun = !dumpPath && !draft.sql.trim() && !entry;
-  // A greyed-out button says nothing; name what is still missing.
-  const blocked = !available
-    ? 'Uruchamianie na serwerze jest teraz niedostępne.'
-    : !draft.database.trim()
-      ? 'Wpisz nazwę bazy danych.'
-      : nothingToRun
-        ? 'Wybierz plik bazy, wpisz zapytanie albo wskaż stronę PHP.'
-        : '';
+  const blocked = readOnly
+    ? 'Czas pracy minął lub próba została już oddana.'
+    : !available
+      ? 'Uruchamianie na serwerze jest teraz niedostępne.'
+      : !database
+        ? 'Wpisz nazwę bazy danych.'
+        : view === 'sql' && !dumpPath && !draft.sql.trim()
+          ? 'Wybierz plik bazy lub wpisz zapytanie SQL.'
+          : view === 'php' && !entry
+            ? 'Wybierz stronę do uruchomienia.'
+            : '';
+  const runSql = () => {
+    if (blocked || running.current) return;
+    const selection = selectedSql.current;
+    if (selection && !selection.trim()) {
+      setError('Zaznaczenie nie zawiera zapytania SQL.');
+      return;
+    }
+    void run(selection || draft.sql);
+  };
+  const openPage = () => void run('', { entry, method: 'GET', fields: [] });
+  const blockedId = blocked ? `${id}-blocked` : undefined;
   return (
     <div className="database-runner">
       <header>
@@ -432,10 +504,8 @@ export function DatabaseRunner({
           <Database size={20} /> Baza danych, SQL i PHP
         </h2>
         <p>
-          Zaimportuj własny plik .sql z materiałów do arkusza, wykonaj zapytania i otwórz stronę PHP
-          korzystającą z tej bazy. Każde uruchomienie zaczyna od czystej bazy: plik jest importowany
-          od nowa, potem po kolei wykonywane są wpisane instrukcje, a na końcu wywoływana jest
-          wybrana strona. To uruchomienie, nie ocena.
+          Każde uruchomienie tworzy czystą bazę i ponownie importuje wybrany plik .sql. To
+          uruchomienie, nie ocena.
         </p>
       </header>
       {!available && (
@@ -450,6 +520,7 @@ export function DatabaseRunner({
           <span>Nazwa bazy danych</span>
           <input
             value={draft.database}
+            readOnly={readOnly || busy}
             maxLength={64}
             spellCheck={false}
             autoComplete="off"
@@ -459,13 +530,14 @@ export function DatabaseRunner({
           <small>Litery bez polskich znaków, cyfry i znak podkreślenia.</small>
         </label>
         <div className="field">
-          <label htmlFor="run-dump">
+          <label htmlFor={`${id}-dump`}>
             <span>Plik bazy (.sql) z projektu</span>
           </label>
           <div className="run-dump-row">
             <select
-              id="run-dump"
+              id={`${id}-dump`}
               value={dumpPath}
+              disabled={readOnly || busy}
               onChange={(event) => change({ dumpPath: event.target.value })}
             >
               <option value="">Bez importu</option>
@@ -496,6 +568,26 @@ export function DatabaseRunner({
             Platforma nie dostarcza plików z arkuszy. Pobierz je ze źródła wskazanego przy arkuszu.
           </small>
         </div>
+      </div>
+      <div className="run-views" role="group" aria-label="Narzędzie bazy i PHP">
+        <button
+          type="button"
+          className="button secondary small"
+          aria-pressed={view === 'sql'}
+          onClick={() => setView('sql')}
+        >
+          SQL
+        </button>
+        <button
+          type="button"
+          className="button secondary small"
+          aria-pressed={view === 'php'}
+          onClick={() => setView('php')}
+        >
+          Strona PHP
+        </button>
+      </div>
+      {view === 'sql' ? (
         <div className="field run-sql">
           <span>Zapytania SQL</span>
           <Editor
@@ -503,24 +595,51 @@ export function DatabaseRunner({
             label="Zapytania SQL"
             minHeight={170}
             value={draft.sql}
-            readOnly={busy}
+            readOnly={readOnly || busy}
             onChange={(sql) => change({ sql: sql.slice(0, MAX_RUN_SQL_CHARACTERS) })}
-            onRun={() => {
-              if (!blocked) void run();
+            onSelectedText={(sql) => {
+              selectedSql.current = sql;
             }}
+            onRun={runSql}
           />
           <small>
-            Rozdziel instrukcje średnikami. Wykonywanych jest najwyżej 30 instrukcji. Ctrl+Enter
-            uruchamia.
+            Ctrl+Enter lub ⌘+Enter uruchamia zaznaczenie albo cały tekst. Rozdziel instrukcje
+            średnikami. Wykonywanych jest najwyżej 30 instrukcji.
           </small>
+          <div className="run-actions">
+            <button
+              type="button"
+              className="button primary"
+              disabled={busy || !!blocked}
+              aria-describedby={blockedId}
+              onClick={runSql}
+            >
+              {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
+              Uruchom SQL
+            </button>
+            {queries && (
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || readOnly}
+                onClick={() => change({ sql: queries.content.slice(0, MAX_RUN_SQL_CHARACTERS) })}
+              >
+                Wstaw treść kwerendy.txt
+              </button>
+            )}
+          </div>
         </div>
-        <fieldset className="run-php">
-          <legend>Strona PHP (opcjonalnie)</legend>
+      ) : (
+        <div className="run-php">
           <div className="run-php-row">
             <label className="field">
               <span>Strona do uruchomienia</span>
-              <select value={entry} onChange={(event) => change({ entry: event.target.value })}>
-                <option value="">Bez strony</option>
+              <select
+                value={entry}
+                disabled={readOnly || busy}
+                onChange={(event) => change({ entry: event.target.value })}
+              >
+                <option value="">Wybierz plik PHP lub HTML</option>
                 {pages.map((path) => (
                   <option key={path} value={path}>
                     {path}
@@ -528,116 +647,143 @@ export function DatabaseRunner({
                 ))}
               </select>
             </label>
-            <label className="field">
-              <span>Metoda formularza</span>
-              <select
-                value={draft.method}
-                disabled={!entry}
-                onChange={(event) =>
-                  change({ method: event.target.value === 'POST' ? 'POST' : 'GET' })
-                }
-              >
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-              </select>
-            </label>
-          </div>
-          {entry && (
-            <>
-              {draft.fields.map((row, index) => (
-                <div className="run-field-row" key={index}>
-                  <input
-                    aria-label={`Nazwa pola ${index + 1}`}
-                    placeholder="nazwa pola (name)"
-                    value={row.name}
-                    spellCheck={false}
-                    onChange={(event) => changeField(index, { name: event.target.value })}
-                  />
-                  <input
-                    aria-label={`Wartość pola ${index + 1}`}
-                    placeholder="wartość"
-                    value={row.value}
-                    onChange={(event) => changeField(index, { value: event.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="button quiet"
-                    aria-label={`Usuń pole ${index + 1}`}
-                    onClick={() =>
-                      change({ fields: draft.fields.filter((_, position) => position !== index) })
-                    }
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              <div className="run-php-options">
-                <button
-                  type="button"
-                  className="button secondary"
-                  disabled={draft.fields.length >= MAX_RUN_FIELDS}
-                  onClick={() => change({ fields: [...draft.fields, { name: '', value: '' }] })}
-                >
-                  <Plus size={16} />
-                  Dodaj pole formularza
-                </button>
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={draft.scripts}
-                    onChange={(event) => change({ scripts: event.target.checked })}
-                  />
-                  <span>Uruchom też skrypty JavaScript strony w podglądzie</span>
-                </label>
-              </div>
-              <small>
-                Pola odpowiadają atrybutom name formularza. Dla GET trafiają do adresu, dla POST do
-                treści żądania.
-              </small>
-            </>
-          )}
-        </fieldset>
-        <div className="run-actions">
-          <button
-            type="button"
-            className="button primary"
-            disabled={busy || !!blocked}
-            aria-describedby={blocked ? 'run-blocked' : undefined}
-            onClick={() => void run()}
-          >
-            {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
-            Uruchom
-          </button>
-          {queries && (
             <button
               type="button"
-              className="button secondary"
-              disabled={busy}
-              onClick={() => change({ sql: queries.content.slice(0, MAX_RUN_SQL_CHARACTERS) })}
+              className="button primary"
+              disabled={busy || !!blocked}
+              aria-describedby={blockedId}
+              onClick={openPage}
             >
-              Wstaw treść kwerendy.txt
+              {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
+              Otwórz stronę
             </button>
+          </div>
+          {entry && (
+            <details className="run-manual">
+              <summary>Żądanie ręczne</summary>
+              <fieldset disabled={readOnly || busy} className="run-manual-fields">
+                <label className="field">
+                  <span>Metoda formularza</span>
+                  <select
+                    value={draft.method}
+                    disabled={!entry}
+                    onChange={(event) =>
+                      change({ method: event.target.value === 'POST' ? 'POST' : 'GET' })
+                    }
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                  </select>
+                </label>
+                {draft.fields.map((row, index) => (
+                  <div className="run-field-row" key={index}>
+                    <input
+                      aria-label={`Nazwa pola ${index + 1}`}
+                      placeholder="nazwa pola (name)"
+                      value={row.name}
+                      spellCheck={false}
+                      onChange={(event) => changeField(index, { name: event.target.value })}
+                    />
+                    <input
+                      aria-label={`Wartość pola ${index + 1}`}
+                      placeholder="wartość"
+                      value={row.value}
+                      onChange={(event) => changeField(index, { value: event.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="button quiet"
+                      aria-label={`Usuń pole ${index + 1}`}
+                      onClick={() =>
+                        change({ fields: draft.fields.filter((_, position) => position !== index) })
+                      }
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <div className="run-php-options">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={draft.fields.length >= MAX_RUN_FIELDS}
+                    onClick={() => change({ fields: [...draft.fields, { name: '', value: '' }] })}
+                  >
+                    <Plus size={16} />
+                    Dodaj pole formularza
+                  </button>
+                </div>
+                <small>
+                  Uruchomienie ręczne wykona cały tekst z widoku SQL przed otwarciem strony.
+                </small>
+                <div className="run-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={!!blocked}
+                    aria-describedby={blockedId}
+                    onClick={() =>
+                      void run(draft.sql, {
+                        entry,
+                        method: draft.method,
+                        fields: requestFields(draft.fields),
+                      })
+                    }
+                  >
+                    Wykonaj żądanie
+                  </button>
+                </div>
+              </fieldset>
+            </details>
           )}
-          <span className="run-status" role="status">
-            {busy && (status === 'running' ? 'Wykonywanie w izolowanym środowisku…' : 'W kolejce…')}
-          </span>
-          {!busy && blocked && (
-            <span className="run-status" id="run-blocked">
-              {blocked}
-            </span>
+          {result?.value.php?.html && (
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={draft.scripts}
+                onChange={(event) => change({ scripts: event.target.checked })}
+              />
+              <span>Podgląd JavaScript</span>
+            </label>
           )}
         </div>
-      </div>
+      )}
+      {busy ? (
+        <div className="run-status" role="status">
+          {status === 'running' ? 'Wykonywanie w izolowanym środowisku…' : 'W kolejce…'}
+        </div>
+      ) : (
+        blocked && (
+          <div className="run-status" id={blockedId}>
+            {blocked}
+          </div>
+        )
+      )}
       {notice && <Notice>{notice}</Notice>}
       {error && <ErrorNotice message={error} />}
       {result && (
-        <RunResult
-          result={result.value}
-          dumpPath={result.dumpPath}
-          entry={result.entry}
-          files={result.files}
-          scripts={result.scripts}
-        />
+        <RunResult result={result.value} dumpPath={result.request.dumpPath ?? ''}>
+          {result.value.php && result.request.php && (
+            <>
+              {stale && (
+                <Notice>
+                  Zmieniono pliki projektu lub ustawienia bazy. Otwórz stronę ponownie.
+                </Notice>
+              )}
+              <PageResult
+                page={result.value.php}
+                entry={result.request.php.entry}
+                files={result.files}
+                scripts={draft.scripts}
+                enabled={!stale && !readOnly && available}
+                onRequest={(request) => {
+                  if (!stale) void run(result.request.sql, request, result);
+                }}
+                onError={setError}
+              />
+            </>
+          )}
+        </RunResult>
       )}
     </div>
   );

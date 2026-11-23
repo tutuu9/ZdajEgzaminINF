@@ -22,6 +22,7 @@ import {
   autocompletion,
   closeBrackets,
   closeBracketsKeymap,
+  closeCompletion,
 } from '@codemirror/autocomplete';
 import { search, searchKeymap } from '@codemirror/search';
 import {
@@ -133,6 +134,7 @@ export function Editor({
   sessionKey,
   initialView,
   onViewChange,
+  onSelectedText,
   reveal,
   onRun,
   tabMovesFocus = false,
@@ -146,6 +148,7 @@ export function Editor({
   sessionKey?: string;
   initialView?: ViewPosition;
   onViewChange?: (view: ViewPosition) => void;
+  onSelectedText?: (text: string) => void;
   reveal?: EditorReveal;
   /** Ctrl+Enter (Cmd+Enter) action, e.g. executing the statements being written. */
   onRun?: () => void;
@@ -160,8 +163,10 @@ export function Editor({
   const runCallback = useRef(onRun);
   runCallback.current = onRun;
   const positionCallback = useRef(onViewChange),
+    selectionCallback = useRef(onSelectedText),
     compartments = useRef<SavedEditor | null>(null);
   positionCallback.current = onViewChange;
+  selectionCallback.current = onSelectedText;
   const clearReveal = (instance: EditorView) => {
     if (instance.state.selection === revealedSelection.current)
       instance.dispatch({
@@ -283,6 +288,10 @@ export function Editor({
           EditorView.updateListener.of((update) => {
             if (update.transactions.some((tr) => tr.docChanged && !tr.annotation(externalValue)))
               callback.current(update.state.doc.toString());
+            if ((update.selectionSet || update.docChanged) && selectionCallback.current) {
+              const { from, to } = update.state.selection.main;
+              selectionCallback.current(update.state.sliceDoc(from, to));
+            }
             if (update.selectionSet || update.docChanged) notifyPosition();
           }),
         ),
@@ -307,6 +316,8 @@ export function Editor({
       });
       instance.scrollDOM.scrollTop = position.scrollTop;
     }
+    const { from, to } = instance.state.selection.main;
+    selectionCallback.current?.(instance.state.sliceDoc(from, to));
     compartments.current = {
       state: instance.state,
       position: { anchor: 0, head: 0, scrollTop: 0 },
@@ -348,7 +359,9 @@ export function Editor({
   useEffect(() => {
     const instance = view.current,
       config = compartments.current;
-    if (instance && config)
+    if (instance && config) {
+      // Clear a pending completion before removing its state on a read-only transition.
+      if (readOnly) closeCompletion(instance);
       instance.dispatch({
         effects: [
           config.readonly.reconfigure(accessSettings(readOnly, path)),
@@ -360,6 +373,7 @@ export function Editor({
           ),
         ],
       });
+    }
   }, [readOnly, label, path, minHeight]);
   useEffect(() => {
     const instance = view.current;

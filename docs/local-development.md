@@ -38,6 +38,14 @@ npm run worker
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to NestJS. The worker must be healthy for server-side project checks; reading lessons and theory do not execute PHP.
 
+## PHP and SQL workbench
+
+For an existing checkout, rebuild the sandbox with `npm run sandbox:build`. If the private `.env` specifies `SANDBOX_IMAGE`, set it to `zdaj-inf-sandbox:0.3.2` and restart the worker.
+
+Sign in to the local `/admin` and enable **Sprawdzanie na serwerze** and **Uruchamianie SQL i PHP**. Save with **Zapisz ustawienia**. In an open practical attempt with PHP or SQL, open **Baza i PHP**, enter the database name and choose your `.sql` file. Run a query under **SQL** or choose a project file under **Strona PHP**. Form and link actions each start a new run from the same dump. Results show the behaviour of your code, and the original paper provides the requirements for self-review.
+
+SQL and PHP runs default to off. When the worker is unavailable, the workbench saves the inputs locally and directs the learner to XAMPP or another local runtime. See [learner-initiated runs](checking.md#learner-initiated-runs) for limits and supported forms.
+
 ## Full Compose application
 
 After `npm ci` and `npm run setup:local` have prepared the private `.env`:

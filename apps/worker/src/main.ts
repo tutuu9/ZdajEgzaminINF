@@ -22,7 +22,7 @@ const dataDir = path.resolve(process.env.DATA_DIR ?? 'data');
 const profile = process.env.RUNNER_PROFILE ?? 'local-development';
 if (!['local-development', 'public-sandbox'].includes(profile))
   throw new Error('Invalid RUNNER_PROFILE.');
-const currentSandboxImage = 'zdaj-inf-sandbox:0.3.1';
+const currentSandboxImage = 'zdaj-inf-sandbox:0.3.2';
 const options: RunnerOptions = {
   dataDir,
   hostDataDir: process.env.SANDBOX_HOST_DATA_DIR,

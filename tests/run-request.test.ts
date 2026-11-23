@@ -46,6 +46,29 @@ describe('learner run request boundary', () => {
     });
   });
 
+  it('accepts a bounded URL query separately from ordered POST fields', () => {
+    const php = {
+      entry: 'motor.php',
+      method: 'POST',
+      query: [['miasto', 'Łódź']],
+      fields: [
+        ['wybor[]', '1'],
+        ['wybor[]', '2'],
+      ],
+    };
+    expect(validateRunRequest({ ...valid, php }, files).php).toEqual(php);
+    expect(() => validateRunRequest({ ...valid, php: { ...php, method: 'GET' } }, files)).toThrow();
+    expect(() =>
+      validateRunRequest({ ...valid, php: { ...php, query: [['x', 'a'.repeat(2001)]] } }, files),
+    ).toThrow();
+    expect(() =>
+      validateRunRequest(
+        { ...valid, php: { ...php, query: Array.from({ length: 19 }, () => ['x', '1']) } },
+        files,
+      ),
+    ).toThrow();
+  });
+
   it.each([
     ['a system database', { database: 'mysql' }],
     ['an injected database name', { database: 'a`; DROP DATABASE mysql; --' }],

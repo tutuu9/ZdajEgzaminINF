@@ -249,6 +249,70 @@ echo '<p id="wynik">' . $_SERVER['REQUEST_METHOD'] . ' ' . htmlspecialchars($_PO
     expect(result.php?.html).toContain('<p id="wynik">POST dokładny 8.99</p>');
   });
 
+  it('follows a local 307 with its POST fields and restores the dump on the next run', async () => {
+    const files = base([
+      {
+        path: 'sklep/formularz.php',
+        content: "<?php header('Location: wynik.php?' . http_build_query($_GET), true, 307);",
+      },
+      {
+        path: 'sklep/wynik.php',
+        content: `<?php
+$pdo = new PDO('mysql:host=localhost;dbname=Sklep_2024;charset=utf8mb4', 'root', '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $insert = $pdo->prepare("INSERT INTO produkty (kategorie_id, nazwa, cena, dodano) VALUES (1, ?, 5, '2024-04-01')");
+  foreach ($_POST['produkt'] ?? [] as $nazwa) $insert->execute([$nazwa]);
+}
+echo '<p>' . htmlspecialchars($_GET['filtr'] ?? '') . ': ' . $pdo->query('SELECT COUNT(*) FROM produkty')->fetchColumn() . '</p>';`,
+      },
+    ]);
+    const posted = await run(
+      'php-local-redirect',
+      {
+        php: {
+          entry: 'sklep/formularz.php',
+          method: 'POST',
+          query: [['filtr', 'Łódź']],
+          fields: [
+            ['produkt[]', 'Śliwka'],
+            ['produkt[]', 'Wiśnia'],
+          ],
+        },
+      },
+      files,
+    );
+    expect(posted.php).toMatchObject({
+      status: 200,
+      finalPath: '/sklep/wynik.php?filtr=%C5%81%C3%B3d%C5%BA',
+      html: '<p>Łódź: 5</p>',
+    });
+    const reopened = await run(
+      'php-reopened',
+      {
+        php: { entry: 'sklep/wynik.php', method: 'GET', fields: [['filtr', 'Łódź']] },
+      },
+      files,
+    );
+    expect(reopened.php).toMatchObject({ status: 200, html: '<p>Łódź: 3</p>' });
+  });
+
+  it('reports a redirect outside the project without following it', async () => {
+    const result = await run(
+      'php-external-redirect',
+      {
+        php: { entry: 'index.php', method: 'GET', fields: [] },
+      },
+      base([
+        { path: 'index.php', content: "<?php header('Location: https://example.invalid/next');" },
+      ]),
+    );
+    expect(result.php).toMatchObject({
+      status: 302,
+      finalPath: '/index.php',
+      redirect: 'https://example.invalid/next',
+    });
+  });
+
   it('returns PHP messages for a wrong database name and bounds an endless page', async () => {
     const wrong = await run(
       'php-wrong-database',
