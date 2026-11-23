@@ -533,6 +533,19 @@ export const MAX_RUN_DUMP_BYTES = 2 * 1024 * 1024;
 export const MAX_RUN_SQL_CHARACTERS = 64 * 1024;
 export const MAX_RUN_FIELDS = 20;
 export const MAX_RUN_FIELD_CHARACTERS = 2000;
+export function isRunParameterList(value: unknown): value is [string, string][] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_RUN_FIELDS &&
+    value.every(
+      (pair) =>
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        pair[0] !== '' &&
+        pair.every((part) => typeof part === 'string' && part.length <= MAX_RUN_FIELD_CHARACTERS),
+    )
+  );
+}
 /** Text files of one run. Stored in the job row, so it stays far below the project limit. */
 export const MAX_RUN_INPUT_BYTES = 4 * 1024 * 1024;
 export interface SandboxRunSubmission {
@@ -556,7 +569,13 @@ export interface SandboxRunRequest {
   /** Statements executed in order after the import. */
   sql: string;
   /** One page request made after the statements. */
-  php: { entry: string; method: 'GET' | 'POST'; fields: [string, string][] } | null;
+  php: {
+    entry: string;
+    method: 'GET' | 'POST';
+    fields: [string, string][];
+    /** Query string on a POST target. GET requests place all parameters in fields. */
+    query?: [string, string][];
+  } | null;
 }
 export interface SandboxRunStatement {
   index: number;

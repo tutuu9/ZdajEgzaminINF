@@ -613,7 +613,12 @@ describe('real Nest API and PostgreSQL boundaries', () => {
           database: 'motory',
           dumpPath: 'baza.sql',
           sql: 'SELECT 1;',
-          php: { entry: 'motor.php', method: 'GET', fields: [['id', '2']] },
+          php: {
+            entry: 'motor.php',
+            method: 'POST',
+            query: [['id', '2']],
+            fields: [['miasto', 'Łódź']],
+          },
           ignored: true,
         },
         files: [
@@ -643,7 +648,12 @@ describe('real Nest API and PostgreSQL boundaries', () => {
           database: 'motory',
           dumpPath: 'baza.sql',
           sql: 'SELECT 1;',
-          php: { entry: 'motor.php', method: 'GET', fields: [['id', '2']] },
+          php: {
+            entry: 'motor.php',
+            method: 'POST',
+            query: [['id', '2']],
+            fields: [['miasto', 'Łódź']],
+          },
         },
         files: [
           { path: 'baza.sql', content: 'CREATE TABLE a (id INT);', encoding: 'utf8' },
@@ -796,6 +806,22 @@ describe('real Nest API and PostgreSQL boundaries', () => {
       await owner.request('/admin/settings', 'PATCH', { checkingEnabled: true });
 
       expect(await submit({ token: 'x'.repeat(32) })).toBe(404);
+      const finished = await practice('inf03-01-24-06-sg');
+      expect(
+        (
+          await learner.request(`/attempts/${finished.id}/complete`, 'POST', {
+            token: finished.token,
+          })
+        ).status,
+      ).toBe(201);
+      expect(await submit({ token: finished.token }, `/attempts/${finished.id}/runs`)).toBe(409);
+      const timedOut = await practice('inf03-01-24-06-sg', 'egzamin');
+      await db.attemptTicket.update({
+        where: { id: timedOut.id },
+        data: { deadlineAt: new Date(Date.now() - 1000) },
+      });
+      expect(await submit({ token: timedOut.token }, `/attempts/${timedOut.id}/runs`)).toBe(403);
+      expect(await db.sandboxRunJob.count()).toBe(0);
       const noDatabasePart = await practice('inf03-01-24-01-sg');
       expect(
         await submit({ token: noDatabasePart.token }, `/attempts/${noDatabasePart.id}/runs`),

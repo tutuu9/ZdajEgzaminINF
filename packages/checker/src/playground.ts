@@ -1,7 +1,7 @@
 import {
+  isRunParameterList,
   MAX_RUN_DUMP_BYTES,
   MAX_RUN_FIELDS,
-  MAX_RUN_FIELD_CHARACTERS,
   MAX_RUN_SQL_CHARACTERS,
   type ProjectFile,
   type SandboxRunRequest,
@@ -46,21 +46,21 @@ export function validateRunRequest(value: unknown, files: ProjectFile[]): Sandbo
     if (page.method !== 'GET' && page.method !== 'POST')
       throw new Error('Strona może zostać wywołana metodą GET albo POST.');
     const fields = page.fields ?? [];
+    const query = page.query === undefined ? [] : page.query;
+    if (page.query !== undefined && page.method !== 'POST')
+      throw new Error('Dodatkowe parametry adresu są dostępne tylko dla metody POST.');
     if (
-      !Array.isArray(fields) ||
-      fields.length > MAX_RUN_FIELDS ||
-      fields.some(
-        (field) =>
-          !Array.isArray(field) ||
-          field.length !== 2 ||
-          field.some(
-            (part) => typeof part !== 'string' || part.length > MAX_RUN_FIELD_CHARACTERS,
-          ) ||
-          !field[0],
-      )
+      !isRunParameterList(fields) ||
+      !isRunParameterList(query) ||
+      fields.length + query.length > MAX_RUN_FIELDS
     )
-      throw new Error('Formularz może zawierać maksymalnie 20 nazwanych pól tekstowych.');
-    php = { entry, method: page.method, fields: fields.map(([name, text]) => [name, text]) };
+      throw new Error('Adres i formularz mogą zawierać łącznie do 20 pól po 2000 znaków.');
+    php = {
+      entry,
+      method: page.method,
+      fields: fields.map(([name, text]) => [name, text]),
+      ...(query.length ? { query: query.map(([name, text]) => [name, text]) } : {}),
+    };
   }
   if (!dumpPath && !sql.trim() && !php)
     throw new Error('Wybierz plik bazy, zapytania albo stronę do uruchomienia.');
@@ -131,7 +131,12 @@ function normaliseResult(payload: unknown, database: string, runtimeMs: number):
           contentType: page.contentType === null ? null : text(page.contentType, 200),
           html: text(page.html, 512 * 1024),
           truncated: page.truncated === true,
-          finalPath: page.finalPath === null ? null : text(page.finalPath, 2000),
+          // The browser uses this as the base for the next request. A clipped query
+          // would silently change what PHP receives from an empty form action.
+          finalPath:
+            typeof page.finalPath === 'string' && page.finalPath.length <= 8192
+              ? page.finalPath
+              : null,
           ...(typeof page.redirect === 'string' ? { redirect: text(page.redirect, 2000) } : {}),
           ...(page.error === 'timeout' || page.error === 'unavailable'
             ? { error: page.error }

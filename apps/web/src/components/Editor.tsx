@@ -22,6 +22,7 @@ import {
   autocompletion,
   closeBrackets,
   closeBracketsKeymap,
+  closeCompletion,
 } from '@codemirror/autocomplete';
 import { search, searchKeymap } from '@codemirror/search';
 import {
@@ -358,7 +359,9 @@ export function Editor({
   useEffect(() => {
     const instance = view.current,
       config = compartments.current;
-    if (instance && config)
+    if (instance && config) {
+      // Clear a pending completion before removing its state on a read-only transition.
+      if (readOnly) closeCompletion(instance);
       instance.dispatch({
         effects: [
           config.readonly.reconfigure(accessSettings(readOnly, path)),
@@ -370,6 +373,7 @@ export function Editor({
           ),
         ],
       });
+    }
   }, [readOnly, label, path, minHeight]);
   useEffect(() => {
     const instance = view.current;

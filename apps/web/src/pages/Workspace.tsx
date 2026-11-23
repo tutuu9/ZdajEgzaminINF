@@ -1582,26 +1582,25 @@ export function Workspace() {
               />
             )}
           {(tab === 'database' || databaseVisited) && store && (
-            <div hidden={tab !== 'database'}>
-              <DatabaseRunner
-                key={attempt.id}
-                store={store}
-                files={attempt.files ?? []}
-                available={Boolean(data?.features.runsAvailable)}
-                readOnly={closed || overtime}
-                pageSelection={databasePage}
-                onResult={setLastRun}
-                onAddFile={(added) =>
-                  update((latest) => ({
-                    ...latest,
-                    files: [
-                      ...(latest.files ?? []).filter((item) => item.path !== added.path),
-                      added,
-                    ],
-                  }))
-                }
-              />
-            </div>
+            <DatabaseRunner
+              key={attempt.id}
+              store={store}
+              files={attempt.files ?? []}
+              visible={tab === 'database'}
+              available={Boolean(data?.features.runsAvailable)}
+              readOnly={closed || overtime}
+              pageSelection={databasePage}
+              onResult={setLastRun}
+              onAddFile={(added) =>
+                update((latest) => ({
+                  ...latest,
+                  files: [
+                    ...(latest.files ?? []).filter((item) => item.path !== added.path),
+                    added,
+                  ],
+                }))
+              }
+            />
           )}
           {(tab === 'code' || tab === 'preview') && (
             <div className="project-workbench">

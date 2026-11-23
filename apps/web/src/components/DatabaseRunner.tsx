@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Database, Loader2, Play, Plus, Trash2, Upload } from 'lucide-react';
 import type {
   ProjectFile,
@@ -10,6 +10,7 @@ import type {
 import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS } from '@zdaj/shared';
 import { api, errorMessage } from '../api';
 import { createPreview } from '../preview';
+import { phpActionRequest, phpResultEntry, readPhpAction } from '../php-preview';
 import { Editor } from './Editor';
 import type { ProjectStore } from '../project-store';
 import {
@@ -40,6 +41,7 @@ interface Draft {
   scripts: boolean;
 }
 type RunView = 'sql' | 'php';
+type PageRequest = NonNullable<SandboxRunRequest['php']>;
 interface CompletedRun {
   value: SandboxRunResult;
   request: SandboxRunRequest;
@@ -161,31 +163,55 @@ function PageResult({
   entry,
   files,
   scripts,
+  enabled,
+  onRequest,
+  onError,
 }: {
   page: NonNullable<SandboxRunResult['php']>;
   entry: string;
   files: ProjectFile[];
   scripts: boolean;
+  enabled: boolean;
+  onRequest: (request: PageRequest) => void;
+  onError: (message: string) => void;
 }) {
-  // The server returns markup only. Styles and images come from the local project, and the
-  // frame keeps the same isolation as the ordinary preview: no network, no form target.
-  const preview = useMemo(
-    () =>
-      page.html
-        ? createPreview(files, entry, {
-            markup: page.html,
-            scripts,
-            // After a redirect the markup belongs to another page, so its folder is the base.
-            base: page.finalPath?.split(/[?#]/)[0]!.replace(/^\/+/, '') || entry,
-          })
-        : undefined,
-    [files, entry, page.html, page.finalPath, scripts],
-  );
+  const frame = useRef<HTMLIFrameElement>(null);
+  const pages = useMemo(() => pageFilePaths(files), [files]);
+  const base = phpResultEntry(page.finalPath, pages);
+  const interactive =
+    enabled &&
+    !scripts &&
+    !!base &&
+    !page.truncated &&
+    /^text\/html\b/i.test(page.contentType ?? '');
+  const { preview, generation } = useMemo(() => {
+    const generation = interactive ? crypto.randomUUID() : undefined;
+    const preview = page.html
+      ? createPreview(files, entry, { markup: page.html, scripts, base, phpGeneration: generation })
+      : undefined;
+    return { preview, generation };
+  }, [files, entry, page, base, scripts, interactive]);
+  useEffect(() => {
+    const finalPath = page.finalPath;
+    if (!generation || !finalPath) return;
+    const receive = (event: MessageEvent) => {
+      if (event.origin !== 'null' || event.source !== frame.current?.contentWindow) return;
+      const action = readPhpAction(event.data, generation);
+      if (!action) return;
+      try {
+        onRequest(phpActionRequest(action, finalPath, pages));
+      } catch (cause) {
+        onError(errorMessage(cause));
+      }
+    };
+    window.addEventListener('message', receive);
+    return () => window.removeEventListener('message', receive);
+  }, [generation, page.finalPath, pages, onRequest, onError]);
   const html = preview?.html ?? '';
   return (
     <div className="run-page">
       <h3>Strona {entry}</h3>
-      <p className="run-note">
+      <p className="run-note" aria-live="polite">
         {page.error === 'timeout'
           ? 'Strona nie odpowiedziała w ciągu 10 sekund. Sprawdź, czy kod nie zawiera nieskończonej pętli.'
           : page.error
@@ -197,18 +223,22 @@ function PageResult({
       {preview && <MissingAssets missing={preview.missing} inexact={preview.inexact} />}
       {html ? (
         <iframe
+          ref={frame}
           className="run-page-frame"
           title={`Wynik strony ${entry}`}
-          sandbox={scripts ? 'allow-scripts' : ''}
+          sandbox={generation ? 'allow-scripts allow-forms' : scripts ? 'allow-scripts' : ''}
           srcDoc={html}
         />
       ) : (
         !page.error && <p className="run-note">Strona nie zwróciła żadnej treści.</p>
       )}
-      <p className="run-note">
-        Odnośniki i formularze w tym podglądzie nie wysyłają żądań. Aby sprawdzić formularz, wpisz
-        jego pola powyżej i uruchom ponownie.
-      </p>
+      {html && (interactive || scripts) && (
+        <p className="run-note">
+          {interactive
+            ? 'Użyj lokalnego odnośnika lub formularza na stronie, aby wysłać kolejne żądanie.'
+            : 'Przełącz na podgląd formularzy, aby wysłać kolejne żądanie PHP.'}
+        </p>
+      )}
       {page.messages.trim() && (
         <details className="run-messages" open>
           <summary>Komunikaty PHP</summary>
@@ -222,15 +252,11 @@ function PageResult({
 function RunResult({
   result,
   dumpPath,
-  entry,
-  files,
-  scripts,
+  children,
 }: {
   result: SandboxRunResult;
   dumpPath: string;
-  entry: string;
-  files: ProjectFile[];
-  scripts: boolean;
+  children: ReactNode;
 }) {
   return (
     <section className="run-result" aria-label="Wynik uruchomienia">
@@ -268,7 +294,7 @@ function RunResult({
           ))}
         </ol>
       )}
-      {result.php && <PageResult page={result.php} entry={entry} files={files} scripts={scripts} />}
+      {children}
       {result.omittedStatements > 0 && (
         <p className="run-note">
           Wykonano pierwsze 30 instrukcji. Pominięte instrukcje: {result.omittedStatements}.
@@ -288,6 +314,7 @@ function RunResult({
 export function DatabaseRunner({
   store,
   files,
+  visible,
   available,
   readOnly,
   pageSelection,
@@ -296,6 +323,7 @@ export function DatabaseRunner({
 }: {
   store: ProjectStore;
   files: ProjectFile[];
+  visible: boolean;
   available: boolean;
   readOnly: boolean;
   pageSelection: { path: string } | null;
@@ -334,6 +362,8 @@ export function DatabaseRunner({
       /* The form still works without a remembered draft. */
     }
   }, [attemptId, draft]);
+  // Retain the run and its polling when switching tabs, without mounting a second editor.
+  if (!visible) return null;
   const dumps = sqlFilePaths(files);
   const dumpPath = dumps.includes(draft.dumpPath) ? draft.dumpPath : '';
   const queries = files.find((file) => file.path.toLowerCase() === 'kwerendy.txt');
@@ -341,6 +371,11 @@ export function DatabaseRunner({
   const entry = pages.includes(draft.entry) ? draft.entry : '';
   const database = draft.database.trim();
   const result = results[view];
+  const stale =
+    !!result &&
+    (result.files !== files ||
+      result.request.database !== database ||
+      result.request.dumpPath !== (dumpPath || null));
   const changeField = (index: number, patch: Partial<FieldRow>) =>
     change({
       fields: draft.fields.map((row, position) =>
@@ -370,7 +405,11 @@ export function DatabaseRunner({
     }
   };
 
-  const run = async (sql: string, php: SandboxRunRequest['php'] = null) => {
+  const run = async (
+    sql: string,
+    php: SandboxRunRequest['php'] = null,
+    previous?: CompletedRun,
+  ) => {
     if (running.current || readOnly || !available || !database) return;
     running.current = true;
     setBusy(true);
@@ -381,6 +420,8 @@ export function DatabaseRunner({
       await store.flush();
       const project = store.get().project;
       const snapshot = project.files ?? [];
+      if (previous && previous.files !== snapshot)
+        throw new Error('Pliki projektu zmieniły się. Otwórz stronę ponownie.');
       const input = runInputFiles(snapshot);
       if (
         (dumpPath && !sqlFilePaths(input).includes(dumpPath)) ||
@@ -446,8 +487,13 @@ export function DatabaseRunner({
             ? 'Wybierz stronę do uruchomienia.'
             : '';
   const runSql = () => {
-    const sql = selectedSql.current.trim() ? selectedSql.current : draft.sql;
-    if (!blocked) void run(sql);
+    if (blocked || running.current) return;
+    const selection = selectedSql.current;
+    if (selection && !selection.trim()) {
+      setError('Zaznaczenie nie zawiera zapytania SQL.');
+      return;
+    }
+    void run(selection || draft.sql);
   };
   const openPage = () => void run('', { entry, method: 'GET', fields: [] });
   const blockedId = blocked ? `${id}-blocked` : undefined;
@@ -690,14 +736,16 @@ export function DatabaseRunner({
               </fieldset>
             </details>
           )}
-          <label className="checkbox-field">
-            <input
-              type="checkbox"
-              checked={draft.scripts}
-              onChange={(event) => change({ scripts: event.target.checked })}
-            />
-            <span>Podgląd JavaScript</span>
-          </label>
+          {result?.value.php?.html && (
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={draft.scripts}
+                onChange={(event) => change({ scripts: event.target.checked })}
+              />
+              <span>Podgląd JavaScript</span>
+            </label>
+          )}
         </div>
       )}
       {busy ? (
@@ -714,13 +762,28 @@ export function DatabaseRunner({
       {notice && <Notice>{notice}</Notice>}
       {error && <ErrorNotice message={error} />}
       {result && (
-        <RunResult
-          result={result.value}
-          dumpPath={result.request.dumpPath ?? ''}
-          entry={result.request.php?.entry ?? ''}
-          files={result.files}
-          scripts={draft.scripts}
-        />
+        <RunResult result={result.value} dumpPath={result.request.dumpPath ?? ''}>
+          {result.value.php && result.request.php && (
+            <>
+              {stale && (
+                <Notice>
+                  Zmieniono pliki projektu lub ustawienia bazy. Otwórz stronę ponownie.
+                </Notice>
+              )}
+              <PageResult
+                page={result.value.php}
+                entry={result.request.php.entry}
+                files={result.files}
+                scripts={draft.scripts}
+                enabled={!stale && !readOnly && available}
+                onRequest={(request) => {
+                  if (!stale) void run(result.request.sql, request, result);
+                }}
+                onError={setError}
+              />
+            </>
+          )}
+        </RunResult>
       )}
     </div>
   );

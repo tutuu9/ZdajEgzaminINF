@@ -5,6 +5,7 @@ import { prepareInspection } from './inspector/source';
 import { createInspectionBridge } from './inspector/bridge';
 import type { InspectionIndex } from './inspector/types';
 import { consoleBridgeScript } from './preview-console';
+import { phpPreviewBridge, preparePhpPreview } from './php-preview';
 
 /** Retain only literal HTML outside PHP blocks. PHP is never evaluated in a preview. */
 export function staticPhpMarkup(source: string) {
@@ -217,6 +218,8 @@ export function createPreview(
     markup?: string;
     /** Page whose folder relative addresses start from, when it differs from the entry. */
     base?: string;
+    /** Enable native form events with the trusted PHP bridge and learner scripts removed. */
+    phpGeneration?: string;
   } = {},
 ): {
   html: string;
@@ -247,8 +250,9 @@ export function createPreview(
   const nonce = previewNonce();
   // Inspection owns its trusted bridge; learner JavaScript stays disabled. Measurement
   // frames never get instrumentation or a script, even if inspection is requested.
-  const inspecting = options.inspection && !options.preserveResourceAttributes;
-  const scripts = !inspecting && options.scripts !== false;
+  const inspecting =
+    options.inspection && !options.preserveResourceAttributes && !options.phpGeneration;
+  const scripts = !inspecting && !options.phpGeneration && options.scripts !== false;
   const prepared = inspecting ? prepareInspection(files, entry) : undefined;
   // Used only by the hidden, script-free style measurement frame. CSP blocks
   // original URLs, while attribute selectors retain their actual meaning.
@@ -377,13 +381,15 @@ export function createPreview(
           element.setAttribute(name, address);
         }
       });
-  root.querySelectorAll('a[href]').forEach((link) => {
-    const path = locate(origin, link.getAttribute('href') || '')?.path;
-    if (!preserveAttributes) link.setAttribute('href', '#');
-    if (path && /\.(?:html?|php)$/i.test(path)) link.setAttribute('data-preview-path', path);
-    link.removeAttribute('target');
-    link.removeAttribute('download');
-  });
+  if (options.phpGeneration) preparePhpPreview(root);
+  else
+    root.querySelectorAll('a[href]').forEach((link) => {
+      const path = locate(origin, link.getAttribute('href') || '')?.path;
+      if (!preserveAttributes) link.setAttribute('href', '#');
+      if (path && /\.(?:html?|php)$/i.test(path)) link.setAttribute('data-preview-path', path);
+      link.removeAttribute('target');
+      link.removeAttribute('download');
+    });
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
   csp.content = `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'; media-src data:`;
@@ -413,6 +419,12 @@ export function createPreview(
     `${handlers.join('\n')}\ndocument.addEventListener('click',function(event){var link=event.target instanceof Element?event.target.closest('a'):null;if(link){event.preventDefault();var path=link.getAttribute('data-preview-path');if(path)parent.postMessage({type:'zdaj-preview-navigate',path:path},'*');}},true);document.addEventListener('submit',function(event){event.preventDefault();},true);`,
   );
   if (scripts) body.append(bridge);
+  if (options.phpGeneration) {
+    const phpBridge = doc.createElement('script');
+    phpBridge.setAttribute('nonce', nonce);
+    phpBridge.textContent = scriptText(phpPreviewBridge(options.phpGeneration));
+    body.append(phpBridge);
+  }
   if (prepared) {
     const attribute = prepared.index.attribute;
     const present = new Set(

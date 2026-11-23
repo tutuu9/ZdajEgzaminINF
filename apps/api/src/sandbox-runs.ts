@@ -2,6 +2,7 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   GoneException,
   HttpException,
   NotFoundException,
@@ -10,7 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, type AttemptTicket } from '@prisma/client';
 import { db } from '@zdaj/database';
 import {
   fileBuffer,
@@ -47,11 +48,21 @@ function resultToken(attemptToken: string, id: string) {
   return createHmac('sha256', attemptToken).update(`sandbox-run:${id}`).digest('base64url');
 }
 
+type RunWindow = Pick<AttemptTicket, 'submittedAt' | 'deadlineAt' | 'expiresAt'>;
+function requireOpenAttempt(attempt: RunWindow) {
+  const now = new Date();
+  if (attempt.expiresAt <= now) throw new GoneException('Dane serwerowe tej próby wygasły.');
+  if (attempt.submittedAt) throw new ConflictException('Ta próba została już oddana.');
+  if (attempt.deadlineAt && attempt.deadlineAt <= now)
+    throw new ForbiddenException('Czas pracy minął.');
+}
+
 export async function submitSandboxRun(attemptId: string, body: unknown, req: Request) {
   const value = parse(requestSchema, body);
   // A run replaces the examination station's local server. It reveals no teaching
   // material and no assessment, so it is available in every mode, including Egzamin.
   const attempt = await getAttempt(attemptId, value.token);
+  requireOpenAttempt(attempt);
   if (!attempt.taskId || !attempt.taskVersion)
     throw new BadRequestException('To nie jest próba praktyczna.');
   const task = await taskVersion(attempt.taskId, attempt.taskVersion);
@@ -97,6 +108,11 @@ export async function submitSandboxRun(attemptId: string, body: unknown, req: Re
   const token = resultToken(value.token, id);
   const queued = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(74620401)::text`;
+    const [current] = await tx.$queryRaw<RunWindow[]>`
+      SELECT "submittedAt", "deadlineAt", "expiresAt" FROM "AttemptTicket"
+      WHERE "id" = ${attemptId} FOR UPDATE`;
+    if (!current) throw new GoneException('Dane serwerowe tej próby wygasły.');
+    requireOpenAttempt(current);
     if (existing) await tx.sandboxRunJob.deleteMany({ where: { id: existing.id } });
     const duplicate = await tx.sandboxRunJob.findFirst({
       where: { ...identity, expiresAt: { gt: new Date() } },

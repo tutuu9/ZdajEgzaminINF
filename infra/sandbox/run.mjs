@@ -1,7 +1,7 @@
 // Learner-initiated run: import the learner's own dump, execute their statements and
 // optionally request one PHP page. It reports what happened; it never grades.
 import { Buffer } from 'node:buffer';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import mariadb from 'mariadb';
 import {
@@ -32,12 +32,14 @@ const LIMITS = {
   resultCharacters: 256 * 1024,
   tables: 50,
   fields: 20,
+  fieldCharacters: 2000,
   redirects: 3,
   requestMs: 10000,
   htmlBytes: 512 * 1024,
   messageCharacters: 8192,
 };
 const ORIGIN = 'http://127.0.0.1:8080';
+const PAGE_EXTENSIONS = ['.php', '.html', '.htm'];
 
 function projectFile(relative, extensions) {
   if (
@@ -51,6 +53,21 @@ function projectFile(relative, extensions) {
   if (!resolved.startsWith('/project/')) throw new InfrastructureError('Invalid project path.');
   return resolved;
 }
+
+function validParameters(value) {
+  return (
+    Array.isArray(value) &&
+    value.length <= LIMITS.fields &&
+    value.every(
+      (pair) =>
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        pair[0] !== '' &&
+        pair.every((part) => typeof part === 'string' && part.length <= LIMITS.fieldCharacters),
+    )
+  );
+}
+
 function validated() {
   const { database, dumpPath = null, sql: source = '', php = null } = task;
   if (
@@ -61,17 +78,16 @@ function validated() {
     throw new InfrastructureError('Invalid database name.');
   if (typeof source !== 'string') throw new InfrastructureError('Invalid statements.');
   if (php) {
+    const query = php.query === undefined ? [] : php.query;
     if (
       !['GET', 'POST'].includes(php.method) ||
-      !Array.isArray(php.fields) ||
-      php.fields.length > LIMITS.fields ||
-      php.fields.some(
-        (field) =>
-          !Array.isArray(field) || field.length !== 2 || field.some((v) => typeof v !== 'string'),
-      )
+      (php.query !== undefined && php.method !== 'POST') ||
+      !validParameters(php.fields) ||
+      !validParameters(query) ||
+      php.fields.length + query.length > LIMITS.fields
     )
       throw new InfrastructureError('Invalid page request.');
-    projectFile(php.entry, ['.php', '.html', '.htm']);
+    projectFile(php.entry, PAGE_EXTENSIONS);
   }
   return {
     database,
@@ -242,6 +258,18 @@ async function executeStatements(database, source) {
   return { results, omitted: all.length - list.length, connectionLost };
 }
 
+async function redirectPage(target) {
+  if (target.origin !== ORIGIN || target.username || target.password) return false;
+  try {
+    const parts = target.pathname.slice(1).split('/').map(decodeURIComponent);
+    if (parts.some((part) => !part || part === '.' || part === '..' || /[\\/]/u.test(part)))
+      return false;
+    return (await stat(projectFile(parts.join('/'), PAGE_EXTENSIONS))).isFile();
+  } catch {
+    return false;
+  }
+}
+
 async function requestPage(php) {
   let url = new URL(
     `${ORIGIN}/${php.entry
@@ -251,7 +279,7 @@ async function requestPage(php) {
   );
   const fields = new URLSearchParams(php.fields);
   let method = php.method;
-  if (method === 'GET') url.search = fields.toString();
+  url.search = method === 'GET' ? fields.toString() : new URLSearchParams(php.query).toString();
   const signal = AbortSignal.timeout(LIMITS.requestMs);
   const page = { status: null, contentType: null, html: '', truncated: false, finalPath: null };
   try {
@@ -265,15 +293,21 @@ async function requestPage(php) {
       });
       const location = response.headers.get('location');
       if (![301, 302, 303, 307, 308].includes(response.status) || !location) break;
-      const target = new URL(location, url);
-      // The sandbox has no network; a redirect elsewhere is reported, never followed.
-      if (target.origin !== ORIGIN || hop >= LIMITS.redirects) {
-        page.redirect = target.origin === ORIGIN ? target.pathname + target.search : target.href;
+      let target;
+      try {
+        target = new URL(location, url);
+      } catch {
+        page.redirect = location;
+        break;
+      }
+      if (hop >= LIMITS.redirects || !(await redirectPage(target))) {
+        page.redirect = location;
         break;
       }
       await response.body?.cancel().catch(() => undefined);
       url = target;
-      method = 'GET';
+      if (response.status === 303 || (method === 'POST' && [301, 302].includes(response.status)))
+        method = 'GET';
     }
     page.status = response.status;
     page.contentType = response.headers.get('content-type');

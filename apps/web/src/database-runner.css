@@ -106,6 +106,9 @@
 .run-page h3 {
   font-size: 16px;
 }
+.run-page .run-note {
+  overflow-wrap: anywhere;
+}
 .run-page-frame {
   display: block;
   width: 100%;
