@@ -167,6 +167,8 @@ export function Workspace() {
     [inspectChoice, setInspectChoice] = useState<{ generation: string; id: string }>(),
     [checkStatus, setCheckStatus] = useState(''),
     [hintBusy, setHintBusy] = useState(false),
+    [databaseVisited, setDatabaseVisited] = useState(false),
+    [databasePage, setDatabasePage] = useState<{ path: string } | null>(null),
     [lastRun, setLastRun] = useState<SandboxRunResult | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null),
     iframeRef = useRef<HTMLIFrameElement>(null),
@@ -246,7 +248,8 @@ export function Workspace() {
   );
   // The database view is a tool, not a place in the paper: it is reachable by URL but is
   // not stored as the project's last view, so older backups stay compatible.
-  const openDatabase = () => {
+  const openDatabase = (path?: string) => {
+    if (path) setDatabasePage({ path });
     setEditorReveal(undefined);
     setTabState('database');
     setParams(
@@ -258,6 +261,9 @@ export function Workspace() {
       { replace: true },
     );
   };
+  useEffect(() => {
+    if (tab === 'database') setDatabaseVisited(true);
+  }, [tab]);
   const setPreviewEntry = (path: string) => {
     setPreviewEntryState(path);
     remember({ previewEntry: path });
@@ -316,6 +322,8 @@ export function Workspace() {
     setError('');
     setAttempt(null);
     setEditorReveal(undefined);
+    setDatabaseVisited(false);
+    setDatabasePage(null);
     setLastRun(null);
     setTabState('code');
     storeRef.current = null;
@@ -956,6 +964,21 @@ export function Workspace() {
               onClick={() => changeEditorFont(editorFont + 1)}
             />
           </span>
+          {file &&
+            file.encoding !== 'base64' &&
+            /\.php$/i.test(file.path) &&
+            usesDatabase(task) &&
+            !closed && (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Otwórz plik w widoku Baza i PHP"
+                title="Otwórz plik w widoku Baza i PHP"
+                onClick={() => openDatabase(file.path)}
+              >
+                <Database size={15} />
+              </button>
+            )}
           {closed ? (
             <span>Tylko odczyt</span>
           ) : (
@@ -1452,7 +1475,7 @@ export function Workspace() {
               Projekt
             </button>
             {usesDatabase(task) && (
-              <button role="tab" aria-selected={tab === 'database'} onClick={openDatabase}>
+              <button role="tab" aria-selected={tab === 'database'} onClick={() => openDatabase()}>
                 <Database size={17} />
                 Baza i PHP
               </button>
@@ -1558,23 +1581,27 @@ export function Workspace() {
                 }
               />
             )}
-          {tab === 'database' && store && (
-            <DatabaseRunner
-              store={store}
-              files={attempt.files ?? []}
-              available={Boolean(data?.features.runsAvailable)}
-              readOnly={closed}
-              onResult={setLastRun}
-              onAddFile={(added) =>
-                update((latest) => ({
-                  ...latest,
-                  files: [
-                    ...(latest.files ?? []).filter((item) => item.path !== added.path),
-                    added,
-                  ],
-                }))
-              }
-            />
+          {(tab === 'database' || databaseVisited) && store && (
+            <div hidden={tab !== 'database'}>
+              <DatabaseRunner
+                key={attempt.id}
+                store={store}
+                files={attempt.files ?? []}
+                available={Boolean(data?.features.runsAvailable)}
+                readOnly={closed || overtime}
+                pageSelection={databasePage}
+                onResult={setLastRun}
+                onAddFile={(added) =>
+                  update((latest) => ({
+                    ...latest,
+                    files: [
+                      ...(latest.files ?? []).filter((item) => item.path !== added.path),
+                      added,
+                    ],
+                  }))
+                }
+              />
+            </div>
           )}
           {(tab === 'code' || tab === 'preview') && (
             <div className="project-workbench">
