@@ -64,6 +64,17 @@ test('the database view keeps the learner dump locally and explains the manual f
 });
 
 test('XAMPP help appears in the database view after the exam is handed in', async ({ page }) => {
+  // Keep this UI-only journey out of the full suite's shared attempt quota.
+  const ticket = {
+    id: randomUUID(),
+    token: randomUUID(),
+    deadlineAt: new Date(Date.now() + 150 * 60_000).toISOString(),
+  };
+  await page.route('**/api/v1/attempts', (route) => route.fulfill({ status: 201, json: ticket }));
+  await page.route(`**/api/v1/attempts/${ticket.id}/complete`, (route) =>
+    route.fulfill({ status: 201, json: { submittedAt: new Date().toISOString() } }),
+  );
+
   await page.goto('/praktyka/inf03-01-24-06-sg?tryb=egzamin');
   await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
   const databaseTab = page.getByRole('tab', { name: 'Baza i PHP', exact: true });
