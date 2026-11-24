@@ -1,4 +1,5 @@
 import type { FaqRevision } from '@zdaj/shared';
+import { xamppFaq } from './faq-xampp.js';
 
 // Reviewed explanations; official rules and platform advice remain separately identified.
 export const faq: FaqRevision[] = [
@@ -516,6 +517,7 @@ export const faq: FaqRevision[] = [
     reviewedAt: '2026-11-02',
     type: 'advice',
   },
+  ...xamppFaq,
   {
     id: 'inf03-results-access',
     version: 1,

@@ -11,6 +11,7 @@ import { api, errorMessage } from '../api';
 import { ErrorNotice, Loading, PageHeading } from '../components/common';
 import { FaqAnswer } from '../components/FaqAnswer';
 import { filterFaqEntries } from '../faq-search';
+import { XAMPP_FAQ } from '../xampp-help';
 import '../faq.css';
 
 function FaqItem({ entry, active }: { entry: FaqRevision; active: boolean }) {
@@ -99,6 +100,8 @@ export function Faq() {
       </PageHeading>
       <p className="faq-exam-day">
         Wolisz całość po kolei? <Link to="/jak-wyglada-egzamin">Zobacz, jak wygląda egzamin</Link>.
+        {' · '}
+        <Link to={XAMPP_FAQ}>XAMPP i MariaDB</Link>
       </p>
       <div className="faq-filters" role="search" aria-label="Wyszukiwanie odpowiedzi">
         <label className="field faq-search-field">

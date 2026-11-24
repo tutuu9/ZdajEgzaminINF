@@ -124,7 +124,7 @@ describe('FAQ publication through the real API and PostgreSQL', () => {
     const response = await new Client().request<FaqResponse>('/faq');
     expect(response.status).toBe(200);
     expect(response.data.entries).toEqual(seed);
-    expect(response.data.entries).toHaveLength(35);
+    expect(response.data.entries).toHaveLength(51);
   });
 
   it('requires administrator rights and CSRF for both draft creation and publication', async () => {

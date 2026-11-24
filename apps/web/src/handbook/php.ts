@@ -1,4 +1,5 @@
 import type { HandbookBook } from './types';
+import { XAMPP_START } from '../xampp-help';
 
 export const phpBook: HandbookBook = {
   id: 'php',
@@ -18,6 +19,13 @@ export const phpBook: HandbookBook = {
           heading: 'Sprawdź samo PHP',
           body: 'Na własnym komputerze zapisz ten przykład w osobnym pliku `sprawdz.php` w folderze projektu. Pod adresem `http://localhost/inf03/sprawdz.php` zobaczysz komunikat. Potem wróć do pliku wymaganego w arkuszu.',
           example: { kind: 'php', code: "<?php\necho 'PHP działa';" },
+        },
+        {
+          heading: 'Instrukcja i najczęstsze błędy',
+          body:
+            '[Otwórz pomoc z XAMPP](' +
+            XAMPP_START +
+            ') ze zrzutami ekranu, importem SQL i próbą domową.',
         },
       ],
       mistakes: [

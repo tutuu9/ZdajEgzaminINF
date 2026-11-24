@@ -1589,6 +1589,7 @@ export function Workspace() {
               visible={tab === 'database'}
               available={Boolean(data?.features.runsAvailable)}
               readOnly={closed || overtime}
+              showXamppHelp={attempt.mode !== 'egzamin' || closed}
               pageSelection={databasePage}
               onResult={setLastRun}
               onAddFile={(added) =>

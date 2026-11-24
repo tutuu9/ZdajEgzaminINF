@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Database, Loader2, Play, Plus, Trash2, Upload } from 'lucide-react';
 import type {
   ProjectFile,
@@ -11,6 +12,7 @@ import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS } from '@zdaj/shared';
 import { api, errorMessage } from '../api';
 import { createPreview } from '../preview';
 import { phpActionRequest, phpResultEntry, readPhpAction } from '../php-preview';
+import { XAMPP_START } from '../xampp-help';
 import { Editor } from './Editor';
 import type { ProjectStore } from '../project-store';
 import {
@@ -317,6 +319,7 @@ export function DatabaseRunner({
   visible,
   available,
   readOnly,
+  showXamppHelp,
   pageSelection,
   onAddFile,
   onResult,
@@ -326,6 +329,7 @@ export function DatabaseRunner({
   visible: boolean;
   available: boolean;
   readOnly: boolean;
+  showXamppHelp: boolean;
   pageSelection: { path: string } | null;
   onAddFile: (file: ProjectFile) => Promise<void>;
   /** Supplies the existing assistant with the last result for this attempt. */
@@ -499,14 +503,21 @@ export function DatabaseRunner({
   const blockedId = blocked ? `${id}-blocked` : undefined;
   return (
     <div className="database-runner">
-      <header>
-        <h2>
-          <Database size={20} /> Baza danych, SQL i PHP
-        </h2>
-        <p>
-          Każde uruchomienie tworzy czystą bazę i ponownie importuje wybrany plik .sql. To
-          uruchomienie, nie ocena.
-        </p>
+      <header className="database-runner-heading">
+        <div>
+          <h2>
+            <Database size={20} /> Baza danych, SQL i PHP
+          </h2>
+          <p>
+            Każde uruchomienie tworzy czystą bazę i ponownie importuje wybrany plik .sql. To
+            uruchomienie, nie ocena.
+          </p>
+        </div>
+        {showXamppHelp && (
+          <Link className="button secondary small" to={XAMPP_START}>
+            Pomoc z XAMPP
+          </Link>
+        )}
       </header>
       {!available && (
         <Notice>

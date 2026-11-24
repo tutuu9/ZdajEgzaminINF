@@ -5,6 +5,11 @@
 .faq-page .page-heading {
   margin-bottom: 32px;
 }
+.faq-exam-day a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .faq-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(200px, 0.55fr);
@@ -89,7 +94,7 @@
   transform: rotate(180deg);
 }
 .faq-item > .faq-answer {
-  padding: 0 26px;
+  padding: 8px 26px 0;
 }
 .faq-answer-text {
   max-width: 68ch;
@@ -112,6 +117,56 @@
   color: var(--ink);
   font-weight: 600;
 }
+.faq-screenshot,
+.faq-code-example {
+  max-width: 680px;
+  margin: 0 0 20px;
+}
+.faq-screenshot a {
+  display: block;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+.faq-screenshot img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: inherit;
+}
+.faq-screenshot figcaption,
+.faq-copy-status,
+.faq-panel-reference {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.faq-panel-reference {
+  margin: 0 0 16px;
+}
+.faq-code-example figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.faq-code-example pre {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.faq-copy-status:empty {
+  margin: 0;
+}
+.faq-demo-download {
+  margin-bottom: 20px;
+}
 .faq-sources {
   border-top: 1px solid var(--line);
   padding-top: 16px;
@@ -131,6 +186,7 @@
   overflow-wrap: anywhere;
 }
 .faq-sources a,
+.faq-panel-reference a,
 .faq-permalink {
   color: var(--blue);
   text-decoration: underline;

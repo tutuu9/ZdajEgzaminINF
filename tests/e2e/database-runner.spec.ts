@@ -32,6 +32,10 @@ test('the database view keeps the learner dump locally and explains the manual f
   ).toBeVisible();
   await expect(runner).toContainText('Uruchamianie SQL i PHP na serwerze jest teraz niedostępne.');
   await expect(runner).toContainText('To uruchomienie, nie ocena.');
+  await expect(runner.getByRole('link', { name: 'Pomoc z XAMPP' })).toHaveAttribute(
+    'href',
+    '/faq?category=xampp#xampp-start',
+  );
   const run = runner.getByRole('button', { name: 'Uruchom SQL', exact: true });
   await expect(run).toBeDisabled();
 
@@ -57,6 +61,23 @@ test('the database view keeps the learner dump locally and explains the manual f
   await page.getByRole('tab', { name: 'Projekt', exact: true }).click();
   await expect(page.locator('.workspace-file-count')).toContainText('1');
   await expect(page.getByRole('button', { name: 'moja.sql', exact: true })).toBeVisible();
+});
+
+test('XAMPP help appears in the database view after the exam is handed in', async ({ page }) => {
+  await page.goto('/praktyka/inf03-01-24-06-sg?tryb=egzamin');
+  await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+  const databaseTab = page.getByRole('tab', { name: 'Baza i PHP', exact: true });
+  const help = page.getByRole('link', { name: 'Pomoc z XAMPP' });
+  await databaseTab.click();
+  await expect(page.locator('.database-runner')).toBeVisible();
+  await expect(help).toHaveCount(0);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Zakończ próbę', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Próba zakończona', exact: true })).toBeVisible();
+  await databaseTab.click();
+  await help.click();
+  await expect(page).toHaveURL(/category=xampp#xampp-start$/);
+  await expect(page.locator('#xampp-start summary')).toBeFocused();
 });
 
 test('runs the selected SQL and keeps the in-flight result while editing the project', async ({

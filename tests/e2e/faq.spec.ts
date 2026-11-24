@@ -13,7 +13,7 @@ test('FAQ searches answer text, filters categories and restores an accessible de
   await expect(
     page.getByRole('heading', { name: 'Pytania i odpowiedzi', exact: true }),
   ).toBeVisible();
-  await expect(page.locator('.faq-item')).toHaveCount(35);
+  await expect(page.locator('.faq-item')).toHaveCount(51);
   await page.getByLabel('Szukaj w pytaniach i odpowiedziach').fill('kadrowac');
   await expect(page.locator('.faq-item')).toHaveCount(1);
   await expect(page.locator('.faq-item summary')).toHaveText(
@@ -22,7 +22,7 @@ test('FAQ searches answer text, filters categories and restores an accessible de
   await page.getByRole('combobox', { name: 'Temat', exact: true }).selectOption('written');
   await expect(page.getByRole('heading', { name: 'Nie znaleziono odpowiedzi' })).toBeVisible();
   await page.getByRole('button', { name: 'Wyczyść filtry' }).click();
-  await expect(page.locator('.faq-item')).toHaveCount(35);
+  await expect(page.locator('.faq-item')).toHaveCount(51);
   const question = page.locator('#inf03-screenshots summary');
   await question.focus();
   await page.keyboard.press('Enter');
@@ -46,6 +46,51 @@ test('FAQ searches answer text, filters categories and restores an accessible de
   );
   await expect(page.locator('#inf03-session-dates .faq-answer-text')).toContainText(
     '7–13 stycznia 2027 r. i 2–10 czerwca 2027 r.',
+  );
+});
+
+test('XAMPP help opens on a phone and provides the local PHP and SQL rehearsal', async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/faq');
+  await page.getByRole('link', { name: 'XAMPP i MariaDB', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Temat' })).toHaveValue('xampp');
+  await expect(page.locator('.faq-item')).toHaveCount(16);
+  const search = page.getByLabel('Szukaj w pytaniach i odpowiedziach');
+  await search.fill('Apache shutdown unexpectedly');
+  await expect(page.locator('.faq-item')).toHaveCount(1);
+  await expect(page.locator('.faq-item')).toHaveAttribute('id', 'xampp-apache');
+
+  await page.goto('/faq?category=xampp#xampp-start');
+  const start = page.locator('#xampp-start');
+  await expect(start.locator('summary')).toBeFocused();
+  await expect(start.getByRole('link', { name: /Zobacz zrzut panelu XAMPP/ })).toHaveAttribute(
+    'href',
+    'https://commons.wikimedia.org/wiki/File:Xampp_Control_Panel.jpg',
+  );
+  const screenshot = start.getByRole('img', { name: /PHP działa/ });
+  await screenshot.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() => screenshot.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  await start.getByRole('link', { name: 'Próba na własnym komputerze' }).click();
+  const rehearsal = page.locator('#xampp-home-practice');
+  await expect(page).toHaveURL(/category=xampp#xampp-home-practice$/);
+  await expect(rehearsal.locator('summary')).toBeFocused();
+  await rehearsal.getByRole('button', { name: 'Kopiuj sprawdz.php' }).click();
+  await expect(rehearsal.getByText('Skopiowano kod.')).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("echo 'PHP działa'");
+  const downloadPromise = page.waitForEvent('download');
+  await rehearsal.getByRole('link', { name: 'Pobierz miasta.sql' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('miasta.sql');
+  expect(await download.failure()).toBeNull();
+  await expect(rehearsal.locator('pre').last()).toContainText('SELECT nazwa FROM miasta');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
   );
 });
 

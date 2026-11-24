@@ -61,6 +61,7 @@ export const EXAM_DAY_STAGES: ExamDayStage[] = [
     faq: [
       { id: 'inf03-workstation-software', label: 'Jakie programy i wersje będą na stanowisku?' },
       { id: 'inf03-permitted-aids', label: 'Co wolno przynieść i czego nie wolno używać?' },
+      { id: 'xampp-start', label: 'Uruchomienie XAMPP i najczęstsze błędy' },
     ],
   },
   {
@@ -133,7 +134,10 @@ export const EXAM_DAY_STAGES: ExamDayStage[] = [
         text: 'W przykładowym arkuszu zrzuty mają obejmować cały ekran z widocznym paskiem zadań i nie wolno ich kadrować. Zawsze sprawdź warunki we własnym arkuszu.',
       },
     ],
-    faq: [{ id: 'inf03-screenshots', label: 'Kiedy i jak wykonywać zrzuty ekranu?' }],
+    faq: [
+      { id: 'inf03-screenshots', label: 'Kiedy i jak wykonywać zrzuty ekranu?' },
+      { id: 'xampp-import', label: 'Import pliku SQL w phpMyAdmin krok po kroku' },
+    ],
     practice: {
       to: '/arkusze',
       label: 'Ćwicz zapytania w zakładce „Baza i PHP” podczas nauki z arkuszem',
