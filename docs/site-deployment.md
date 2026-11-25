@@ -1,6 +1,6 @@
 # Public site without a code executor
 
-This profile serves the current eight CKE INF.03 courses, 25 published theory examples and 35 FAQ entries at `https://zdajegzamin.sbs`. It deliberately has only PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview remain available; server behaviour checks have an explicit manual fallback. AI is disabled by default and can be enabled separately as described below. This does not certify the VPS for anonymous code execution.
+This profile serves the current 15 CKE INF.03 courses, 25 published theory examples and 51 FAQ entries at `https://zdajegzamin.sbs`. It deliberately has only PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview remain available; server behaviour checks have an explicit manual fallback. AI is disabled by default and can be enabled separately as described below. This does not certify the VPS for anonymous code execution.
 
 ## Build and transfer
 
@@ -46,7 +46,7 @@ Run `npm run test:site-config` with the Docker Compose CLI to verify both blank-
 `infra/site/deploy.sh` runs as root and works only on root-owned copies of the uploaded files. It holds a lock and, in order:
 
 - refuses if the uploaded `compose.site.yaml` differs from `/opt/zdaj-egzamin-inf/compose.site.yaml` (review and update the server copy manually first);
-- requires at least 8 GiB free for the deployment, Docker and backup directories and 768 MiB `MemAvailable` (the running API stays up and only `initialize`, limited to 512 MiB, starts beside it);
+- requires at least 8 GiB free for the deployment, Docker and backup directories and 1280 MiB `MemAvailable` (the running API stays up and only `initialize`, limited to 1 GiB, starts beside it);
 - verifies the archive SHA-256; requires the archive to tag exactly one image, `zdaj-inf-site:git-<sha>`, so it cannot retag other images; loads it and checks the revision label and `amd64` architecture; keeps the archive and checksum in `/opt/zdaj-egzamin-inf/releases`;
 - exits successfully without changes if `.env` already selects this image;
 - runs `zdaj-egzamin-backup.service` and refuses unless a new `zdaj-*.dump` appears in `/var/backups/zdaj-egzamin-inf`;
@@ -96,7 +96,7 @@ Start it from **Actions → Deploy public site → Run workflow** on `main`, typ
 
 ## Host capacity and startup
 
-Before deployment record disk, `MemAvailable`, swap, load and the start times of unrelated services. Require at least **8 GiB free disk and 1 GiB MemAvailable** for the first start; later image updates through `deploy.sh` require 768 MiB. Do not reclaim another application's data to pass this gate. PostgreSQL is limited to 384 MiB and API to 512 MiB; these are limits, not guaranteed total VPS requirements.
+Before deployment record disk, `MemAvailable`, swap, load and the start times of unrelated services. The current VPS has 2 vCPU, 4 GB RAM and 120 GB NVMe. Require at least **8 GiB free disk and 2 GiB MemAvailable** for the first start; later image updates through `deploy.sh` require 1280 MiB. Do not reclaim another application's data to pass this gate. PostgreSQL is limited to 768 MiB (`shared_buffers` 192 MB), API and initialization to 1 GiB each; these are limits, not guaranteed total VPS requirements. `deploy.sh` recreates only `api`; after changing the PostgreSQL limits, update the server copy of `compose.site.yaml`, make a fresh backup and recreate PostgreSQL deliberately with `docker compose --env-file .env -f compose.site.yaml up -d --no-deps --wait postgres`.
 
 Set `PUBLIC_TRUST_PROXY` temporarily to an exact loopback address only to let Compose resolve its environment. Start **only** PostgreSQL:
 
