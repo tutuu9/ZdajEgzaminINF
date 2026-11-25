@@ -5,17 +5,17 @@ import { faqSchema } from '../apps/api/src/faq-validation.js';
 import { filterFaqEntries } from '../apps/web/src/faq-search.js';
 
 describe('reviewed INF.03 FAQ', () => {
-  it('publishes exactly 35 complete, attributed answers in the seven agreed groups', () => {
-    expect(faq).toHaveLength(35);
-    expect(new Set(faq.map((entry) => entry.id)).size).toBe(35);
+  it('publishes 51 complete, attributed answers in the eight agreed groups', () => {
+    expect(faq).toHaveLength(51);
+    expect(new Set(faq.map((entry) => entry.id)).size).toBe(51);
     expect(
       FAQ_CATEGORIES.map(
         (category) => faq.filter((entry) => entry.categoryId === category.id).length,
       ),
-    ).toEqual([5, 5, 5, 11, 5, 1, 3]);
+    ).toEqual([5, 5, 5, 11, 16, 5, 1, 3]);
     for (const entry of faq) {
       expect(faqSchema.safeParse(entry).success, entry.id).toBe(true);
-      expect(entry.reviewedAt).toBe('2026-11-02');
+      expect(entry.reviewedAt).toBe(entry.categoryId === 'xampp' ? '2026-11-24' : '2026-11-02');
       expect(entry.answer.trim().length).toBeGreaterThan(80);
       expect(entry.sources.every((source) => source.section.length > 0)).toBe(true);
     }
@@ -50,5 +50,17 @@ describe('reviewed INF.03 FAQ', () => {
     expect(filterFaqEntries(faq, 'dyplom', 'results')).toEqual([]);
     expect(filterFaqEntries(faq, 'nieistniejacywyraz', 'all')).toEqual([]);
     expect(filterFaqEntries(faq, '   ', 'service')).toHaveLength(3);
+  });
+
+  it('finds XAMPP help by literal error messages, codes, ports and Polish symptoms', () => {
+    for (const [query, id] of [
+      ['Apache shutdown unexpectedly', 'xampp-apache'],
+      ['port 3306', 'xampp-mariadb'],
+      ['#1049', 'xampp-schema'],
+      ['polskie znaki', 'xampp-encoding'],
+    ]) {
+      expect(filterFaqEntries(faq, query!, 'xampp').map((entry) => entry.id)).toContain(id);
+      expect(filterFaqEntries(faq, query!, 'written')).toEqual([]);
+    }
   });
 });

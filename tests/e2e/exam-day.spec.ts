@@ -19,6 +19,12 @@ test('the exam-day page walks through the practical part and links sourced answe
   await expect(page.locator('.exam-day-body li .origin-badge')).toHaveCount(total);
   await expect(page.getByText('Zasada CKE').first()).toBeVisible();
   await expect(page.locator('.exam-day-sources li a')).toHaveCount(3);
+  await expect(
+    page.getByRole('link', { name: 'Uruchomienie XAMPP i najczęstsze błędy' }),
+  ).toHaveAttribute('href', '/faq#xampp-start');
+  await expect(
+    page.getByRole('link', { name: 'Import pliku SQL w phpMyAdmin krok po kroku' }),
+  ).toHaveAttribute('href', '/faq#xampp-import');
 
   await page.getByRole('link', { name: 'Ile punktów potrzeba, żeby zdać?' }).click();
   await expect(page).toHaveURL(/\/faq#inf03-pass-threshold$/);

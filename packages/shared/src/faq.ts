@@ -3,6 +3,7 @@ export const FAQ_CATEGORIES = [
   { id: 'registration', label: 'Zapisy i terminy' },
   { id: 'written', label: 'Część pisemna' },
   { id: 'practical', label: 'Część praktyczna' },
+  { id: 'xampp', label: 'XAMPP i MariaDB' },
   { id: 'results', label: 'Wyniki i poprawki' },
   { id: 'accommodations', label: 'Dostosowania' },
   { id: 'service', label: 'Działanie serwisu' },

@@ -1,4 +1,5 @@
 import { FAQ_TYPE_LABELS, type FaqRevision } from '@zdaj/shared';
+import { XamppFaqExtras } from './XamppFaqExtras';
 
 function date(value: string) {
   const parsed = new Date(`${value}T12:00:00Z`);
@@ -22,6 +23,7 @@ export function FaqAnswer({ entry }: { entry: FaqRevision }) {
           <p key={index}>{paragraph}</p>
         ))}
       </div>
+      <XamppFaqExtras entry={entry} />
       <div className="faq-sources">
         <h3>Źródła i podstawa odpowiedzi</h3>
         <ul>

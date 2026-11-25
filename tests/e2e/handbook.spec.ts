@@ -38,6 +38,10 @@ test('the handbook opens from the learning page and remembers read chapters', as
   await page.getByRole('link', { name: 'Uruchomienie w XAMPP' }).click();
   await expect(page.getByRole('article').locator('pre code')).toContainText("echo 'PHP działa'");
   await expect(page.getByRole('article').locator('iframe')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Otwórz pomoc z XAMPP' })).toHaveAttribute(
+    'href',
+    '/faq?category=xampp#xampp-start',
+  );
 });
 
 test('every live example runs without errors and shows its result', async ({ page }) => {
