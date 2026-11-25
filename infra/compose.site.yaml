@@ -28,7 +28,7 @@ services:
       POSTGRES_DB: zdaj
       POSTGRES_USER: zdaj
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-    command: ['postgres', '-c', 'max_connections=40', '-c', 'shared_buffers=96MB']
+    command: ['postgres', '-c', 'max_connections=40', '-c', 'shared_buffers=192MB']
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -37,7 +37,7 @@ services:
       timeout: 3s
       retries: 30
     restart: unless-stopped
-    mem_limit: 384m
+    mem_limit: 768m
     pids_limit: 128
     logging: *limited-logging
 
@@ -50,7 +50,7 @@ services:
       postgres:
         condition: service_healthy
     restart: 'no'
-    mem_limit: 512m
+    mem_limit: 1g
     pids_limit: 256
     security_opt:
       - no-new-privileges:true
@@ -88,7 +88,7 @@ services:
       start_period: 30s
       retries: 3
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 1g
     pids_limit: 256
     cap_drop:
       - ALL
