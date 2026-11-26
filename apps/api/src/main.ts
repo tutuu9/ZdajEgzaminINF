@@ -11,7 +11,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import express from 'express';
-import { join } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Response } from 'express';
@@ -20,6 +20,8 @@ import { ApiController } from './controller.js';
 import { cleanupExpiredStudyChecks } from './study-checks.js';
 import { cleanupExpiredSandboxRuns } from './sandbox-runs.js';
 import { config, DAY_MS, projectRoot } from './config.js';
+import { bootstrap } from './content.js';
+import { robotsTxt, sitemapXml } from './site-index.js';
 
 @Module({ controllers: [ApiController] })
 class AppModule {}
@@ -108,7 +110,36 @@ export async function createApp(options: { webDist?: string } = {}) {
     server.get('/index.html', (_req, res) => {
       sendHtml(res);
     });
-    const serveStatic = express.static(dist, { index: false });
+    const origin = [...config.origins][0];
+    server.get('/robots.txt', (_req, res) => {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.type('text/plain').send(robotsTxt(origin));
+    });
+    server.get('/sitemap.xml', async (_req, res, next) => {
+      try {
+        const { tasks } = await bootstrap();
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.type('application/xml').send(
+          sitemapXml(
+            origin,
+            tasks.map((task) => task.id),
+          ),
+        );
+      } catch (error) {
+        next(error);
+      }
+    });
+    const assets = join(dist, 'assets');
+    const serveStatic = express.static(dist, {
+      index: false,
+      // Vite names every file in assets/ after its content hash, so a cached copy never goes
+      // stale. Everything else, including HTML, keeps the global no-store policy.
+      setHeaders: (res, path) => {
+        const fromAssets = relative(assets, path);
+        if (fromAssets && !fromAssets.startsWith('..') && !isAbsolute(fromAssets))
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    });
     app.use((req: express.Request, res: Response, next: express.NextFunction) => {
       let path: string;
       try {

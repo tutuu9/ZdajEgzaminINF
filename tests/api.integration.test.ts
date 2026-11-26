@@ -2008,6 +2008,19 @@ describe('real Nest API and PostgreSQL boundaries', () => {
       const asset = await actualFetch(`${webBase}/assets/app.js`);
       expect(asset.status).toBe(200);
       expect(await asset.text()).toBe('window.syntheticAssetLoaded = true;');
+      expect(asset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+      const robots = await actualFetch(`${webBase}/robots.txt`);
+      expect(robots.status).toBe(200);
+      expect(robots.headers.get('content-type')).toContain('text/plain');
+      expect(await robots.text()).toMatch(
+        /Disallow: \/moje-prace[\s\S]*Sitemap: https?:\/\/[^\s]+\/sitemap\.xml/,
+      );
+      const sitemap = await actualFetch(`${webBase}/sitemap.xml`);
+      expect(sitemap.status).toBe(200);
+      expect(sitemap.headers.get('content-type')).toContain('application/xml');
+      const sitemapBody = await sitemap.text();
+      expect(sitemapBody).toContain('/co-nowego</loc>');
+      expect(sitemapBody).toMatch(/\/praktyka\/[^<]+<\/loc>/);
       const health = await actualFetch(`${webBase}/api/v1/health`);
       expect(health.status).toBe(200);
       expect(await health.json()).toMatchObject({ ok: true });
