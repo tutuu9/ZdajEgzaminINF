@@ -36,9 +36,18 @@ The initial source is the [CKE informator for technik programista, updated 25 Au
 - Example 12 is excluded because the task depends on an embedded Joomla video that this viewer does not support.
 - All included question numbers, printed answer keys, diagrams and crop boundaries were checked. The UI renders the original excerpt rather than transcribing a replacement question. Explanations are separately labelled platform commentary.
 
-The informator prints an answer key alongside its questions. Although the excerpt does not display that line, the original PDF remains available to the browser. This is a learning/practice source, not a hidden-key examination source. No full 40-question simulation is claimed from these 25 examples.
+The informator prints an answer key alongside its questions. Although the excerpt does not display that line, the original PDF remains available to the browser. This is a learning/practice source, not a hidden-key examination source. No full 40-question simulation is claimed from these 25 examples; the exam-system view described below is a training run over them.
 
 Known source ambiguity: example 10 on page 9 prints a space between `p` and the attribute selector while the official key indicates option C. In CSS, that space changes the selector to match descendants. The intended same-element selector has no space. Keep both the original document and official key unchanged; the feedback explicitly describes the ambiguity. This is an editorial explanation by the platform, not an official CKE erratum.
+
+## Electronic written part (exam-system view)
+
+The theory exam-system view and the practical workstation describe the examination process, not examination content. Their behaviour comes from these documents:
+
+- [CKE informator o egzaminie zawodowym, część ogólna, formuła 2019 (update of 7 December 2023)](https://oke.waw.pl/wp-content/uploads/OKE_WARSZAWA/EE/EE_Zawodowy/Informatory/Informatory_Czesc-ogolna__Formula-2019.pdf), prepared by CKE with the OKEs; copy hosted by OKE Warszawa, 28 pages, reviewed on 2026-11-26, SHA-256 `6985d5e0e40a246097c80843410380ba3291e33f39a2be56a82fff936895466e`. Pages 13–17: 60 minutes, 40 closed tasks with four options and one correct answer; the countdown starts with the Start button; tasks may be answered in any order; unanswered tasks are marked red; the right side shows the numbers of given and missing answers and the remaining time; any answer can be changed; "Zakończ egzamin" ends the exam once 40 answers are given; the candidate then sees the preliminary number of correct answers. Page 17 and the pass rule state the 50% threshold.
+- The practical workstation (10-minute reading time outside the 150 minutes, the results folder named with the candidate's number, the archive, the disc) follows the stages already sourced in `apps/web/src/exam-day-content.ts` and the FAQ.
+
+The view reuses the 25 informator examples, keeps the API's `trening` mode and gives each task the official share of time (90 seconds). It is labelled as training: the key is public, the set is not the live bank, and the interface is not the CKE system. No CKE or OKE branding is reproduced.
 
 ## Catalogue and review workflow
 
