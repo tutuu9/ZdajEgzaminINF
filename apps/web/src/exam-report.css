@@ -140,3 +140,8 @@
   justify-self: start;
   color: var(--accent-ink);
 }
+.exam-report-station {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}

@@ -221,6 +221,7 @@ for (const course of courses) {
   }) => {
     await page.goto(`/praktyka/${course.guide.taskId}?tryb=egzamin`);
     await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+    await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
     await expect(page.getByRole('tab', { name: 'Nauka', exact: true })).toBeDisabled();
     await expect(page.locator('.cumulative-course')).toHaveCount(0);
     const snapshot = await storedAttempt(page);

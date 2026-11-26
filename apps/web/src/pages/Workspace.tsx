@@ -45,6 +45,24 @@ import { AiAssistant } from '../components/AiAssistant';
 import { DatabaseRunner } from '../components/DatabaseRunner';
 import { ExamChecklist, ExamPlan } from '../components/ExamPlan';
 import { ExamReport } from '../components/ExamReport';
+import {
+  ExamFolder,
+  ExamMaterials,
+  ExamReading,
+  HandInDialog,
+  StationClock,
+  WallClock,
+} from '../components/ExamStation';
+import {
+  clearReading,
+  folderFiles,
+  practiceCandidate,
+  readReading,
+  readStation,
+  saveReading,
+  saveStation,
+  type ReadingPhase,
+} from '../exam-station';
 import { studySequence } from '../study-progress';
 import { matchHandInFiles } from '../exam-report';
 import { SqlPractice } from '../components/SqlPractice';
@@ -89,10 +107,13 @@ function TaskPdfPanel({
   task,
   requestedPage,
   onPageChange,
+  offline = false,
 }: {
   task: PublicTask;
   requestedPage?: number;
   onPageChange?: (page: number) => void;
+  /** An open exam has no internet: the external source link is left out. */
+  offline?: boolean;
 }) {
   const { data } = useApp();
   const entry = data?.catalog.find((item) => item.id === task.sourceCatalogId);
@@ -106,7 +127,7 @@ function TaskPdfPanel({
             ? 'Oryginalny dokument CKE'
             : 'Oryginalny arkusz CKE · kopia w zewnętrznym archiwum'
         }
-        sourceUrl={entry.sourcePdf.url}
+        sourceUrl={offline ? undefined : entry.sourcePdf.url}
         sourceLabel={entry.sourcePdf.sourceLabel}
         downloadName={`${entry.id}.pdf`}
         requestedPage={requestedPage}
@@ -155,9 +176,11 @@ export function Workspace() {
     [editorReveal, setEditorReveal] = useState<EditorReveal>(),
     [newPath, setNewPath] = useState(''),
     [adding, setAdding] = useState(false),
-    [tab, setTabState] = useState<'code' | 'preview' | 'report' | 'sheet' | 'study' | 'database'>(
-      'code',
-    ),
+    [tab, setTabState] = useState<
+      'code' | 'preview' | 'report' | 'sheet' | 'study' | 'database' | 'folder'
+    >('code'),
+    [reading, setReading] = useState<ReadingPhase | null>(null),
+    [handInOpen, setHandInOpen] = useState(false),
     [showSheet, setShowSheet] = useState(false),
     [sheetPage, setSheetPageState] = useState(1);
   const [previewEntry, setPreviewEntryState] = useState(''),
@@ -326,6 +349,8 @@ export function Workspace() {
     setDatabasePage(null);
     setLastRun(null);
     setTabState('code');
+    setReading(null);
+    setHandInOpen(false);
     storeRef.current = null;
     setStore(null);
     autoSubmitted.current = null;
@@ -348,6 +373,12 @@ export function Workspace() {
           ));
         if (cancelled) return;
         setTask(current);
+        // A reading phase that was open before a reload continues where it was.
+        const phase =
+          stored || current.origin !== 'exam'
+            ? undefined
+            : readReading(current.id, current.version);
+        if (phase) setReading(phase);
         const restored = stored ? projectStore(stored) : null;
         storeRef.current = restored;
         setStore(restored);
@@ -372,7 +403,11 @@ export function Workspace() {
         setAttempt(active ?? null);
         setMode(
           stored?.mode ??
-            (requestedMode === 'trening' || requestedMode === 'egzamin' ? requestedMode : 'nauka'),
+            (phase
+              ? 'egzamin'
+              : requestedMode === 'trening' || requestedMode === 'egzamin'
+                ? requestedMode
+                : 'nauka'),
         );
         setSelectedState(active?.workspace?.activeFile ?? active?.files?.[0]?.path ?? '');
         setSheetPageState(active?.workspace?.sheetPage ?? 1);
@@ -469,6 +504,17 @@ export function Workspace() {
       };
       next.revision = 0;
       await saveAttempt(next);
+      if (startMode === 'egzamin' && reading) {
+        saveStation(next.id, {
+          candidate: reading.candidate.trim(),
+          readingMinutes: Math.max(
+            0,
+            Math.min(10, Math.ceil((Date.now() - Date.parse(reading.startedAt)) / 60_000)),
+          ),
+        });
+        clearReading(studyTask.id, studyTask.version);
+        setReading(null);
+      }
       const controller = projectStore(next);
       storeRef.current = controller;
       setStore(controller);
@@ -728,6 +774,44 @@ export function Workspace() {
         lokalnych postępach.
       </EmptyState>
     );
+  const sourceEntry = data?.catalog.find((entry) => entry.id === task.sourceCatalogId);
+  const beginReading = () => {
+    const phase = { startedAt: new Date().toISOString(), candidate: practiceCandidate() };
+    saveReading(task.id, task.version, phase);
+    setError('');
+    setReading(phase);
+  };
+  if (!attempt && reading)
+    return (
+      <ExamReading
+        phase={reading}
+        title={task.title}
+        durationMinutes={task.durationMinutes}
+        entry={sourceEntry}
+        busy={busy}
+        error={<ErrorNotice message={error} />}
+        pdf={
+          <Suspense fallback={<Loading label="Otwieranie czytnika PDF…" />}>
+            <TaskPdfPanel
+              task={task}
+              requestedPage={sheetPage}
+              onPageChange={setSheetPage}
+              offline
+            />
+          </Suspense>
+        }
+        onCandidate={(candidate) => {
+          const phase = { ...reading, candidate };
+          saveReading(task.id, task.version, phase);
+          setReading(phase);
+        }}
+        onStart={() => void start()}
+        onCancel={() => {
+          clearReading(task.id, task.version);
+          setReading(null);
+        }}
+      />
+    );
   if (!attempt)
     return (
       <>
@@ -795,8 +879,19 @@ export function Workspace() {
               <span>{levelLabel(level)}</span>
             </div>
             {mode === 'egzamin' && <ExamChecklist />}
+            {mode === 'egzamin' && (
+              <p className="fine-print">
+                Najpierw otworzy się stanowisko z arkuszem i 10 minutami na zapoznanie się z
+                zadaniem. Czas egzaminu ruszy po kliknięciu „Rozpocznij pracę”.
+              </p>
+            )}
+            {mode === 'egzamin' && <ExamMaterials entry={sourceEntry} />}
             <ErrorNotice message={error} />
-            <button className="button primary full" disabled={busy} onClick={() => void start()}>
+            <button
+              className="button primary full"
+              disabled={busy}
+              onClick={() => (mode === 'egzamin' ? beginReading() : void start())}
+            >
               {busy ? <Loader2 className="spin" size={18} /> : <Play size={17} />}Rozpocznij{' '}
               {mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
             </button>
@@ -837,6 +932,13 @@ export function Workspace() {
     ? data?.catalog.find((entry) => entry.id === task.sourceCatalogId && entry.handIn)
     : undefined;
   const overtime = !!attempt.deadlineAt && Date.now() > Date.parse(attempt.deadlineAt);
+  // An open exam runs on the simulated workstation: no task summary, criteria or helpers.
+  const station = attempt.mode === 'egzamin' && !closed;
+  const candidate = attempt.mode === 'egzamin' ? readStation(attempt.id)?.candidate : undefined;
+  const downloadZip = () =>
+    candidate
+      ? downloadProject(folderFiles(attempt.files ?? [], candidate), `${candidate}.zip`)
+      : downloadProject(attempt.files ?? [], `${task.id}-rozwiazanie.zip`);
   const inspectionChoice =
     inspectChoice?.generation === projectPreview.index?.generation
       ? (inspectChoice?.id ?? '')
@@ -1038,7 +1140,7 @@ export function Workspace() {
                       : {
                           ...latest,
                           workspace: {
-                            view: tab === 'database' ? 'code' : tab,
+                            view: tab === 'database' || tab === 'folder' ? 'code' : tab,
                             activeFile: file.path,
                             previewEntry,
                             ...latest.workspace,
@@ -1208,7 +1310,9 @@ export function Workspace() {
             </div>
           )}
           {projectPreview.problem && <Notice>{projectPreview.problem}</Notice>}
-          <MissingAssets missing={projectPreview.missing} inexact={projectPreview.inexact} />
+          {!station && (
+            <MissingAssets missing={projectPreview.missing} inexact={projectPreview.inexact} />
+          )}
           <div className="preview-run-options">
             <label>
               <input
@@ -1265,7 +1369,12 @@ export function Workspace() {
     </div>
   );
   return (
-    <>
+    <div className={station ? 'exam-station working' : 'workspace-root'}>
+      {station && (
+        <p className="station-simulation station-banner">
+          Symulacja stanowiska egzaminacyjnego · nie jest to system CKE · bez dostępu do internetu
+        </p>
+      )}
       <div className="workspace-heading">
         <div>
           <Link className="back-link" to="/arkusze">
@@ -1285,11 +1394,8 @@ export function Workspace() {
         </div>
         <div className="workspace-heading-actions">
           <ThemePicker />
-          {!closed && <Timer deadlineAt={attempt.deadlineAt} onExpire={expire} />}
-          <button
-            className="button secondary small"
-            onClick={() => downloadProject(attempt.files ?? [], `${task.id}-rozwiazanie.zip`)}
-          >
+          {!closed && !station && <Timer deadlineAt={attempt.deadlineAt} onExpire={expire} />}
+          <button className="button secondary small" onClick={downloadZip}>
             <Download size={16} />
             Pobierz ZIP
           </button>
@@ -1307,6 +1413,10 @@ export function Workspace() {
               className="button secondary small"
               disabled={busy || (!manual && !data?.features.checkingAvailable)}
               onClick={() => {
+                if (station) {
+                  setHandInOpen(true);
+                  return;
+                }
                 if (
                   window.confirm(
                     'Zakończyć pracę? Pliki zostaną zachowane do odczytu; dalsze poprawki wykonasz w nowej próbie.',
@@ -1316,7 +1426,7 @@ export function Workspace() {
               }}
             >
               {busy ? <Loader2 className="spin" size={16} /> : <Send size={16} />}
-              {manual ? 'Zakończ próbę' : 'Oddaj do sprawdzenia'}
+              {station ? 'Zakończ egzamin' : manual ? 'Zakończ próbę' : 'Oddaj do sprawdzenia'}
             </button>
           )}
         </div>
@@ -1382,81 +1492,83 @@ export function Workspace() {
         </div>
       )}
       <div className={`workspace-columns${tab === 'study' ? ' study-mode' : ''}`}>
-        <aside className="task-instructions">
-          <div className="instructions-title">
-            <FolderOpen size={18} />
-            <h2>Twoje zadanie</h2>
-          </div>
-          <ul className="task-checklist">
-            {task.requirements.map((requirement, index) => (
-              <li key={requirement}>
-                <span>{index + 1}</span>
-                {requirement}
-              </li>
-            ))}
-          </ul>
-          {!manual && attempt.mode !== 'egzamin' && !closed && (
-            <section className="guidance">
-              <h3>{attempt.mode === 'nauka' ? 'Krok po kroku' : 'Podpowiedzi na życzenie'}</h3>
-              {attempt.mode === 'nauka' &&
-                task.guidance[attempt.level].map((step, index) => (
-                  <details key={step.title} open={attempt.mode === 'nauka' && index === 0}>
-                    <summary>
-                      <span>{index + 1}</span>
-                      {step.title}
-                    </summary>
-                    <div className="prose">
-                      <Markdown>{step.body}</Markdown>
-                      <p className="checkpoint">
-                        <CheckCircle2 size={15} />
-                        {step.checkpoint}
-                      </p>
-                    </div>
-                  </details>
-                ))}
-              <button
-                className="button secondary full"
-                disabled={hintBusy}
-                onClick={() => void getHint()}
-              >
-                <Lightbulb size={16} />
-                {hintBusy ? 'Wczytywanie…' : 'Potrzebuję wskazówki'}
-              </button>
-              {(attempt.revealedHints ?? []).map((hint, index) => (
-                <div className="hint-note" key={index}>
-                  <Lightbulb size={17} />
-                  <div>
-                    <strong>Wskazówka {index + 1}</strong>
-                    <p>{hint}</p>
-                  </div>
-                </div>
+        {!station && (
+          <aside className="task-instructions">
+            <div className="instructions-title">
+              <FolderOpen size={18} />
+              <h2>Twoje zadanie</h2>
+            </div>
+            <ul className="task-checklist">
+              {task.requirements.map((requirement, index) => (
+                <li key={requirement}>
+                  <span>{index + 1}</span>
+                  {requirement}
+                </li>
               ))}
-              <p className="fine-print">Użyte wskazówki: {attempt.hintCount}</p>
-            </section>
-          )}
-          {attempt.mode === 'egzamin' && !closed && (
-            <Notice>
-              Podpowiedzi i AI są wyłączone do oddania pracy. Warunki i wymagania zadania pozostają
-              dostępne.
-            </Notice>
-          )}
-          {task.criteria.length > 0 && (
-            <details className="criteria-details">
-              <summary>
-                Kryteria sprawdzania
-                <ChevronRight size={16} />
-              </summary>
-              <ul>
-                {task.criteria.map((criterion) => (
-                  <li key={criterion.id}>
-                    <strong>{criterion.title}</strong>
-                    <span>{criterion.description}</span>
-                  </li>
+            </ul>
+            {!manual && attempt.mode !== 'egzamin' && !closed && (
+              <section className="guidance">
+                <h3>{attempt.mode === 'nauka' ? 'Krok po kroku' : 'Podpowiedzi na życzenie'}</h3>
+                {attempt.mode === 'nauka' &&
+                  task.guidance[attempt.level].map((step, index) => (
+                    <details key={step.title} open={attempt.mode === 'nauka' && index === 0}>
+                      <summary>
+                        <span>{index + 1}</span>
+                        {step.title}
+                      </summary>
+                      <div className="prose">
+                        <Markdown>{step.body}</Markdown>
+                        <p className="checkpoint">
+                          <CheckCircle2 size={15} />
+                          {step.checkpoint}
+                        </p>
+                      </div>
+                    </details>
+                  ))}
+                <button
+                  className="button secondary full"
+                  disabled={hintBusy}
+                  onClick={() => void getHint()}
+                >
+                  <Lightbulb size={16} />
+                  {hintBusy ? 'Wczytywanie…' : 'Potrzebuję wskazówki'}
+                </button>
+                {(attempt.revealedHints ?? []).map((hint, index) => (
+                  <div className="hint-note" key={index}>
+                    <Lightbulb size={17} />
+                    <div>
+                      <strong>Wskazówka {index + 1}</strong>
+                      <p>{hint}</p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
-            </details>
-          )}
-        </aside>
+                <p className="fine-print">Użyte wskazówki: {attempt.hintCount}</p>
+              </section>
+            )}
+            {attempt.mode === 'egzamin' && !closed && (
+              <Notice>
+                Podpowiedzi i AI są wyłączone do oddania pracy. Warunki i wymagania zadania
+                pozostają dostępne.
+              </Notice>
+            )}
+            {task.criteria.length > 0 && (
+              <details className="criteria-details">
+                <summary>
+                  Kryteria sprawdzania
+                  <ChevronRight size={16} />
+                </summary>
+                <ul>
+                  {task.criteria.map((criterion) => (
+                    <li key={criterion.id}>
+                      <strong>{criterion.title}</strong>
+                      <span>{criterion.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </aside>
+        )}
         <section className="workspace-work">
           {attempt.mode === 'egzamin' && !closed && attempt.deadlineAt && (
             <ExamPlan
@@ -1465,7 +1577,16 @@ export function Workspace() {
               handIn={examHandIn}
             />
           )}
-          <div className="workspace-tabs glass-panel" role="tablist" aria-label="Widok projektu">
+          <div
+            className={`workspace-tabs${station ? ' station-taskbar' : ' glass-panel'}`}
+            role="tablist"
+            aria-label={station ? 'Pasek zadań stanowiska' : 'Widok projektu'}
+          >
+            {station && (
+              <span className="station-start" aria-hidden="true">
+                INF.03
+              </span>
+            )}
             <button role="tab" aria-selected={tab === 'sheet'} onClick={() => setTab('sheet')}>
               <FileText size={17} />
               Arkusz PDF
@@ -1505,14 +1626,59 @@ export function Workspace() {
                 )}
               </button>
             )}
-            <span className="workspace-file-count">
-              {plural(attempt.files?.length ?? 0, 'plik', 'pliki', 'plików')}
-            </span>
+            {station && (
+              <button
+                role="tab"
+                aria-selected={tab === 'folder'}
+                onClick={() => {
+                  setEditorReveal(undefined);
+                  setTabState('folder');
+                }}
+              >
+                <FolderOpen size={17} />
+                Folder {candidate ?? 'z wynikami'}
+              </button>
+            )}
+            {station ? (
+              <>
+                <span className="station-taskbar-spacer" />
+                {attempt.deadlineAt && (
+                  <StationClock
+                    deadlineAt={attempt.deadlineAt}
+                    label="Pozostały czas"
+                    onExpire={expire}
+                  />
+                )}
+                <WallClock />
+              </>
+            ) : (
+              <span className="workspace-file-count">
+                {plural(attempt.files?.length ?? 0, 'plik', 'pliki', 'plików')}
+              </span>
+            )}
           </div>
+          {tab === 'folder' && station && (
+            <ExamFolder
+              candidate={candidate ?? 'wyniki'}
+              files={attempt.files ?? []}
+              closed={closed}
+              busy={busy}
+              onUpload={(list) => void upload(list)}
+              onOpen={(path) => {
+                setSelected(path);
+                setTab('code');
+              }}
+            />
+          )}
           {tab === 'sheet' && (
             <div className="workspace-sheet">
               <Suspense fallback={<Loading label="Otwieranie czytnika PDF…" />}>
-                <TaskPdfPanel task={task} requestedPage={sheetPage} onPageChange={setSheetPage} />
+                <TaskPdfPanel
+                  task={task}
+                  requestedPage={sheetPage}
+                  onPageChange={setSheetPage}
+                  offline={station}
+                />
               </Suspense>
               {(attempt.mode !== 'egzamin' || closed) && (
                 <PdfReadingGuide
@@ -1609,7 +1775,7 @@ export function Workspace() {
               {previewPanel}
             </div>
           )}
-          {(tab === 'code' || tab === 'preview') && paperGraphics && (
+          {(tab === 'code' || tab === 'preview') && paperGraphics && !station && (
             <GraphicsCheck graphics={paperGraphics} files={attempt.files ?? []} />
           )}
           {tab === 'report' && (
@@ -1694,6 +1860,19 @@ export function Workspace() {
           run={lastRun}
         />
       )}
-    </>
+      {station && handInOpen && (
+        <HandInDialog
+          candidate={candidate ?? 'wyniki'}
+          files={attempt.files ?? []}
+          required={paperHandIn?.files}
+          busy={busy}
+          onCancel={() => setHandInOpen(false)}
+          onConfirm={() => {
+            setHandInOpen(false);
+            void submit();
+          }}
+        />
+      )}
+    </div>
   );
 }

@@ -1,0 +1,485 @@
+/* Simulated exam workstation: a neutral desktop, window frames and a bottom taskbar.
+   It imitates no operating system or CKE branding; the taskbar stays dark in both themes. */
+.workspace-root {
+  display: contents;
+}
+.exam-station {
+  --station-desktop: linear-gradient(160deg, #dfe6ef 0%, #c9d4e2 55%, #b9c6d8 100%);
+  --station-taskbar: #1c222c;
+  --station-taskbar-ink: #e9edf3;
+  --station-taskbar-muted: #a5aebc;
+  --station-taskbar-active: rgba(255, 255, 255, 0.14);
+  --station-accent: #6fb3ff;
+  --station-window-bar: #f2f4f7;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: auto;
+  padding: 10px 16px 64px;
+  background: var(--station-desktop);
+  color: var(--ink);
+}
+:root[data-theme='dark'] .exam-station {
+  --station-desktop: linear-gradient(160deg, #1b2330 0%, #151b25 60%, #10151d 100%);
+  --station-window-bar: #202834;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .exam-station {
+    --station-desktop: linear-gradient(160deg, #1b2330 0%, #151b25 60%, #10151d 100%);
+    --station-window-bar: #202834;
+  }
+}
+.station-simulation {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+.station-banner {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* The project view inside the station */
+.exam-station.working .workspace-heading {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(20, 30, 50, 0.12);
+}
+.exam-station.working .workspace-heading h1 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.exam-station.working .workspace-heading .back-link {
+  font-size: 12px;
+}
+.exam-station.working .workspace-columns {
+  display: block;
+}
+.exam-station.working .workspace-work {
+  border: 0;
+  background: transparent;
+}
+.exam-station.working .exam-plan {
+  margin-bottom: 10px;
+}
+.exam-station.working .workspace-sheet,
+.exam-station.working .project-workbench,
+.exam-station.working .database-runner,
+.exam-station.working .station-folder {
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(20, 30, 50, 0.16);
+}
+
+/* Taskbar: the tab list of the workspace, docked to the bottom edge */
+.station-taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  margin: 0;
+  padding: 0 10px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--station-taskbar);
+  color: var(--station-taskbar-ink);
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06);
+  scrollbar-width: thin;
+}
+.exam-station .workspace-tabs.station-taskbar {
+  position: fixed;
+  top: auto;
+}
+.station-taskbar > button,
+.station-task {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--station-taskbar-ink);
+  font-size: 13px;
+  font-weight: 550;
+  box-shadow: none;
+  white-space: nowrap;
+  position: relative;
+}
+.station-taskbar > button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.station-taskbar > button:disabled {
+  color: var(--station-taskbar-muted);
+  opacity: 0.6;
+}
+.station-taskbar > button[aria-selected='true'],
+.station-task.active {
+  background: var(--station-taskbar-active);
+  color: #fff;
+}
+.station-taskbar > button[aria-selected='true']::after,
+.station-task.active::after {
+  content: '';
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--station-accent);
+}
+.station-taskbar > button:focus-visible {
+  outline: 2px solid var(--station-accent);
+  outline-offset: -2px;
+}
+.station-start {
+  flex-shrink: 0;
+  margin-right: 6px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--station-taskbar-ink);
+  font:
+    600 12px/1 'IBM Plex Mono',
+    monospace;
+}
+.station-taskbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+.station-taskbar .timer {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--station-taskbar-ink);
+}
+.station-taskbar .timer.urgent {
+  border-color: #ff8a80;
+  color: #ffb4ab;
+}
+.station-wall-clock {
+  flex-shrink: 0;
+  padding: 0 6px 0 12px;
+  color: var(--station-taskbar-muted);
+  font:
+    500 13px/1 'IBM Plex Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Windows */
+.station-window {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(20, 30, 50, 0.16);
+}
+.station-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--station-window-bar);
+  font-size: 13px;
+  font-weight: 600;
+}
+.station-window-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.station-window-body {
+  min-width: 0;
+  padding: 14px;
+}
+
+/* Reading phase */
+.exam-station.reading .station-desktop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 14px;
+  align-items: start;
+}
+.station-reading-panel {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(20, 30, 50, 0.16);
+}
+.station-reading-panel h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.station-reading-panel p {
+  margin: 0;
+  line-height: 1.5;
+}
+.station-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.station-field input {
+  padding: 9px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    500 15px/1.2 'IBM Plex Mono',
+    monospace;
+}
+.station-reading-panel small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.station-problem {
+  color: var(--danger) !important;
+}
+.station-materials {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  font-size: 13px;
+}
+.station-materials h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.station-materials p {
+  margin: 0;
+  line-height: 1.5;
+}
+.station-materials ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.station-materials a {
+  overflow-wrap: anywhere;
+}
+
+/* Results folder */
+.station-folder .station-window-body {
+  display: grid;
+  gap: 12px;
+}
+.station-folder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.station-folder-actions small {
+  flex: 1 1 260px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.station-folder-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.station-folder-table th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+.station-folder-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.station-folder-table td:last-child {
+  width: 1%;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.station-folder-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.station-folder-file:hover {
+  color: var(--blue);
+}
+.station-folder-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Hand-in dialog */
+.station-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 70px rgba(10, 20, 40, 0.35);
+}
+.station-dialog::backdrop {
+  background: rgba(12, 18, 28, 0.55);
+}
+.station-dialog header,
+.station-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.station-dialog footer {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.station-dialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.station-dialog h3 {
+  margin: 14px 0 6px;
+  font-size: 14px;
+}
+.station-dialog p {
+  line-height: 1.5;
+}
+.station-hand-in,
+.station-reminders {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.station-hand-in li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+.station-hand-in li span {
+  overflow-wrap: anywhere;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.station-hand-in small {
+  color: var(--muted);
+}
+.station-hand-in .hand-in-present svg {
+  color: var(--success);
+}
+.station-hand-in .hand-in-missing,
+.station-hand-in .hand-in-wrong-case {
+  background: var(--warning-bg);
+}
+.station-hand-in .hand-in-missing svg,
+.station-hand-in .hand-in-wrong-case svg {
+  color: var(--warning);
+}
+.station-reminders {
+  margin-top: 12px;
+  padding-left: 18px;
+  list-style: disc;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .exam-station.reading .station-desktop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .station-reading-panel {
+    position: static;
+    order: -1;
+  }
+}
+@media (max-width: 760px) {
+  .exam-station {
+    padding: 8px 8px 60px;
+  }
+  .station-taskbar > button,
+  .station-task {
+    padding: 0 9px;
+    font-size: 12px;
+  }
+  .station-wall-clock {
+    display: none;
+  }
+  /* The remaining time stays in view while the window buttons scroll. */
+  .station-taskbar .timer {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--station-taskbar);
+    box-shadow: -10px 0 10px var(--station-taskbar);
+  }
+  .station-window-body {
+    padding: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-dialog .spin {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .station-taskbar > button[aria-selected='true']::after,
+  .station-task.active::after {
+    background: Highlight;
+  }
+}
+/* Workspace tab styles for phones must not repaint the taskbar. */
+.exam-station .workspace-tabs.station-taskbar > button {
+  background: transparent;
+  color: var(--station-taskbar-ink);
+  box-shadow: none;
+}
+.exam-station .workspace-tabs.station-taskbar > button[aria-selected='true'] {
+  background: var(--station-taskbar-active);
+  color: #fff;
+}
+.exam-station .workspace-tabs.station-taskbar > button:disabled {
+  color: var(--station-taskbar-muted);
+}

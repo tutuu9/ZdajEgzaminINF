@@ -77,13 +77,14 @@ test('XAMPP help appears in the database view after the exam is handed in', asyn
 
   await page.goto('/praktyka/inf03-01-24-06-sg?tryb=egzamin');
   await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+  await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
   const databaseTab = page.getByRole('tab', { name: 'Baza i PHP', exact: true });
   const help = page.getByRole('link', { name: 'Pomoc z XAMPP' });
   await databaseTab.click();
   await expect(page.locator('.database-runner')).toBeVisible();
   await expect(help).toHaveCount(0);
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Zakończ próbę', exact: true }).click();
+  await page.getByRole('button', { name: 'Zakończ egzamin', exact: true }).click();
+  await page.getByRole('button', { name: 'Nagraj płytę i oddaj pracę', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Próba zakończona', exact: true })).toBeVisible();
   await databaseTab.click();
   await help.click();
