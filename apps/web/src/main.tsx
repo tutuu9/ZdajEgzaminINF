@@ -24,6 +24,9 @@ const Theory = lazy(() => import('./pages/Theory').then((module) => ({ default: 
 const ExamDay = lazy(() =>
   import('./pages/ExamDay').then((module) => ({ default: module.ExamDay })),
 );
+const WhatsNew = lazy(() =>
+  import('./pages/WhatsNew').then((module) => ({ default: module.WhatsNew })),
+);
 const Progress = lazy(() =>
   import('./pages/Progress').then((module) => ({ default: module.Progress })),
 );
@@ -81,6 +84,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="admin" element={<Admin />} />
               <Route path="faq" element={<Faq />} />
               <Route path="jak-wyglada-egzamin" element={<ExamDay />} />
+              <Route path="co-nowego" element={<WhatsNew />} />
               <Route
                 path="*"
                 element={

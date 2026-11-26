@@ -30,6 +30,7 @@ const staticTitles: Record<string, string> = {
   '/moje-prace': 'Moje prace',
   '/faq': 'Pytania i odpowiedzi',
   '/jak-wyglada-egzamin': 'Jak wygląda egzamin',
+  '/co-nowego': 'Co nowego',
   '/admin': 'Administracja',
 };
 export function Shell() {
@@ -95,6 +96,7 @@ export function Shell() {
             </span>
             <div>
               <span>Niezależny projekt edukacyjny</span>
+              <NavLink to="/co-nowego">Co nowego</NavLink>
               <a href="https://t.me/tutuu9" target="_blank" rel="noopener noreferrer">
                 <Send size={13} aria-hidden="true" />
                 Właściciel

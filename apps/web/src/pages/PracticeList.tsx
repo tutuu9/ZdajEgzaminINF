@@ -145,6 +145,14 @@ export function PracticeList() {
                     Rozwiąż samodzielnie
                     <ArrowRight size={16} />
                   </Link>
+                  <Link
+                    className="button quiet"
+                    to={`/praktyka/${task.id}?tryb=egzamin`}
+                    aria-label={`Próbny egzamin: ${task.title}`}
+                  >
+                    <Clock3 size={16} />
+                    Próbny egzamin
+                  </Link>
                   <span>
                     {past.length
                       ? plural(past.length, 'zapisana próba', 'zapisane próby', 'zapisanych prób')

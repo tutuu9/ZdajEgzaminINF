@@ -421,6 +421,8 @@ for (const [mode, label] of [
   test(`${mode} does not expose page inspection`, async ({ page }) => {
     await page.goto(`/praktyka/inf03-02-24-06-sg?tryb=${mode}`);
     await button(page, `Rozpocznij ${label}`).click();
+    // An exam opens with the reading time; the project starts with the clock.
+    if (mode === 'egzamin') await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
     await page.getByRole('tab', { name: 'Projekt', exact: true }).click();
     await expect(button(page, 'Zbadaj stronę')).toHaveCount(0);
     await expect(page.getByRole('combobox', { name: 'Element strony', exact: true })).toHaveCount(

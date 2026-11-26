@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, ExternalLink as ExternalIcon, Timer } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useApp } from '../context';
+import { ArrowRight, ExternalLink as ExternalIcon, Shuffle, Timer } from 'lucide-react';
 import { PageHeading } from '../components/common';
 import { EXAM_CHECKLIST } from '../components/ExamPlan';
 import {
@@ -16,6 +17,15 @@ function OriginBadge({ origin }: { origin: PointOrigin }) {
 
 /** The practical part of INF.03, stage by stage, with the origin of every statement. */
 export function ExamDay() {
+  const { data } = useApp();
+  const navigate = useNavigate();
+  const papers = (data?.tasks ?? []).filter(
+    (task) => task.origin === 'exam' && task.sourceCatalogId,
+  );
+  const drawPaper = () => {
+    const paper = papers[Math.floor(Math.random() * papers.length)];
+    if (paper) navigate(`/praktyka/${encodeURIComponent(paper.id)}?tryb=egzamin`);
+  };
   return (
     <div className="exam-day-page">
       <PageHeading kicker="Część praktyczna INF.03" title="Jak wygląda egzamin">
@@ -78,18 +88,25 @@ export function ExamDay() {
         <div>
           <h2 id="proba-generalna">Zrób próbę generalną</h2>
           <p>
-            Wybierz arkusz i tryb <strong>Egzamin</strong>: 150 minut, bez podpowiedzi, z planem
-            czasu i listą kontrolną przed oddaniem.
+            Tryb <strong>Egzamin</strong> otwiera symulowane stanowisko: 10 minut na zapoznanie się
+            z arkuszem, potem 150 minut pracy bez podpowiedzi, folder nazwany numerem zdającego i
+            sprawdzenie plików przed „nagraniem płyty”.
           </p>
           <ul>
             {EXAM_CHECKLIST.slice(0, 3).map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <Link className="button primary" to="/arkusze">
-            Wybierz arkusz
-            <ArrowRight size={17} />
-          </Link>
+          <div className="exam-day-rehearsal-actions">
+            <button className="button primary" disabled={papers.length === 0} onClick={drawPaper}>
+              <Shuffle size={17} />
+              Losuj arkusz i zacznij
+            </button>
+            <Link className="button secondary" to="/arkusze">
+              Wybierz arkusz
+              <ArrowRight size={17} />
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -17,6 +17,7 @@ import {
   type ResultReview,
 } from '../exam-report';
 import { practiceStepForResult } from '../practice-results';
+import { readStation } from '../exam-station';
 import '../exam-report.css';
 
 const REVIEW_OPTIONS: { value: ResultReview; label: string }[] = [
@@ -59,6 +60,7 @@ export function ExamReport({
     attempt.mode === 'egzamin' && attempt.deadlineAt && attempt.submittedAt
       ? examTiming(attempt.deadlineAt, attempt.submittedAt, limitMinutes)
       : null;
+  const station = attempt.mode === 'egzamin' ? readStation(attempt.id) : undefined;
   const criteria = entry.attachments.find((item) => /kryteri|zasad/i.test(item.title));
 
   return (
@@ -72,6 +74,12 @@ export function ExamReport({
           {timing.overtime
             ? `Oddano po czasie (limit ${timing.limitMinutes} minut).`
             : `Oddano po ${timing.usedMinutes} z ${timing.limitMinutes} minut.`}
+        </p>
+      )}
+      {station && (
+        <p className="exam-report-station">
+          Folder z wynikami: <strong>{station.candidate}</strong> · zapoznanie z arkuszem:{' '}
+          {station.readingMinutes} z 10 minut. Archiwum pobierzesz przyciskiem „Pobierz ZIP”.
         </p>
       )}
 

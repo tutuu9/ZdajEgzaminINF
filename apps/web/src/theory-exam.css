@@ -1,0 +1,250 @@
+/* Theory series in the layout of an electronic written exam: a plain menu bar, one task at a
+   time, and a status column with answer counts, remaining time and the task grid. */
+.theory-exam {
+  display: grid;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.theory-exam-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #24476b;
+  color: #fff;
+}
+.theory-exam-menu strong {
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.theory-exam-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 7px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.theory-exam-menu-item:hover,
+.theory-exam-menu-item[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.14);
+}
+.theory-exam-menu-item:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.theory-exam-panel,
+.theory-exam-task,
+.theory-exam-status {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.theory-exam-panel {
+  display: grid;
+  gap: 12px;
+}
+.theory-exam-panel h1,
+.theory-exam-task h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.theory-exam-panel p {
+  margin: 0;
+  line-height: 1.5;
+}
+.theory-exam-panel .button {
+  justify-self: start;
+  min-width: 160px;
+}
+.theory-exam-instructions ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+.theory-exam-source {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.theory-exam-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--warning-border);
+  border-radius: 9px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.theory-exam-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+  gap: 14px;
+  align-items: start;
+}
+.theory-exam-task {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.theory-exam-task h1:focus {
+  outline: none;
+}
+.theory-exam-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.theory-exam-options legend {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.theory-exam-options label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+.theory-exam-options label:hover {
+  border-color: var(--accent-border);
+}
+.theory-exam-options label.selected {
+  border-color: var(--blue);
+  background: var(--accent-soft);
+}
+.theory-exam-options label:has(input:focus-visible) {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.theory-exam-options input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theory-exam-letter {
+  font:
+    600 20px/1 'IBM Plex Mono',
+    monospace;
+}
+.theory-exam-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.theory-exam-status {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 14px;
+}
+.theory-exam-status dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.theory-exam-status dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.theory-exam-status dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.theory-exam-status dd {
+  margin: 0;
+  font:
+    600 16px/1 'IBM Plex Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.theory-exam-status dd.open {
+  color: var(--danger);
+}
+.theory-exam-status .timer {
+  padding: 6px 10px;
+  font-size: 15px;
+}
+.theory-exam-status .fine-print {
+  margin: 0;
+}
+.theory-exam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 6px;
+}
+.theory-exam-grid button {
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font:
+    600 13px/1 'IBM Plex Mono',
+    monospace;
+}
+.theory-exam-grid button.open {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.theory-exam-grid button.answered {
+  border-color: var(--positive-border);
+  background: var(--positive-bg);
+  color: var(--success);
+}
+.theory-exam-grid button.current {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+.theory-exam-action p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 900px) {
+  .theory-exam-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theory-exam-status {
+    position: static;
+  }
+}
+@media (max-width: 520px) {
+  .theory-exam-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .theory-exam-panel,
+  .theory-exam-task,
+  .theory-exam-status {
+    padding: 14px;
+  }
+}
+@media (forced-colors: active) {
+  .theory-exam-grid button.open {
+    border-style: dashed;
+  }
+}

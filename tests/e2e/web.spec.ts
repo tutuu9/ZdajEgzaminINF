@@ -195,6 +195,7 @@ test('exam mode hides guidance and resumes the existing deadline', async ({ page
   await page.goto('/praktyka/inf03-01-25-01-sg');
   await page.getByRole('button', { name: /^Egzamin Zadanie na czas/ }).click();
   await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+  await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
   await expect(page.locator('.workspace-meta .pill')).toHaveText('Egzamin');
   await expect(page.getByRole('button', { name: 'Potrzebuję wskazówki', exact: true })).toHaveCount(
     0,
@@ -272,6 +273,7 @@ test('task PDF renders before starting and exam mode keeps the sheet without rea
     0,
   );
   await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+  await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
   await page.getByRole('tab', { name: 'Arkusz PDF', exact: true }).click();
   await expect(page.locator('.pdf-sheet canvas')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Jak czytać arkusz', exact: true })).toHaveCount(
@@ -599,10 +601,11 @@ test('a late check result cannot mark or replace code edited during the check', 
 test('exam keeps cumulative guidance locked until the attempt is closed', async ({ page }) => {
   await page.goto('/praktyka/inf03-01-25-01-sg?tryb=egzamin');
   await page.getByRole('button', { name: 'Rozpocznij egzamin', exact: true }).click();
+  await page.getByRole('button', { name: /^Rozpocznij pracę/ }).click();
   await expect(page.getByRole('tab', { name: 'Nauka', exact: true })).toBeDisabled();
   await expect(page.locator('.cumulative-course')).toHaveCount(0);
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Zakończ próbę', exact: true }).click();
+  await page.getByRole('button', { name: 'Zakończ egzamin', exact: true }).click();
+  await page.getByRole('button', { name: 'Nagraj płytę i oddaj pracę', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Próba zakończona', exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get('proba')).toBe((await savedProject(page)).id);
   await page.getByRole('tab', { name: 'Nauka', exact: true }).click();
