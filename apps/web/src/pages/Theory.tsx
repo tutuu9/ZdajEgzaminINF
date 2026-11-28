@@ -24,6 +24,7 @@ import type {
   TheoryResult,
   TheoryTicket,
 } from '@zdaj/shared';
+import { MAX_THEORY_SERIES_QUESTIONS } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, ApiError, errorMessage } from '../api';
 import { readAttempt, updateAttempt } from '../storage';
@@ -31,6 +32,7 @@ import { createTheoryAttempt, theoryReviewQuestions, theoryReviewTitle } from '.
 import { TheoryExamView } from '../components/TheoryExamView';
 import {
   guideTimeLabel,
+  OFFICIAL_TASKS,
   readTheoryExam,
   saveTheoryExam,
   type TheoryExamRecord,
@@ -134,6 +136,9 @@ export function Theory() {
     [error, setError] = useState(''),
     [filter, setFilter] = useState<'all' | 'wrong'>('all'),
     [examView, setExamView] = useState<TheoryExamRecord | undefined>();
+  const availableCount = Math.min(data?.questionCount ?? 0, MAX_THEORY_SERIES_QUESTIONS);
+  const seriesCount = Math.min(count, availableCount);
+  const timedCount = Math.min(availableCount, OFFICIAL_TASKS);
   const ref = useRef<AttemptSnapshot | null>(null),
     expired = useRef<string | null>(null),
     heading = useRef<HTMLHeadingElement>(null),
@@ -236,9 +241,7 @@ export function Theory() {
   const start = async (questionIds?: string[], asExam = false) => {
     if (busy) return;
     if (!questionIds && !asExam && mode === 'egzamin') {
-      setError(
-        'Pełny egzamin jest wyłączony: opublikowany zestaw CKE jest niepełny, a źródłowe informatory zawierają odpowiedzi. Wybierz naukę lub trening.',
-      );
+      setError('Opublikowane zadania CKE są dostępne w trybach Nauka i Trening.');
       return;
     }
     setBusy(true);
@@ -248,7 +251,7 @@ export function Theory() {
         ? await createTheoryAttempt({ mode: 'trening', level, questionIds }, theoryReviewTitle)
         : asExam
           ? await createTheoryAttempt(
-              { mode: 'trening', level, count: Math.min(data?.questionCount ?? 40, 40) },
+              { mode: 'trening', level, count: timedCount },
               'Test jak w systemie egzaminacyjnym',
             )
           : await createTheoryAttempt(
@@ -256,7 +259,7 @@ export function Theory() {
                 mode: mode === 'trening' ? 'trening' : 'nauka',
                 level,
                 topicId: topic === 'all' ? undefined : topic,
-                count: Math.min(count, data?.questionCount ?? count, 40),
+                count: seriesCount,
               },
               `Przykłady CKE: ${topic === 'all' ? 'wszystkie tematy' : (data?.topics.find((t) => t.id === topic)?.title ?? 'wybrany temat')}`,
             );
@@ -391,8 +394,8 @@ export function Theory() {
           <div className="theory-set-summary">
             <strong>
               {topic === 'all'
-                ? plural(Math.min(count, data?.questionCount ?? 0), 'pytanie', 'pytania', 'pytań')
-                : `Do ${Math.min(count, data?.questionCount ?? 0)} pytań`}
+                ? plural(seriesCount, 'pytanie', 'pytania', 'pytań')
+                : `Do ${seriesCount} pytań`}
             </strong>
             <span>
               {topic === 'all'
@@ -428,8 +431,7 @@ export function Theory() {
           <div className="theory-review-action theory-exam-action">
             <p>
               <MonitorCheck size={16} aria-hidden /> Test w układzie systemu egzaminacyjnego ·{' '}
-              {plural(Math.min(data?.questionCount ?? 0, 40), 'zadanie', 'zadania', 'zadań')} ·{' '}
-              {guideTimeLabel(Math.min(data?.questionCount ?? 0, 40))}
+              {plural(timedCount, 'zadanie', 'zadania', 'zadań')} · {guideTimeLabel(timedCount)}
             </p>
             <button
               className="button secondary full"
@@ -459,18 +461,21 @@ export function Theory() {
               <label className="field">
                 <span>Liczba pytań</span>
                 <select
-                  value={Math.min(count, data?.questionCount ?? 0)}
+                  value={seriesCount}
                   onChange={(event) => setCount(Number(event.target.value))}
                 >
-                  {[5, 10, 20]
-                    .filter((value) => value < (data?.questionCount ?? 0))
+                  {[5, 10, 20, OFFICIAL_TASKS]
+                    .filter((value) => value < availableCount)
                     .map((value) => (
                       <option key={value} value={value}>
                         {value} pytań
                       </option>
                     ))}
-                  <option value={data?.questionCount ?? 0}>
-                    Wszystkie dostępne ({data?.questionCount ?? 0})
+                  <option value={availableCount}>
+                    {availableCount === data?.questionCount
+                      ? 'Wszystkie dostępne'
+                      : 'Najdłuższa seria'}{' '}
+                    ({availableCount})
                   </option>
                 </select>
               </label>
@@ -484,9 +489,9 @@ export function Theory() {
         <details className="theory-source-note">
           <summary>Skąd pochodzą pytania?</summary>
           <p>
-            To {data?.questionCount ?? 0} opublikowanych przykładów CKE, a nie pełny bank
-            egzaminacyjny. Dokumenty źródłowe zawierają także klucze odpowiedzi, dlatego pełny tryb
-            egzaminu pozostaje wyłączony.
+            W puli jest {data?.questionCount ?? 0} opublikowanych zadań CKE z informatora z 2022 r.
+            i arkusza przykładowego z 2024 r. Klucz do informatora opublikowała CKE. Klucz do
+            arkusza z 2024 r. i objaśnienia przygotowała redakcja serwisu.
           </p>
           <p>
             Prawdziwa część pisemna to 40 pytań w 60 minut, z progiem 50%. Wyniki na tej stronie
@@ -646,6 +651,9 @@ export function Theory() {
         Zaimportuj prawidłową kopię postępu lub rozpocznij nowy test.
       </EmptyState>
     );
+  const questionTitle = question.source
+    ? `Zadanie ${question.source.questionNumber} z dokumentu CKE`
+    : question.prompt;
   return (
     <>
       <div className="quiz-heading">
@@ -674,14 +682,14 @@ export function Theory() {
             <span>{data?.topics.find((t) => t.id === question.topicId)?.title}</span>
           </div>
           <h2 ref={heading} tabIndex={-1}>
-            {question.prompt}
+            {questionTitle}
           </h2>
           {question.source && (
             <div className="theory-source-question">
               <Suspense fallback={<Loading label="Wczytywanie oryginalnego pytania CKE…" />}>
                 <SourceQuestionPdf
                   url={`/api/v1/catalog/${encodeURIComponent(question.source.catalogId)}/sheet.pdf`}
-                  title={question.prompt}
+                  title={questionTitle}
                   label={`CKE · zadanie ${question.source.questionNumber} · strona ${question.source.page}`}
                   downloadName={`${question.source.catalogId}.pdf`}
                   requestedPage={question.source.page}
@@ -695,10 +703,9 @@ export function Theory() {
               </Suspense>
               <p className="fine-print">
                 <a href={question.source.url} target="_blank" rel="noreferrer">
-                  Oryginalny informator CKE
+                  Oryginalny dokument CKE
                 </a>{' '}
-                może zawierać także odpowiedzi. Wybierz A, B, C lub D w kolejności pokazanej w
-                dokumencie.
+                · wybierz literę pokazaną przy odpowiedzi w dokumencie.
               </p>
             </div>
           )}

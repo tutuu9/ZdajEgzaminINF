@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import type { AttemptSnapshot, Bootstrap } from '@zdaj/shared';
+import { examStudyGuides } from '../../packages/content/src/index';
 
 const path = '/nauka/15-minut/join';
 
@@ -37,7 +39,7 @@ test('learners practise JOIN on mobile, get feedback and resume the separate SQL
   });
   await page.goto('/nauka');
   const entry = page.getByRole('link', { name: /^Mam 15 minut/ });
-  await expect(entry).toHaveAttribute('href', path);
+  await expect(entry).toHaveAttribute('href', '/nauka/15-minut');
   const now = new Date().toISOString();
   const existingProject: AttemptSnapshot = {
     id: 'existing-chat-course',
@@ -57,6 +59,7 @@ test('learners practise JOIN on mobile, get feedback and resume the separate SQL
   await localProjects(page, existingProject);
 
   await entry.press('Enter');
+  await page.getByRole('link', { name: /Połącz tabele za pomocą JOIN/ }).press('Enter');
   const example = page.getByRole('heading', { name: 'Zobacz przykład w arkuszu Chat' });
   await expect(example).toBeFocused();
   await expect(page.getByRole('link', { name: /INF\.03-02-24\.06-SG, str\. 2/ })).toHaveAttribute(
@@ -100,7 +103,7 @@ test('learners practise JOIN on mobile, get feedback and resume the separate SQL
   const courseLink = exercise.getByRole('link', { name: 'Otwórz kurs Baza Smoków' });
   await expect(courseLink).toHaveAttribute(
     'href',
-    '/praktyka/inf03-08-25-06-sg?tryb=nauka&widok=nauka',
+    '/praktyka/inf03-08-25-06-sg?tryb=nauka&widok=nauka&etap=sql',
   );
 
   await page.reload();
@@ -109,9 +112,63 @@ test('learners practise JOIN on mobile, get feedback and resume the separate SQL
   await expect(courseLink).toHaveCount(0);
   await editor.press('Control+Enter');
   await courseLink.click();
-  await expect(page.getByRole('button', { name: 'Rozpocznij naukę' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rozpocznij krok' })).toBeVisible();
   expect(await localProjects(page)).toEqual([existingProject]);
   expect(mutations).toEqual([]);
+});
+
+test('learners practise GROUP BY and resume the single POST activity with its starter form', async ({
+  page,
+}) => {
+  const ticket = { id: randomUUID(), token: randomUUID(), deadlineAt: null };
+  const guide = examStudyGuides.find(({ taskId }) => taskId === 'inf03-03-24-06-sg')!;
+  // The API tests exercise the real attempt and course boundaries. This journey tests local restore.
+  await page.route('**/api/v1/attempts', (route) => route.fulfill({ status: 201, json: ticket }));
+  await page.route(`**/api/v1/attempts/${ticket.id}/study`, (route) =>
+    route.fulfill({ json: { guide, hintCount: 0 } }),
+  );
+  await page.goto('/nauka/15-minut');
+  await page.getByRole('link', { name: /GROUP BY/ }).click();
+  await expect(page.getByRole('link', { name: /str\. 2, zapytanie 4/ })).toHaveAttribute(
+    'href',
+    /\.pdf#page=2$/,
+  );
+  await page.getByRole('button', { name: 'Spróbuj samodzielnie' }).click();
+  const sql = page.getByLabel('Twoje zapytanie SQL: kwerenda.sql');
+  await sql.fill(
+    'SELECT o.imie, COUNT(n.id) FROM notatki n JOIN osoby o ON n.Osoby_id = o.id GROUP BY o.imie;',
+  );
+  await sql.press('Control+Enter');
+  await expect(page.getByRole('status')).toContainText('Zapytanie zgodne z wariantem kursu');
+  await expect(page.getByRole('link', { name: 'Otwórz kurs Moje zadania' })).toHaveAttribute(
+    'href',
+    /etap=queries&krok=group$/,
+  );
+
+  await page.getByRole('link', { name: 'Wróć do krótkich ćwiczeń' }).click();
+  await page.getByRole('link', { name: /dane z formularza POST/ }).click();
+  await expect(page.getByRole('link', { name: /str\. 4/ })).toHaveAttribute(
+    'href',
+    /\.pdf#page=4$/,
+  );
+  await page.getByRole('link', { name: /Przejdź do kroku w kursie Poziomy rzek/ }).click();
+  await page.getByRole('button', { name: 'Rozpocznij krok' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Odczytaj jedną opcję z POST', exact: true }),
+  ).toBeVisible();
+  expect((await localProjects(page))[0]).toMatchObject({
+    mode: 'nauka',
+    files: [{ path: 'poziomRzek.php', content: expect.stringContaining('<form method="post">') }],
+    study: {
+      focusStepId: 'php-form',
+      focusActivityId: 'read-option',
+      current: 'php-form/read-option',
+    },
+  });
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: 'Odczytaj jedną opcję z POST', exact: true }),
+  ).toBeVisible();
 });
 
 test('a site without the practice payload offers a way back to learning', async ({ page }) => {
@@ -119,12 +176,15 @@ test('a site without the practice payload offers a way back to learning', async 
     const response = await route.fetch();
     const data = (await response.json()) as Bootstrap;
     delete data.shortPractice;
+    delete data.groupByPractice;
+    delete data.postPractice;
     await route.fulfill({ response, json: data });
   });
   await page.goto(path);
   await expect(
     page.getByRole('heading', { name: 'Trening JOIN jest chwilowo niedostępny' }),
   ).toBeVisible();
+  await page.getByRole('link', { name: 'Wróć do krótkich ćwiczeń' }).click();
   await page.getByRole('link', { name: 'Wróć do nauki' }).click();
   await expect(page.getByRole('heading', { name: 'Ucz się. Po swojemu.' })).toBeVisible();
   await expect(page.getByRole('link', { name: /^Mam 15 minut/ })).toHaveCount(0);

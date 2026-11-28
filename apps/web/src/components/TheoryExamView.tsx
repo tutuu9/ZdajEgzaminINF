@@ -74,9 +74,8 @@ export function TheoryExamView({
   const deadline = theoryExamDeadline(record);
   const notice = (
     <p className="theory-exam-notice">
-      Trening z {questions.length} opublikowanych przykładów z informatora CKE. Klucz odpowiedzi
-      jest publiczny, więc to nie jest egzamin i nie jest to system CKE. Prawdziwa część pisemna ma{' '}
-      {OFFICIAL_TASKS} zadań i {OFFICIAL_MINUTES} minut.
+      Trening z opublikowanych zadań CKE. Ten widok pokazuje układ egzaminu, a wynik służy do nauki.
+      Część pisemna CKE ma {OFFICIAL_TASKS} zadań i {OFFICIAL_MINUTES} minut.
     </p>
   );
   if (!deadline)
@@ -134,7 +133,7 @@ export function TheoryExamView({
               <Suspense fallback={<Loading label="Wczytywanie zadania…" />}>
                 <SourceQuestionPdf
                   url={`/api/v1/catalog/${encodeURIComponent(question.source.catalogId)}/sheet.pdf`}
-                  title={question.prompt}
+                  title={`Zadanie ${index + 1}`}
                   label={`Zadanie ${index + 1}`}
                   downloadName={`${question.source.catalogId}.pdf`}
                   requestedPage={question.source.page}

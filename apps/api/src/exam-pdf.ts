@@ -5,11 +5,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import { writtenExam2024Source } from '@zdaj/content';
 
 interface ReviewedExamSource {
   url: string;
   sourceLabel: string;
   provenance: 'official-source' | 'archive-copy';
+  theory?: true;
   sha256?: string;
 }
 
@@ -19,7 +21,15 @@ export const REVIEWED_EXAM_PDFS: Readonly<Record<string, ReviewedExamSource>> = 
     url: 'https://bip.cke.gov.pl/attachments/download/8580',
     sourceLabel: 'CKE — informator technik programista, przykładowe pytania INF.03',
     provenance: 'official-source',
+    theory: true,
     sha256: '4db0fbf07b802fa4d5121baa701f15045f6b6c2e74a17be5fc3c9f2831873cc5',
+  },
+  [writtenExam2024Source.id]: {
+    url: writtenExam2024Source.url,
+    sourceLabel: writtenExam2024Source.sourceLabel,
+    provenance: 'official-source',
+    theory: true,
+    sha256: writtenExam2024Source.sha256,
   },
   'cke-wedkowanie': {
     url: 'https://cke.gov.pl/images/_EGZAMIN_ZAWODOWY/Formula_2019/Przykladowe_zadania/inf_03.pdf',

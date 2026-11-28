@@ -3,6 +3,7 @@ import {
   MAX_RUN_DUMP_BYTES,
   MAX_RUN_FIELDS,
   MAX_RUN_SQL_CHARACTERS,
+  riverJoinPractice,
   type ProjectFile,
   type SandboxRunRequest,
   type SandboxRunResult,
@@ -11,6 +12,7 @@ import {
 import { fileBuffer, validatePath, validateProjectFiles } from './archive.js';
 import { runSandbox, type RunnerOptions } from './runner.js';
 import { validateDatabaseName } from './spec.js';
+import { compareSqlResults, riverWarningQuery } from './sql-result-feedback.js';
 
 const RUN_FAILURE = 'Środowisko nie ukończyło uruchomienia. Kod i baza nie zostały wykonane.';
 export const RUN_DISCLAIMER =
@@ -64,7 +66,12 @@ export function validateRunRequest(value: unknown, files: ProjectFile[]): Sandbo
   }
   if (!dumpPath && !sql.trim() && !php)
     throw new Error('Wybierz plik bazy, zapytania albo stronę do uruchomienia.');
-  return { database, dumpPath, sql, php };
+  if (
+    input.practice !== undefined &&
+    (input.practice !== riverJoinPractice.id || !dumpPath || !sql.trim() || php)
+  )
+    throw new Error('Do porównania wybierz plik bazy z arkusza i wpisz zapytanie SQL.');
+  return { database, dumpPath, sql, php, ...(input.practice ? { practice: input.practice } : {}) };
 }
 
 const text = (value: unknown, limit: number) => String(value ?? '').slice(0, limit);
@@ -151,8 +158,8 @@ function normaliseResult(payload: unknown, database: string, runtimeMs: number):
 }
 
 /**
- * Runs the learner's own dump, statements and page in a throwaway sandbox. Nothing is
- * compared with an expected answer, so the result contains no score.
+ * Runs the learner's own dump, statements and page in a throwaway sandbox. The optional
+ * learning comparison runs its fixed reference first, against the same imported data.
  */
 export async function runPlayground(
   request: unknown,
@@ -163,7 +170,11 @@ export async function runPlayground(
   const run = validateRunRequest(request, files);
   const { stdout, runtimeMs } = await runSandbox(
     files,
-    JSON.stringify({ mode: 'run', ...run }),
+    JSON.stringify({
+      mode: 'run',
+      ...run,
+      sql: run.practice ? `${riverWarningQuery};\n${run.sql}` : run.sql,
+    }),
     options,
     {
       // No Chromium in this mode: MariaDB, the PHP server and the controller only.
@@ -174,5 +185,12 @@ export async function runPlayground(
     },
     RUN_FAILURE,
   );
-  return normaliseResult(JSON.parse(stdout), run.database, runtimeMs);
+  const result = normaliseResult(JSON.parse(stdout), run.database, runtimeMs);
+  if (!run.practice) return result;
+  const [reference, ...answers] = result.statements;
+  return {
+    ...result,
+    statements: answers.map((statement, index) => ({ ...statement, index })),
+    practice: compareSqlResults(reference, answers, result.omittedStatements),
+  };
 }

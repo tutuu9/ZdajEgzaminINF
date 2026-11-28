@@ -307,14 +307,29 @@ export function validateProjectState(item: Record<string, unknown>): void {
     if (item.kind !== 'practice' || (item.mode === 'egzamin' && item.submittedAt === undefined))
       fail();
     const study = record(item.study);
-    fields(study, ['guide', 'current', 'completed', 'viewedExamples', 'focusStepId']);
+    fields(study, [
+      'guide',
+      'current',
+      'completed',
+      'viewedExamples',
+      'focusStepId',
+      'focusActivityId',
+    ]);
     const { guide, activityIds: allActivityIds } = validateCachedGuide(study.guide);
     const focusStepId = study.focusStepId === undefined ? undefined : id(study.focusStepId);
     const focus = guide.steps.find((step) => step.id === focusStepId);
+    const focusActivityId =
+      study.focusActivityId === undefined ? undefined : id(study.focusActivityId);
     if (focusStepId && (item.mode !== 'nauka' || !guide.project || !focus?.activities?.length))
       fail();
+    if (focusActivityId && !focus?.activities?.some((activity) => activity.id === focusActivityId))
+      fail();
     const activityIds = focus
-      ? new Set(focus.activities?.map((activity) => `${focus.id}/${activity.id}`))
+      ? new Set(
+          focus.activities
+            ?.filter((activity) => !focusActivityId || activity.id === focusActivityId)
+            .map((activity) => `${focus.id}/${activity.id}`),
+        )
       : allActivityIds;
     validatedStudy = { guide, activityIds };
     if (

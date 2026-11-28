@@ -1,8 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
 import { db } from '@zdaj/database';
-import { topics, lessons as seedLessons, sqlJoinPractice } from '@zdaj/content';
+import {
+  topics,
+  lessons as seedLessons,
+  riverPostPractice,
+  sqlGroupByPractice,
+  sqlJoinPractice,
+} from '@zdaj/content';
 import {
   DEFAULT_SETTINGS,
+  riverJoinPractice,
   toPublicTask,
   type SiteSettings,
   type TaskVersion,
@@ -10,6 +17,7 @@ import {
   type Lesson,
   type CatalogEntry,
   type QuestionRevision,
+  type SqlShortPractice,
 } from '@zdaj/shared';
 import { config } from './config.js';
 import { REVIEWED_EXAM_PDFS } from './exam-pdf.js';
@@ -52,13 +60,19 @@ export function isCkeTask(task: TaskVersion): boolean {
   return (
     task.qualification === 'INF.03' &&
     task.origin === 'exam' &&
-    Boolean(task.sourceCatalogId && Object.hasOwn(REVIEWED_EXAM_PDFS, task.sourceCatalogId))
+    Boolean(
+      task.sourceCatalogId &&
+      Object.hasOwn(REVIEWED_EXAM_PDFS, task.sourceCatalogId) &&
+      !REVIEWED_EXAM_PDFS[task.sourceCatalogId]?.theory,
+    )
   );
 }
 export function isCkeQuestion(question: QuestionRevision): boolean {
   const source = question.source && REVIEWED_EXAM_PDFS[question.source.catalogId];
   return Boolean(
-    source && source.provenance === 'official-source' && source.url === question.source?.url,
+    source?.theory &&
+    source.provenance === 'official-source' &&
+    source.url === question.source?.url,
   );
 }
 export async function bootstrap(): Promise<Bootstrap> {
@@ -87,11 +101,19 @@ export async function bootstrap(): Promise<Bootstrap> {
   );
   const reviewQuestionIds = questions.filter(isCkeQuestion).map((question) => question.id);
   const publicTasks = tasks.filter(isCkeTask).map(toPublicTask);
-  const shortPracticeAvailable = [sqlJoinPractice.example, sqlJoinPractice.exercise].every(
-    ({ source: { catalogId } }) =>
-      publicTasks.some((task) => task.sourceCatalogId === catalogId) &&
-      catalog.some((entry) => entry.id === catalogId),
-  );
+  const paperAvailable = (catalogId: string) =>
+    publicTasks.some((task) => task.sourceCatalogId === catalogId) &&
+    catalog.some((entry) => entry.id === catalogId);
+  const sqlPracticeAvailable = ({ example, exercise }: SqlShortPractice) =>
+    paperAvailable(example.source.catalogId) && paperAvailable(exercise.source.catalogId);
+  const postPracticeAvailable =
+    paperAvailable(riverPostPractice.source.catalogId) &&
+    publicTasks.some(
+      (task) =>
+        task.sourceCatalogId === riverPostPractice.source.catalogId &&
+        task.version === riverPostPractice.taskVersion,
+    );
+  const workerReady = options.checkingEnabled && (await workerAvailable());
   return {
     topics,
     tasks: publicTasks,
@@ -116,12 +138,16 @@ export async function bootstrap(): Promise<Bootstrap> {
     exercises: [],
     questionCount: reviewQuestionIds.length,
     reviewQuestionIds,
-    ...(shortPracticeAvailable ? { shortPractice: sqlJoinPractice } : {}),
+    ...(sqlPracticeAvailable(sqlJoinPractice) ? { shortPractice: sqlJoinPractice } : {}),
+    ...(sqlPracticeAvailable(sqlGroupByPractice) ? { groupByPractice: sqlGroupByPractice } : {}),
+    ...(postPracticeAvailable ? { postPractice: riverPostPractice } : {}),
     features: {
       aiAvailable: options.aiEnabled && Boolean(config.deepseekKey),
-      checkingAvailable: options.checkingEnabled && (await workerAvailable()),
-      runsAvailable:
-        options.checkingEnabled && options.runtimeRunsEnabled && (await workerAvailable()),
+      checkingAvailable: workerReady && !config.publicRuntimePilot,
+      runsAvailable: workerReady && options.runtimeRunsEnabled,
+      ...(config.publicRuntimePilot
+        ? { runScope: { taskId: riverJoinPractice.taskId, mode: riverJoinPractice.mode } }
+        : {}),
     },
   };
 }

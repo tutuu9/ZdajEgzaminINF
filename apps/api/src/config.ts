@@ -31,6 +31,8 @@ export const config = {
   deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-flash',
   runnerProfile: process.env.RUNNER_PROFILE ?? 'local-development',
   publicSandboxVerified: process.env.PUBLIC_SANDBOX_VERIFIED === 'true',
+  publicRuntimePilot:
+    process.env.RUNNER_PROFILE === 'public-sandbox' && process.env.PUBLIC_RUNTIME_PILOT === 'true',
 };
 // The key is sent to this address, so a mistyped or plain-HTTP value must stop the start.
 // Plain HTTP is accepted only for a stand-in provider on this machine.

@@ -38,6 +38,12 @@ const Handbook = lazy(() =>
 const ShortPractice = lazy(() =>
   import('./pages/ShortPractice').then((module) => ({ default: module.ShortPractice })),
 );
+const ShortPracticeIndex = lazy(() =>
+  import('./pages/ShortPractice').then((module) => ({ default: module.ShortPracticeIndex })),
+);
+const PostPractice = lazy(() =>
+  import('./pages/ShortPractice').then((module) => ({ default: module.PostPractice })),
+);
 
 function RouteAlias({ to, task = false }: { to: string; task?: boolean }) {
   const location = useLocation();
@@ -71,7 +77,10 @@ createRoot(document.getElementById('root')!).render(
               <Route path="nauka/podrecznik" element={<Handbook />} />
               <Route path="nauka/podrecznik/:book" element={<Handbook />} />
               <Route path="nauka/podrecznik/:book/:chapter" element={<Handbook />} />
+              <Route path="nauka/15-minut" element={<ShortPracticeIndex />} />
               <Route path="nauka/15-minut/join" element={<ShortPractice />} />
+              <Route path="nauka/15-minut/group-by" element={<ShortPractice kind="group-by" />} />
+              <Route path="nauka/15-minut/post" element={<PostPractice />} />
               <Route path="nauka/:id" element={<Learn />} />
               <Route path="katalog" element={<RouteAlias to="/arkusze" />} />
               <Route path="praktyka" element={<RouteAlias to="/arkusze" />} />

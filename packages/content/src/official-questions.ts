@@ -1,4 +1,5 @@
 import type { QuestionRevision } from '@zdaj/shared';
+import { writtenQuestions2024 } from './written-questions-2024.js';
 
 const sourceUrl = 'https://bip.cke.gov.pl/attachments/download/8580';
 
@@ -448,7 +449,7 @@ const examples: PublishedExample[] = [
   },
 ];
 
-export const officialQuestions: QuestionRevision[] = examples.map((example) => ({
+const informatorQuestions: QuestionRevision[] = examples.map((example) => ({
   id: `cke-inf03-2022-q${String(example.number).padStart(2, '0')}`,
   // Preserve the first locally seeded revision when clarifying answer commentary.
   version: [3, 4, 5, 7, 8, 10, 13, 15, 18].includes(example.number) ? 2 : 1,
@@ -472,3 +473,5 @@ export const officialQuestions: QuestionRevision[] = examples.map((example) => (
     bottom: example.bottom,
   },
 }));
+
+export const officialQuestions = [...informatorQuestions, ...writtenQuestions2024];

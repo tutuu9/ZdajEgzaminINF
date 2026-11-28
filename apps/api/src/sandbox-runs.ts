@@ -21,6 +21,8 @@ import {
 } from '@zdaj/checker';
 import {
   MAX_RUN_INPUT_BYTES,
+  matchesRunScope,
+  riverJoinPractice,
   type ProjectFile,
   type SandboxRunRequest,
   type SandboxRunResponse,
@@ -59,12 +61,13 @@ function requireOpenAttempt(attempt: RunWindow) {
 
 export async function submitSandboxRun(attemptId: string, body: unknown, req: Request) {
   const value = parse(requestSchema, body);
-  // A run replaces the examination station's local server. It reveals no teaching
-  // material and no assessment, so it is available in every mode, including Egzamin.
   const attempt = await getAttempt(attemptId, value.token);
   requireOpenAttempt(attempt);
   if (!attempt.taskId || !attempt.taskVersion)
     throw new BadRequestException('To nie jest próba praktyczna.');
+  const inPilotCourse = matchesRunScope(riverJoinPractice, attempt.taskId, attempt.mode);
+  if (config.publicRuntimePilot && !inPilotCourse)
+    throw new ForbiddenException('Baza i PHP jest dostępna w trybie Nauka w kursie Poziomy rzek.');
   const task = await taskVersion(attempt.taskId, attempt.taskVersion);
   if (!task.technologies.some((technology) => technology === 'SQL' || technology === 'PHP'))
     throw new BadRequestException('Ten arkusz nie zawiera części SQL ani PHP.');
@@ -86,6 +89,10 @@ export async function submitSandboxRun(attemptId: string, body: unknown, req: Re
       error instanceof Error ? error.message : 'Niepoprawne żądanie uruchomienia.',
     );
   }
+  if (run.practice && (!inPilotCourse || attempt.taskVersion !== riverJoinPractice.taskVersion))
+    throw new ForbiddenException(
+      'To porównanie jest dostępne w kursie Poziomy rzek w trybie Nauka.',
+    );
   const inputHash = createHash('sha256')
     .update(studyInputHash(files))
     .update(JSON.stringify(run))

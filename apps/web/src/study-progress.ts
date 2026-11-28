@@ -18,9 +18,13 @@ export interface StudyPosition {
   indexInStep: number;
 }
 
-export function studySequence(guide: ExamStudyGuide, focusStepId?: string): StudyPosition[] {
+export function studySequence(
+  guide: ExamStudyGuide,
+  focusStepId?: string,
+  focusActivityId?: string,
+): StudyPosition[] {
   const steps = focusStepId ? guide.steps.filter((step) => step.id === focusStepId) : guide.steps;
-  return steps.flatMap((step) =>
+  const positions = steps.flatMap((step) =>
     (step.activities ?? []).map((activity, indexInStep) => ({
       id: `${step.id}/${activity.id}`,
       step,
@@ -28,6 +32,9 @@ export function studySequence(guide: ExamStudyGuide, focusStepId?: string): Stud
       indexInStep,
     })),
   );
+  return focusActivityId
+    ? positions.filter(({ activity }) => activity.id === focusActivityId)
+    : positions;
 }
 
 export function initialStudyProgress(guide: ExamStudyGuide): StudyProgress {

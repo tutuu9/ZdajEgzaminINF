@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { CatalogEntry, ShortPracticeSource, SqlJoinPractice } from '@zdaj/shared';
+import type { CatalogEntry, ShortPracticeSource, SqlShortPractice } from '@zdaj/shared';
 import { Editor } from '../components/Editor';
 import {
   EmptyState,
@@ -11,30 +11,40 @@ import {
   usePageTitle,
 } from '../components/common';
 import { useApp } from '../context';
+import { studyStageHref } from '../resume';
 import { compareSingleSelect, type PracticeComparison } from '../sql-practice';
 import { readExercise, saveExercise } from '../storage';
 import '../short-practice.css';
 
-function PaperLink({ paper, source }: { paper: CatalogEntry; source: ShortPracticeSource }) {
+function PaperLink({
+  paper,
+  source,
+}: {
+  paper: CatalogEntry;
+  source: Omit<ShortPracticeSource, 'queryNumber'> & { queryNumber?: number };
+}) {
   if (!paper.sourcePdf) return null;
   const url = new URL(paper.sourcePdf.url);
   url.hash = `page=${source.page}`;
   return (
     <p>
       <ExternalLink href={url.href}>
-        {paper.sourcePdf.sourceLabel}, str. {source.page}, zapytanie {source.queryNumber}
+        {paper.sourcePdf.sourceLabel}, str. {source.page}
+        {source.queryNumber ? `, zapytanie ${source.queryNumber}` : ''}
       </ExternalLink>
     </p>
   );
 }
 
-function JoinPractice({
+function SqlPractice({
   material,
+  kind,
   examplePaper,
   exercisePaper,
   courseHref,
 }: {
-  material: SqlJoinPractice;
+  material: SqlShortPractice;
+  kind: 'join' | 'group-by';
   examplePaper: CatalogEntry;
   exercisePaper: CatalogEntry;
   courseHref: string;
@@ -84,10 +94,10 @@ function JoinPractice({
 
   return (
     <div className="short-practice">
-      <Link className="back-link" to="/nauka">
-        Wróć do nauki
+      <Link className="back-link" to="/nauka/15-minut">
+        Wróć do krótkich ćwiczeń
       </Link>
-      <PageHeading title="SQL JOIN w 15 minut" />
+      <PageHeading title={kind === 'join' ? 'SQL JOIN w 15 minut' : 'SQL GROUP BY w 15 minut'} />
       <ErrorNotice message={storageError} />
       {practicing ? (
         <section
@@ -144,7 +154,7 @@ function JoinPractice({
                     <ul className="short-practice-findings">
                       {feedback.findings.map(({ code, message }) => (
                         <li key={message}>
-                          {code === 'missing-condition'
+                          {kind === 'join' && code === 'missing-condition'
                             ? 'Sprawdź pary kluczy w złączeniach i warunek wyboru lat.'
                             : message}
                         </li>
@@ -197,12 +207,13 @@ function JoinPractice({
   );
 }
 
-export function ShortPractice() {
+export function ShortPractice({ kind = 'join' }: { kind?: 'join' | 'group-by' } = {}) {
   const { data, loading } = useApp();
-  usePageTitle('SQL JOIN w 15 minut');
+  const topic = kind === 'join' ? 'JOIN' : 'GROUP BY';
+  usePageTitle(`SQL ${topic} w 15 minut`);
   if (loading && !data) return <Loading />;
 
-  const practice = data?.shortPractice;
+  const practice = kind === 'join' ? data?.shortPractice : data?.groupByPractice;
   const exampleId = practice?.example.source.catalogId;
   const exerciseId = practice?.exercise.source.catalogId;
   const examplePaper = data?.catalog.find(({ id }) => id === exampleId);
@@ -212,21 +223,128 @@ export function ShortPractice() {
     return (
       <EmptyState
         failed
-        title="Trening JOIN jest chwilowo niedostępny"
-        to="/nauka"
-        label="Wróć do nauki"
+        title={`Trening ${topic} jest chwilowo niedostępny`}
+        to="/nauka/15-minut"
+        label="Wróć do krótkich ćwiczeń"
       >
-        Do tego treningu potrzebne są materiały z arkuszy Chat i Baza Smoków.
+        {kind === 'join'
+          ? 'Do tego treningu potrzebne są materiały z arkuszy Chat i Baza Smoków.'
+          : 'Do tego treningu potrzebne są materiały z arkuszy Poziomy rzek i Moje zadania.'}
       </EmptyState>
     );
 
   return (
-    <JoinPractice
+    <SqlPractice
       key={practice.id}
       material={practice}
+      kind={kind}
       examplePaper={examplePaper}
       exercisePaper={exercisePaper}
-      courseHref={`/praktyka/${encodeURIComponent(course.id)}?tryb=nauka&widok=nauka`}
+      courseHref={
+        kind === 'join'
+          ? studyStageHref(course.id, 'sql')
+          : studyStageHref(course.id, 'queries', 'group')
+      }
     />
+  );
+}
+
+export function ShortPracticeIndex() {
+  const { data, loading } = useApp();
+  usePageTitle('Mam 15 minut');
+  if (loading && !data) return <Loading />;
+  const activities = [
+    {
+      available: data?.shortPractice,
+      path: 'join',
+      title: 'Połącz tabele za pomocą JOIN',
+      paper: 'Chat i Baza Smoków',
+    },
+    {
+      available: data?.groupByPractice,
+      path: 'group-by',
+      title: 'Policz wyniki w grupach za pomocą GROUP BY',
+      paper: 'Poziomy rzek i Moje zadania',
+    },
+    {
+      available: data?.postPractice,
+      path: 'post',
+      title: 'Odczytaj dane z formularza POST',
+      paper: 'Poziomy rzek',
+    },
+  ].filter(({ available }) => available);
+  if (!activities.length)
+    return (
+      <EmptyState
+        failed
+        title="Krótkie ćwiczenia są chwilowo niedostępne"
+        to="/nauka"
+        label="Wróć do nauki"
+      >
+        Możesz kontynuować naukę z pełnym arkuszem.
+      </EmptyState>
+    );
+  return (
+    <div className="short-practice">
+      <Link className="back-link" to="/nauka">
+        Wróć do nauki
+      </Link>
+      <PageHeading title="Mam 15 minut" />
+      {activities.map(({ path, title, paper }) => (
+        <section key={path} className="short-practice-panel surface-panel">
+          <h2>{title}</h2>
+          <p>{paper}</p>
+          <Link className="button secondary" to={path} aria-label={`Otwórz ćwiczenie: ${title}`}>
+            Otwórz ćwiczenie
+          </Link>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function PostPractice() {
+  const { data, loading } = useApp();
+  usePageTitle('PHP POST w 15 minut');
+  if (loading && !data) return <Loading />;
+  const practice = data?.postPractice;
+  const paper = data?.catalog.find(({ id }) => id === practice?.source.catalogId);
+  const course = data?.tasks.find(
+    (task) =>
+      task.sourceCatalogId === practice?.source.catalogId && task.version === practice?.taskVersion,
+  );
+  if (!practice || !paper?.sourcePdf || !course)
+    return (
+      <EmptyState
+        failed
+        title="Trening POST jest chwilowo niedostępny"
+        to="/nauka/15-minut"
+        label="Wróć do krótkich ćwiczeń"
+      >
+        Do tego ćwiczenia potrzebne są materiały z arkusza Poziomy rzek.
+      </EmptyState>
+    );
+  return (
+    <div className="short-practice">
+      <Link className="back-link" to="/nauka/15-minut">
+        Wróć do krótkich ćwiczeń
+      </Link>
+      <PageHeading title="PHP POST w 15 minut" />
+      <section className="short-practice-panel surface-panel" aria-labelledby="post-practice-step">
+        <h2 id="post-practice-step">Odczytaj wybrany poziom z formularza</h2>
+        <PaperLink paper={paper} source={practice.source} />
+        <p>
+          Otrzymasz gotowy formularz z trzema opcjami. Odczytaj wybór w PHP i sprawdź, czy zmienia
+          się po wysłaniu formularza. Do tego kroku wystarczy sam plik PHP.
+        </p>
+        <p>Otwórz stronę w „Baza i PHP” albo uruchom ją lokalnie w XAMPP.</p>
+        <Link
+          className="button primary"
+          to={studyStageHref(course.id, practice.stepId, practice.activityId)}
+        >
+          Przejdź do kroku w kursie {course.title}
+        </Link>
+      </section>
+    </div>
   );
 }

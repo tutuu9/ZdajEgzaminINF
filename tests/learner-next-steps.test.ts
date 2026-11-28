@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   toPublicQuestion,
   toPublicTask,
@@ -16,6 +16,8 @@ import {
   officialQuestions,
   officialTasks,
   questions,
+  riverPostPractice,
+  sqlGroupByPractice,
 } from '../packages/content/src/index';
 
 const paper = toPublicTask(officialTasks.find(({ id }) => id === 'inf03-08-25-06-sg')!);
@@ -139,10 +141,84 @@ describe('practice from a self-review', () => {
     );
     attempt.study!.current = studySequence(guide)[0]!.id;
     expect(() => readProgressBackup(backup)).toThrow();
+    attempt.study!.focusActivityId = step!.activity.id;
+    attempt.study!.current = step!.id;
+    expect(readProgressBackup(backup).attempts[0]?.study).toEqual(attempt.study);
+    attempt.study!.current = studySequence(guide, focusStepId)[1]!.id;
+    expect(() => readProgressBackup(backup)).toThrow();
   });
 });
 
 describe('the daily study plan', () => {
+  it('suggests a different paper from a finished exam review and moves to the next weak skill after practice', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () =>
+        JSON.stringify({
+          confirmedFiles: [],
+          results: { 'operacje na bazie danych': 'missing', skrypty: 'partial' },
+        }),
+    });
+    try {
+      const exam: AttemptSnapshot = {
+        id: ticket.id,
+        ticket,
+        mode: 'egzamin',
+        kind: 'practice',
+        level: 'beginner',
+        taskId: paper.id,
+        taskVersion: paper.version,
+        title: paper.title,
+        createdAt: time,
+        updatedAt: time,
+        submittedAt: time,
+        deadlineAt: null,
+        hintCount: 0,
+      };
+      const plan = { examDate: '2027-02-01', minutesPerDay: 15 };
+      const data = {
+        tasks: officialTasks.map(toPublicTask),
+        reviewQuestionIds: [],
+        catalog,
+        groupByPractice: sqlGroupByPractice,
+        postPractice: riverPostPractice,
+      };
+      expect(dailyStudyAction(plan, today, [exam], data)).toMatchObject({
+        kind: 'follow-up',
+        href: '/praktyka/inf03-02-25-06-sg?tryb=nauka&widok=nauka&etap=queries&krok=group',
+      });
+      const group = examStudyGuides.find(({ taskId }) => taskId === 'inf03-02-25-06-sg')!;
+      const fixed: AttemptSnapshot = {
+        ...exam,
+        id: 'follow-up',
+        taskId: group.taskId,
+        mode: 'nauka',
+        submittedAt: undefined,
+        study: {
+          guide: group,
+          current: 'queries/group',
+          focusStepId: 'queries',
+          focusActivityId: 'group',
+          viewedExamples: [],
+          completed: {
+            'queries/group': {
+              status: 'manual',
+              checkedAt: time,
+              revision: 0,
+              filesHash: '0'.repeat(64),
+              evidence: '',
+            },
+          },
+        },
+      };
+      expect(dailyStudyAction(plan, today, [exam, fixed], data)).toMatchObject({
+        kind: 'follow-up',
+        href: '/praktyka/inf03-03-24-06-sg?tryb=nauka&widok=nauka&etap=php-form&krok=read-option',
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('counts calendar days across a timezone change and rejects imaginary dates', () => {
     expect(daysUntilExam('2027-03-29', '2027-03-27')).toBe(2);
     expect(daysUntilExam('2027-02-29', '2027-02-28')).toBeNaN();
