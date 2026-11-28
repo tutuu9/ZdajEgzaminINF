@@ -2,8 +2,8 @@
  * The exam-system view of a theory series. It follows the CKE description of the electronic
  * written part (40 closed tasks, 60 minutes, Start button, answers in any order, unanswered
  * tasks marked, "Zakończ egzamin" once every task has an answer). Here it is a training run
- * over the published informator examples, whose key is public: the API still treats it as
- * "trening". The guide time and the start moment stay in this browser only.
+ * over published CKE examples. The API treats it as "trening". The guide time
+ * and the start moment stay in this browser only.
  */
 export const OFFICIAL_TASKS = 40;
 export const OFFICIAL_MINUTES = 60;

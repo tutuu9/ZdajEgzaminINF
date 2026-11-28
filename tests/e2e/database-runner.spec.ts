@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import type { Bootstrap, SandboxRunSubmission } from '@zdaj/shared';
+import { riverJoinPractice } from '@zdaj/shared';
+import { examStudyGuides } from '../../packages/content/src/index';
 
-async function showServerRunner(page: Page) {
+async function showServerRunner(page: Page, runScope?: Bootstrap['features']['runScope']) {
   // These UI tests mock the run transport. Keep their tickets out of the real attempt quota.
   await page.route('**/api/v1/attempts', (route) =>
     route.fulfill({
@@ -14,9 +16,68 @@ async function showServerRunner(page: Page) {
     const response = await route.fetch();
     const data: Bootstrap = await response.json();
     data.features.runsAvailable = true;
+    if (runScope) data.features.runScope = runScope;
     await route.fulfill({ response, json: data });
   });
 }
+
+test('the pilot compares a result only in the scoped learning course', async ({ page }) => {
+  const { taskId, mode, id } = riverJoinPractice;
+  await showServerRunner(page, { taskId, mode });
+  const guide = examStudyGuides.find((item) => item.taskId === taskId)!;
+  await page.route('**/api/v1/attempts/*/study', (route) =>
+    route.fulfill({ json: { guide, hintCount: 0 } }),
+  );
+  const submissions: SandboxRunSubmission[] = [];
+  await page.route('**/api/v1/attempts/*/runs', async (route) => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({ json: { id: 'join-run', token: 'test-run-token', status: 'queued' } });
+  });
+  await page.route('**/api/v1/runs/join-run', (route) =>
+    route.fulfill({
+      json: {
+        status: 'completed',
+        result: {
+          database: 'rzeki',
+          import: null,
+          statements: [],
+          php: null,
+          practice: {
+            status: 'columns',
+            expected: ['nazwa', 'rzeka'],
+            actualCount: 1,
+            missing: ['rzeka'],
+          },
+          disclaimer: 'Wynik uruchomienia',
+        },
+      },
+    }),
+  );
+  await page.route('**/api/v1/runs/join-run/ack', (route) => route.fulfill({ json: { ok: true } }));
+
+  await page.goto(`/praktyka/${taskId}?tryb=nauka`);
+  await page.getByRole('button', { name: 'Rozpocznij naukę', exact: true }).click();
+  await page.getByRole('tab', { name: 'Baza i PHP', exact: true }).click();
+  const compare = page.getByRole('button', { name: 'Porównaj wynik zapytania 3' });
+  await expect(compare).toBeDisabled();
+  await page.locator('.database-runner input[type="file"]').setInputFiles({
+    name: 'baza.sql',
+    mimeType: 'application/sql',
+    buffer: Buffer.from('CREATE TABLE dane (id INT);'),
+  });
+  await page.getByLabel('Nazwa bazy danych').fill('rzeki');
+  await page.getByLabel('Zapytania SQL').fill('SELECT nazwa FROM wodowskazy;');
+  await compare.click();
+  await expect(page.getByText('Brakuje: rzeka.', { exact: false })).toBeVisible();
+  expect(submissions[0]?.run).toMatchObject({ practice: id, dumpPath: 'baza.sql' });
+
+  await page.goto(`/praktyka/${taskId}?tryb=trening`);
+  await page.getByRole('button', { name: 'Rozpocznij trening', exact: true }).click();
+  await page.getByRole('tab', { name: 'Baza i PHP', exact: true }).click();
+  await expect(compare).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Uruchom SQL', exact: true })).toBeDisabled();
+  expect(submissions).toHaveLength(1);
+});
 
 // These journeys run without a checking worker, so server-side runs are unavailable.
 test('the database view keeps the learner dump locally and explains the manual fallback', async ({

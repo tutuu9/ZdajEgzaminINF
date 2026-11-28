@@ -125,3 +125,19 @@ export function practiceStepForResult(taskId: string, result: string): string | 
   const category = resultCategories.get(result);
   if (category && Object.hasOwn(practiceSteps, taskId)) return practiceSteps[taskId]?.[category];
 }
+
+export function practiceSkillForResult(
+  paperId: string,
+  result: string,
+  technologies: string[],
+): 'sql' | 'php' | undefined {
+  const step = practiceStepForResult(paperId, result);
+  if (!step) return undefined;
+  const category = resultCategories.get(result);
+  if (category === 'database') return 'sql';
+  if (
+    step.startsWith('php-') ||
+    (category === 'script' && step === 'script' && technologies.includes('PHP'))
+  )
+    return 'php';
+}

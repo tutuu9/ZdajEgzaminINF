@@ -87,7 +87,9 @@ export function StudyPlanCard() {
               <p>
                 {action.kind === 'practice'
                   ? 'Przećwicz zapytania SQL z arkusza '
-                  : 'Zrób jeden krok w nauce · '}
+                  : action.kind === 'follow-up'
+                    ? 'Po próbnym egzaminie · '
+                    : 'Zrób jeden krok w nauce · '}
                 <strong>{action.title}</strong>
               </p>
             )}
@@ -96,7 +98,9 @@ export function StudyPlanCard() {
             <TheoryReviewButton questionIds={action.questionIds} />
           ) : (
             <Link className="button primary" to={action.href}>
-              {action.kind === 'practice' ? 'Otwórz trening' : 'Przejdź do nauki'}
+              {action.kind === 'practice' || action.kind === 'follow-up'
+                ? 'Otwórz trening'
+                : 'Przejdź do nauki'}
               <ArrowRight size={17} aria-hidden />
             </Link>
           )}

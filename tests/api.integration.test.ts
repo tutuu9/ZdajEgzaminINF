@@ -12,12 +12,13 @@ import type {
   CheckResponse,
   ExamStudyResponse,
   SandboxRunResponse,
+  SiteSettings,
   StudyCheckResponse,
   TheoryResult,
   TheoryTicket,
   QuestionCheck,
 } from '@zdaj/shared';
-import { toPublicQuestion } from '@zdaj/shared';
+import { riverJoinPractice, toPublicQuestion } from '@zdaj/shared';
 import { disableServerFeatures } from '../packages/database/src/site-only.js';
 
 loadEnv({ quiet: true });
@@ -870,7 +871,7 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     expect(status).toBe(200);
     expect(data.tasks).toHaveLength(15);
     expect(data.questionCount).toBe(seed.officialQuestions.length);
-    expect(data.questionCount).toBeLessThan(40);
+    expect(data.questionCount).toBe(64);
     expect(data.exercises).toEqual([]);
     expect(data.tasks.map((task) => task.id).sort()).toEqual(
       seed.officialTasks.map((task) => task.id).sort(),
@@ -890,12 +891,76 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     expect(data.lessons.every((lesson) => lesson.exerciseIds.length === 0)).toBe(true);
   });
 
-  it('serves the JOIN practice only with both reviewed paper sources', async () => {
+  it('limits the runtime pilot to learning attempts for the selected CKE paper', async () => {
+    const { config: apiConfig } = await import('../apps/api/src/config.js');
+    const previous = apiConfig.publicRuntimePilot;
+    const {
+      data: { settings: previousSettings },
+    } = await owner.request<{ settings: SiteSettings }>('/admin/dashboard');
+    const [learning, exam, training, other] = await Promise.all([
+      practice(riverJoinPractice.taskId),
+      practice(riverJoinPractice.taskId, 'egzamin'),
+      practice(riverJoinPractice.taskId, 'trening'),
+      practice('inf03-01-24-06-sg'),
+    ]);
+    try {
+      apiConfig.publicRuntimePilot = true;
+      await enableStudyWorker();
+      await owner.request('/admin/settings', 'PATCH', { runtimeRunsEnabled: true });
+      const { data } = await learner.request<Bootstrap>('/bootstrap');
+      expect(data.features).toMatchObject({
+        checkingAvailable: false,
+        runsAvailable: true,
+        runScope: { taskId: riverJoinPractice.taskId, mode: 'nauka' },
+      });
+      const submit = ({ id, token }: { id: string; token: string }) =>
+        learner.request(`/attempts/${id}/runs`, 'POST', {
+          token,
+          projectRevision: 0,
+          run: {
+            database: 'rzeki',
+            dumpPath: 'baza.sql',
+            sql: 'SELECT 1;',
+            php: null,
+            practice: riverJoinPractice.id,
+          },
+          files: [{ path: 'baza.sql', content: 'CREATE TABLE a (id INT);' }],
+        });
+      for (const denied of [exam, training, other]) expect((await submit(denied)).status).toBe(403);
+      expect((await submit(learning)).status).toBe(201);
+      const jobs = await db.sandboxRunJob.findMany({
+        where: { attemptId: { in: [learning.id, exam.id, training.id, other.id] } },
+      });
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0]).toMatchObject({
+        attemptId: learning.id,
+        input: { run: { practice: riverJoinPractice.id } },
+      });
+    } finally {
+      apiConfig.publicRuntimePilot = previous;
+      await db.sandboxRunJob.deleteMany({ where: { attemptId: learning.id } });
+      await owner.request('/admin/settings', 'PATCH', {
+        checkingEnabled: previousSettings.checkingEnabled,
+        runtimeRunsEnabled: previousSettings.runtimeRunsEnabled,
+        queueLimit: previousSettings.queueLimit,
+      });
+    }
+  });
+
+  it('serves short exercises with their reviewed paper sources', async () => {
     const { status, data } = await learner.request<Bootstrap>('/bootstrap');
     expect(status).toBe(200);
     expect(data.shortPractice).toEqual(seed.sqlJoinPractice);
+    expect(data.groupByPractice).toEqual(seed.sqlGroupByPractice);
+    expect(data.postPractice).toEqual(seed.riverPostPractice);
     const practice = data.shortPractice!;
-    for (const { source } of [practice.example, practice.exercise]) {
+    for (const { source } of [
+      practice.example,
+      practice.exercise,
+      seed.sqlGroupByPractice.example,
+      seed.sqlGroupByPractice.exercise,
+      seed.riverPostPractice,
+    ]) {
       expect(data.tasks.some((task) => task.sourceCatalogId === source.catalogId)).toBe(true);
       expect(data.catalog.find(({ id }) => id === source.catalogId)?.sourcePdf).toMatchObject({
         url: expect.stringMatching(/^https:\/\//),
@@ -1103,12 +1168,12 @@ describe('real Nest API and PostgreSQL boundaries', () => {
     expect((await learner.request<ExamStudyResponse>(path, 'POST', body)).data.hintCount).toBe(0);
   });
 
-  it('uses only verified CKE question references and disables a misleading exam with source answers available', async () => {
+  it('starts, renews and grades a complete practice series from both published CKE sources', async () => {
     const exam = await learner.request('/theory/start', 'POST', { mode: 'egzamin', count: 40 });
     expect(exam.status).toBe(503);
     const started = await learner.request<TheoryTicket>('/theory/start', 'POST', {
       mode: 'trening',
-      count: 40,
+      count: seed.officialQuestions.length,
     });
     expect(started.status).toBe(201);
     expect(started.data.deadlineAt).toBeNull();
@@ -1118,14 +1183,25 @@ describe('real Nest API and PostgreSQL boundaries', () => {
       const source = officialById.get(question.id)!;
       expect(source).toBeDefined();
       expect(question.source).toEqual(source.source);
-      expect(question.source?.catalogId).toBe('cke-inf03-informator-2022');
-      expect(question.source?.url).toBe('https://bip.cke.gov.pl/attachments/download/8580');
       expect(question.options.map((option) => option.id)).toEqual(
         source.options.map((option) => option.id),
       );
       expect(question).not.toHaveProperty('correctOptionId');
       expect(question.options.every((option) => !('explanation' in option))).toBe(true);
     }
+    expect(new Set(started.data.questions.map((question) => question.source?.catalogId))).toEqual(
+      new Set(['cke-inf03-informator-2022', 'cke-inf03-written-2024']),
+    );
+    const renewed = await learner.request<TheoryTicket>('/theory/renew', 'POST', {
+      mode: 'trening',
+      questions: started.data.questions.map(({ id, version, options }) => ({
+        id,
+        version,
+        optionOrder: options.map(({ id }) => id),
+      })),
+    });
+    expect(renewed.status).toBe(201);
+    expect(renewed.data.questions).toEqual(started.data.questions);
     const answers = Object.fromEntries(
       started.data.questions.map((question) => [
         question.id,
@@ -1133,17 +1209,13 @@ describe('real Nest API and PostgreSQL boundaries', () => {
       ]),
     );
     const result = await learner.request<TheoryResult>(
-      `/theory/${started.data.id}/submit`,
+      `/theory/${renewed.data.id}/submit`,
       'POST',
-      { token: started.data.token, answers },
+      { token: renewed.data.token, answers },
     );
     expect(result.status).toBe(201);
     expect(result.data.correct).toBe(seed.officialQuestions.length);
-    expect(
-      result.data.results.every(
-        (result) => result.question.source?.catalogId === 'cke-inf03-informator-2022',
-      ),
-    ).toBe(true);
+    expect(result.data.results.map(({ question }) => question)).toEqual(started.data.questions);
   });
 
   it('starts an ordered review of current CKE questions without releasing the key', async () => {

@@ -7,8 +7,9 @@ import type {
   SandboxRunResponse,
   SandboxRunResult,
   SandboxRunStatement,
+  SqlResultFeedback,
 } from '@zdaj/shared';
-import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS } from '@zdaj/shared';
+import { MAX_RUN_FIELDS, MAX_RUN_SQL_CHARACTERS, riverJoinPractice } from '@zdaj/shared';
 import { api, errorMessage } from '../api';
 import { createPreview } from '../preview';
 import { phpActionRequest, phpResultEntry, readPhpAction } from '../php-preview';
@@ -251,6 +252,52 @@ function PageResult({
   );
 }
 
+function JoinFeedback({ feedback }: { feedback: SqlResultFeedback }) {
+  if (feedback.status === 'match')
+    return <Notice>Wynik zgadza się z zapytaniem 3 dla zaimportowanej bazy.</Notice>;
+  if (feedback.status === 'columns')
+    return (
+      <Notice>
+        Liczba zwróconych kolumn: {feedback.actualCount} z {feedback.expected.length}.{' '}
+        {feedback.missing?.length
+          ? `Brakuje: ${feedback.missing.join(', ')}.`
+          : `Porównaj kolumny z poleceniem: ${feedback.expected.join(', ')}.`}
+      </Notice>
+    );
+  if (feedback.status === 'rows')
+    return (
+      <div className="run-import">
+        <strong>Wynik różni się od zapytania 3.</strong>
+        {[
+          { label: 'Brakujące wiersze', rows: feedback.missing },
+          { label: 'Nadmiarowe wiersze', rows: feedback.extra },
+        ].map(({ label, rows }) => (
+          <div key={label}>
+            <p>
+              {label} ({rows.length})
+            </p>
+            {rows.length > 0 && (
+              <ul>
+                {rows.slice(0, 5).map((row, index) => (
+                  <li key={index}>{row.map((cell) => cell ?? 'NULL').join(' · ')}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  return (
+    <Notice>
+      {feedback.reason === 'reference'
+        ? 'Porównanie wymaga danych z arkusza Poziomy rzek. Wybierz jego plik .sql i sprawdź import.'
+        : feedback.reason === 'truncated'
+          ? 'Wynik jest za duży do porównania. Sprawdź powiązanie tabel i warunek filtrowania.'
+          : 'Do porównania zaznacz jedno zapytanie zwracające wiersze. Sprawdź błędy poniżej.'}
+    </Notice>
+  );
+}
+
 function RunResult({
   result,
   dumpPath,
@@ -289,6 +336,11 @@ function RunResult({
             <pre lang="en">{result.import.error}</pre>
           </div>
         ))}
+      {result.practice && (
+        <div role="status">
+          <JoinFeedback feedback={result.practice} />
+        </div>
+      )}
       {result.statements.length > 0 && (
         <ol className="run-statements">
           {result.statements.map((statement) => (
@@ -318,6 +370,7 @@ export function DatabaseRunner({
   files,
   visible,
   available,
+  joinPractice,
   readOnly,
   showXamppHelp,
   pageSelection,
@@ -328,6 +381,7 @@ export function DatabaseRunner({
   files: ProjectFile[];
   visible: boolean;
   available: boolean;
+  joinPractice: boolean;
   readOnly: boolean;
   showXamppHelp: boolean;
   pageSelection: { path: string } | null;
@@ -413,6 +467,7 @@ export function DatabaseRunner({
     sql: string,
     php: SandboxRunRequest['php'] = null,
     previous?: CompletedRun,
+    practice?: SandboxRunRequest['practice'],
   ) => {
     if (running.current || readOnly || !available || !database) return;
     running.current = true;
@@ -432,7 +487,13 @@ export function DatabaseRunner({
         (php && !pageFilePaths(input).includes(php.entry))
       )
         throw new Error('Wybrany plik nie jest już częścią projektu. Wybierz plik ponownie.');
-      const request: SandboxRunRequest = { database, dumpPath: dumpPath || null, sql, php };
+      const request: SandboxRunRequest = {
+        database,
+        dumpPath: dumpPath || null,
+        sql,
+        php,
+        ...(practice ? { practice } : {}),
+      };
       const finished = await awaitRun(
         {
           submit: () =>
@@ -490,14 +551,14 @@ export function DatabaseRunner({
           : view === 'php' && !entry
             ? 'Wybierz stronę do uruchomienia.'
             : '';
-  const runSql = () => {
+  const runSql = (practice?: SandboxRunRequest['practice']) => {
     if (blocked || running.current) return;
     const selection = selectedSql.current;
     if (selection && !selection.trim()) {
       setError('Zaznaczenie nie zawiera zapytania SQL.');
       return;
     }
-    void run(selection || draft.sql);
+    void run(selection || draft.sql, null, undefined, practice);
   };
   const openPage = () => void run('', { entry, method: 'GET', fields: [] });
   const blockedId = blocked ? `${id}-blocked` : undefined;
@@ -611,7 +672,7 @@ export function DatabaseRunner({
             onSelectedText={(sql) => {
               selectedSql.current = sql;
             }}
-            onRun={runSql}
+            onRun={() => runSql()}
           />
           <small>
             Ctrl+Enter lub ⌘+Enter uruchamia zaznaczenie albo cały tekst. Rozdziel instrukcje
@@ -623,11 +684,21 @@ export function DatabaseRunner({
               className="button primary"
               disabled={busy || !!blocked}
               aria-describedby={blockedId}
-              onClick={runSql}
+              onClick={() => runSql()}
             >
               {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
               Uruchom SQL
             </button>
+            {joinPractice && (
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || !!blocked || !dumpPath || !draft.sql.trim()}
+                onClick={() => runSql(riverJoinPractice.id)}
+              >
+                Porównaj wynik zapytania 3
+              </button>
+            )}
             {queries && (
               <button
                 type="button"
@@ -639,6 +710,11 @@ export function DatabaseRunner({
               </button>
             )}
           </div>
+          {joinPractice && (
+            <small>
+              Do porównania zaimportuj plik .sql z arkusza, a potem zaznacz zapytanie 3 ze strony 2.
+            </small>
+          )}
         </div>
       ) : (
         <div className="run-php">

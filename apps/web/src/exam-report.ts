@@ -72,7 +72,13 @@ const reviewKey = (attemptId: string) => `zdaj:exam-review:${attemptId}`;
 export function loadReview(attemptId: string): ExamReview {
   try {
     const value = JSON.parse(localStorage.getItem(reviewKey(attemptId)) ?? 'null') as ExamReview;
-    if (value && Array.isArray(value.confirmedFiles) && typeof value.results === 'object')
+    if (
+      value &&
+      Array.isArray(value.confirmedFiles) &&
+      value.results &&
+      typeof value.results === 'object' &&
+      !Array.isArray(value.results)
+    )
       return value;
   } catch {
     /* A missing or unreadable review starts empty. */

@@ -1,5 +1,11 @@
 import type { AttemptSnapshot } from '@zdaj/shared';
 
+export function studyStageHref(taskId: string, stepId: string, activityId?: string): string {
+  const query = new URLSearchParams({ tryb: 'nauka', widok: 'nauka', etap: stepId });
+  if (activityId) query.set('krok', activityId);
+  return `/praktyka/${encodeURIComponent(taskId)}?${query}`;
+}
+
 export function resumeHref(
   attempt: AttemptSnapshot,
   requestedView?: NonNullable<AttemptSnapshot['workspace']>['view'],

@@ -36,9 +36,19 @@ The initial source is the [CKE informator for technik programista, updated 25 Au
 - Example 12 is excluded because the task depends on an embedded Joomla video that this viewer does not support.
 - All included question numbers, printed answer keys, diagrams and crop boundaries were checked. The UI renders the original excerpt rather than transcribing a replacement question. Explanations are separately labelled platform commentary.
 
-The informator prints an answer key alongside its questions. Although the excerpt does not display that line, the original PDF remains available to the browser. This is a learning/practice source, not a hidden-key examination source. No full 40-question simulation is claimed from these 25 examples; the exam-system view described below is a training run over them.
+The informator prints an answer key alongside its questions. The reader renders each excerpt and offers the original PDF for download. These questions are available in learning and practice.
 
 Known source ambiguity: example 10 on page 9 prints a space between `p` and the attribute selector while the official key indicates option C. In CSS, that space changes the selector to match descendants. The intended same-element selector has no space. Keep both the original document and official key unchanged; the feedback explicitly describes the ambiguity. This is an editorial explanation by the platform, not an official CKE erratum.
+
+### CKE sample written paper from 2024
+
+CKE links the [original PDF](https://cke.gov.pl/images/_EGZAMIN_ZAWODOWY/Formula_2019/Przykladowe_zadania/Pisemny/inf_03_pisemny.pdf) from its [written examples page](https://cke.gov.pl/egzamin-zawodowy/egzamin-zawodowy-formula-2019/przykladowe-zadania/pisemny/). The cover identifies INF.03, Formuła 2019, and carries a 2024 copyright notice. The document contains 40 tasks on pages 2–13. Redistribution rights were not established. The application retrieves the original PDF and displays the reviewed excerpts.
+
+- Source identifier `cke-inf03-written-2024`.
+- Reviewed SHA-256 `596d946e546d05b8a964baa84dcbd2050c314817e0b6822bd742b24f6b6c0e06`.
+- Reviewed all 40 tasks and checked for duplicates against the informator. Included 39 tasks. Task 6 names a `.jpg` in the stem and `.png` in all options, so it is excluded.
+- The PDF contains no answer key. The platform independently checks the answers and writes feedback. For example, the MySQL documentation confirms the `CHANGED` option, Joomla's brand manual identifies its mark, and the Polish Labour Code and PIP guidance support the workplace questions. [MySQL](https://dev.mysql.com/doc/refman/8.4/en/check-table.html) · [Joomla](https://docs.joomla.org/Joomla%3ABrand_Identity_Elements/Intro/en) · [Labour Code](https://eli.gov.pl/api/acts/DU/2023/1465/text.html) · [PIP](https://www.pip.gov.pl/dla-pracodawcow/porady-prawne/szkolenia-w-dziedzinie-bezpieczenstwa-i-higieny-pracy)
+- The explanations describe the CSS layout context for task 7 and the spelling of `console` in task 38. The original excerpts keep the printed text.
 
 ## Electronic written part (exam-system view)
 
@@ -47,7 +57,7 @@ The theory exam-system view and the practical workstation describe the examinati
 - [CKE informator o egzaminie zawodowym, część ogólna, formuła 2019 (update of 7 December 2023)](https://oke.waw.pl/wp-content/uploads/OKE_WARSZAWA/EE/EE_Zawodowy/Informatory/Informatory_Czesc-ogolna__Formula-2019.pdf), prepared by CKE with the OKEs; copy hosted by OKE Warszawa, 28 pages, reviewed on 2026-11-26, SHA-256 `6985d5e0e40a246097c80843410380ba3291e33f39a2be56a82fff936895466e`. Pages 13–17: 60 minutes, 40 closed tasks with four options and one correct answer; the countdown starts with the Start button; tasks may be answered in any order; unanswered tasks are marked red; the right side shows the numbers of given and missing answers and the remaining time; any answer can be changed; "Zakończ egzamin" ends the exam once 40 answers are given; the candidate then sees the preliminary number of correct answers. Page 17 and the pass rule state the 50% threshold.
 - The practical workstation (10-minute reading time outside the 150 minutes, the results folder named with the candidate's number, the archive, the disc) follows the stages already sourced in `apps/web/src/exam-day-content.ts` and the FAQ.
 
-The view reuses the 25 informator examples, keeps the API's `trening` mode and gives each task the official share of time (90 seconds). It is labelled as training: the key is public, the set is not the live bank, and the interface is not the CKE system. No CKE or OKE branding is reproduced.
+The view draws 40 tasks from the 64 public questions for 60 minutes. It uses the API's `trening` mode and shows a practice result. Untimed learning and training can use the whole pool.
 
 ## Catalogue and review workflow
 

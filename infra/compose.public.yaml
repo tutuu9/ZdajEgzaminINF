@@ -11,6 +11,7 @@ services:
       TRUST_PROXY: ${PUBLIC_TRUST_PROXY:-false}
       RUNNER_PROFILE: public-sandbox
       PUBLIC_SANDBOX_VERIFIED: ${PUBLIC_SANDBOX_VERIFIED:-false}
+      PUBLIC_RUNTIME_PILOT: ${PUBLIC_RUNTIME_PILOT:-false}
     volumes:
       - ${PUBLIC_DATA_DIR_HOST:?Set PUBLIC_DATA_DIR_HOST to an absolute Linux data directory}:/app/data
     # The base file's 127.0.0.1:8080 binding is retained for a future trusted TLS proxy.

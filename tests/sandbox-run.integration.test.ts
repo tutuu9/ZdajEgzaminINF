@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { command, runPlayground } from '@zdaj/checker';
+import { riverJoinPractice } from '@zdaj/shared';
 import type { ProjectFile, SandboxRunRequest, SandboxRunResult } from '@zdaj/shared';
+import { riverPostPractice } from '../packages/content/src/short-practice';
 
 const suiteId = randomUUID();
 const dataDir = path.resolve('data', `run-${suiteId}`);
@@ -88,6 +90,89 @@ const php = (body: string) =>
   `<?php mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); ${body}`;
 
 describe.sequential('learner-initiated SQL and PHP runs', () => {
+  it('compares real JOIN rows, accepts equivalent queries and shows targeted differences', async () => {
+    const data = [
+      {
+        path: 'baza.sql',
+        content: `CREATE TABLE wodowskazy (
+        id INT PRIMARY KEY, nazwa VARCHAR(20), rzeka VARCHAR(20), stanOstrzegawczy INT, stanAlarmowy INT
+      );
+      CREATE TABLE pomiary (id INT PRIMARY KEY, wodowskazy_id INT, dataPomiaru DATE, stanWody INT);
+      INSERT INTO wodowskazy VALUES (1, 'Północ', 'Struga', 100, 130), (2, 'Południe', 'Potok', 150, 200);
+      INSERT INTO pomiary VALUES (11, 1, '2022-05-05', 102), (12, 2, '2022-05-05', 151),
+        (13, 2, '2022-05-05', 150), (14, 1, '2022-05-06', 110);`,
+      },
+    ];
+    const original = `SELECT w.nazwa, w.rzeka, w.stanOstrzegawczy, w.stanAlarmowy, p.stanWody
+      FROM wodowskazy w JOIN pomiary p ON w.id = p.wodowskazy_id
+      WHERE p.dataPomiaru = '2022-05-05' AND p.stanWody > w.stanOstrzegawczy;`;
+    const equivalent = `SELECT p.stanWody, w.stanAlarmowy, w.rzeka, w.nazwa, w.stanOstrzegawczy
+      FROM pomiary p INNER JOIN wodowskazy w ON p.wodowskazy_id = w.id
+      WHERE w.stanOstrzegawczy < p.stanWody AND p.dataPomiaru = '2022-05-05' ORDER BY w.id DESC;`;
+    for (const [index, sql] of [original, equivalent].entries()) {
+      const result = await run(
+        `river-join-correct-${index}`,
+        { database: 'rzeki', sql, practice: riverJoinPractice.id },
+        data,
+      );
+      expect(result.practice).toEqual({ status: 'match' });
+      expect(result.statements).toHaveLength(1);
+    }
+    const wrong = await run(
+      'river-join-wrong-comparison',
+      {
+        database: 'rzeki',
+        sql: original.replace(' > ', ' >= '),
+        practice: riverJoinPractice.id,
+      },
+      data,
+    );
+    expect(wrong.practice).toEqual({
+      status: 'rows',
+      missing: [],
+      extra: [['Południe', 'Potok', '150', '200', '150']],
+    });
+
+    const missingColumn = await run(
+      'river-join-missing-column',
+      {
+        database: 'rzeki',
+        sql: original.replace('w.stanAlarmowy, ', ''),
+        practice: riverJoinPractice.id,
+      },
+      data,
+    );
+    expect(missingColumn.practice).toMatchObject({
+      status: 'columns',
+      actualCount: 4,
+      missing: ['stanAlarmowy'],
+    });
+  });
+
+  it('submits the published teaching form and displays the POST field in the PHP output', async () => {
+    const [starter] = riverPostPractice.starterFiles;
+    const project = [
+      {
+        ...starter!,
+        content: starter!.content.replace(
+          '// Odczytaj wybór z POST i zapisz go w zmiennej $filtr.',
+          "$filtr = $_POST['poziom'] ?? 'wszystkie';",
+        ),
+      },
+    ];
+    const result = await run(
+      'river-form-post',
+      {
+        database: 'rzeki',
+        dumpPath: null,
+        php: { entry: 'poziomRzek.php', method: 'POST', fields: [['poziom', 'ostrzegawczy']] },
+      },
+      project,
+    );
+    expect(result.php?.status).toBe(200);
+    expect(result.php?.html).toContain('<output>ostrzegawczy</output>');
+  });
+
   it('imports a dump into a learner-named database and reports each statement', async () => {
     const result = await run(
       'import-and-statements',

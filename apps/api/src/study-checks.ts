@@ -105,7 +105,7 @@ export async function submitStudyCheck(attemptId: string, body: unknown, req: Re
       status: existing.status,
     };
   const options = await settings();
-  if (!options.checkingEnabled || !(await workerAvailable()))
+  if (config.publicRuntimePilot || !options.checkingEnabled || !(await workerAvailable()))
     throw new ServiceUnavailableException(
       'Środowisko JavaScript jest teraz niedostępne. Kod pozostaje lokalnie; skorzystaj z opisanej kontroli ręcznej.',
     );

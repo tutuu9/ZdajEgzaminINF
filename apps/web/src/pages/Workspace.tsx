@@ -38,7 +38,7 @@ import type {
   PublicTask,
   SandboxRunResult,
 } from '@zdaj/shared';
-import { MAX_PROJECT_FILES } from '@zdaj/shared';
+import { MAX_PROJECT_FILES, matchesRunScope, riverJoinPractice } from '@zdaj/shared';
 import { useApp } from '../context';
 import { api, errorMessage } from '../api';
 import { AiAssistant } from '../components/AiAssistant';
@@ -162,6 +162,8 @@ export function Workspace() {
   const attemptId = params.get('proba');
   const requestedStudy = params.get('widok') === 'nauka';
   const requestedMode = params.get('tryb');
+  const requestedStage = !attemptId && requestedMode === 'nauka' ? params.get('etap') : null;
+  const requestedActivity = requestedStage ? (params.get('krok') ?? undefined) : undefined;
   const { data, level, refreshProgress } = useApp();
   const [task, setTask] = useState<PublicTask | null>(null),
     [attempt, setAttempt] = useState<AttemptSnapshot | null>(null),
@@ -375,7 +377,7 @@ export function Workspace() {
         setTask(current);
         // A reading phase that was open before a reload continues where it was.
         const phase =
-          stored || current.origin !== 'exam'
+          stored || requestedStage || current.origin !== 'exam'
             ? undefined
             : readReading(current.id, current.version);
         if (phase) setReading(phase);
@@ -427,7 +429,7 @@ export function Workspace() {
     return () => {
       cancelled = true;
     };
-  }, [id, attemptId]);
+  }, [id, attemptId, requestedStage]);
   const update = useCallback(async (patch: ProjectPatch) => {
     if (!storeRef.current) throw new Error('Projekt nie jest jeszcze gotowy.');
     await storeRef.current.patch(patch);
@@ -436,7 +438,11 @@ export function Workspace() {
     if (!attemptRef.current || attemptRef.current.submittedAt || busy) return;
     void update((current) => ({ ...current, files })).catch(() => undefined);
   };
-  const start = async (copyFiles?: ProjectFile[], focusStepId?: string) => {
+  const start = async (
+    copyFiles?: ProjectFile[],
+    focusStepId?: string,
+    focusActivityId?: string,
+  ) => {
     if (!task || busy) return;
     const studyTask = focusStepId
       ? (data?.tasks.find((item) => item.id === task.id) ?? task)
@@ -473,14 +479,35 @@ export function Workspace() {
           method: 'POST',
           body: { token: ticket.token },
         });
-        const first = studySequence(response.guide, focusStepId)[0];
+        const first = studySequence(response.guide, focusStepId, focusActivityId)[0];
         if (!first) throw new Error('Brakuje tego etapu w dostępnej wersji kursu.');
-        if (!copyFiles)
-          next.files = structuredClone(
-            response.guide.project?.starterFiles ?? studyTask.starterFiles,
-          );
+        if (!copyFiles) {
+          const post = data?.postPractice;
+          const groupBy = data?.groupByPractice?.exercise;
+          const starterFiles = response.guide.project?.starterFiles ?? studyTask.starterFiles;
+          if (
+            post &&
+            post.source.catalogId === studyTask.sourceCatalogId &&
+            post.taskVersion === studyTask.version &&
+            post.stepId === focusStepId &&
+            post.activityId === focusActivityId
+          ) {
+            next.files = structuredClone(post.starterFiles);
+          } else if (
+            groupBy &&
+            groupBy.source.catalogId === studyTask.sourceCatalogId &&
+            focusStepId === 'queries' &&
+            focusActivityId === 'group'
+          ) {
+            next.files = starterFiles.map((file) =>
+              file.path === first.step.fileName
+                ? { ...file, content: groupBy.starterSql }
+                : { ...file },
+            );
+          } else next.files = structuredClone(starterFiles);
+        }
         if (focusStepId) {
-          next.title = `${studyTask.title} · ${first.step.title}`;
+          next.title = `${studyTask.title} · ${focusActivityId ? first.activity.title : first.step.title}`;
           const path = first.activity.targetFiles?.[0] ?? first.step.fileName;
           focusFile = next.files?.find((file) => file.path === path)?.path;
           focusPage = first.step.page;
@@ -489,6 +516,7 @@ export function Workspace() {
           guide: response.guide,
           current: first.id,
           ...(focusStepId ? { focusStepId } : {}),
+          ...(focusActivityId ? { focusActivityId } : {}),
           completed: {},
           viewedExamples: [],
         };
@@ -775,6 +803,11 @@ export function Workspace() {
       </EmptyState>
     );
   const sourceEntry = data?.catalog.find((entry) => entry.id === task.sourceCatalogId);
+  const runScope = data?.features.runScope;
+  const runsAvailable = Boolean(
+    data?.features.runsAvailable &&
+    (!runScope || matchesRunScope(runScope, task.id, attempt?.mode ?? mode)),
+  );
   const beginReading = () => {
     const phase = { startedAt: new Date().toISOString(), candidate: practiceCandidate() };
     saveReading(task.id, task.version, phase);
@@ -826,11 +859,17 @@ export function Workspace() {
           {task.summary}
         </PageHeading>
         <Tags items={task.technologies} />
-        {requestedStudy && (
+        {requestedStage ? (
           <Notice>
-            Rozpocznij próbę w trybie Nauka. W zakładce „Nauka” rozwiniesz jeden projekt małymi
-            krokami. Przejście do kolejnej instrukcji zachowa Twój kod.
+            Otworzysz osobną próbę w trybie Nauka ze wskazanym krokiem z tego arkusza.
           </Notice>
+        ) : (
+          requestedStudy && (
+            <Notice>
+              Rozpocznij próbę w trybie Nauka. W zakładce „Nauka” rozwiniesz jeden projekt małymi
+              krokami. Przejście do kolejnej instrukcji zachowa Twój kod.
+            </Notice>
+          )
         )}
         <p className="authored-sheet-note" hidden>
           Szukasz prawdziwych arkuszy egzaminacyjnych?{' '}
@@ -869,8 +908,8 @@ export function Workspace() {
         )}
         <div className="task-setup">
           <aside className="start-panel">
-            <h2>Wybierz sposób pracy</h2>
-            <ModePicker value={mode} onChange={setMode} />
+            <h2>{requestedStage ? 'Przećwicz krok' : 'Wybierz sposób pracy'}</h2>
+            {!requestedStage && <ModePicker value={mode} onChange={setMode} />}
             <div className="start-meta">
               <span>
                 <Clock3 size={16} />
@@ -890,10 +929,14 @@ export function Workspace() {
             <button
               className="button primary full"
               disabled={busy}
-              onClick={() => (mode === 'egzamin' ? beginReading() : void start())}
+              onClick={() =>
+                mode === 'egzamin'
+                  ? beginReading()
+                  : void start(undefined, requestedStage ?? undefined, requestedActivity)
+              }
             >
               {busy ? <Loader2 className="spin" size={18} /> : <Play size={17} />}Rozpocznij{' '}
-              {mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
+              {requestedStage ? 'krok' : mode === 'nauka' ? 'naukę' : modeLabel(mode).toLowerCase()}
             </button>
             <p className="fine-print">
               Pliki i wynik tej próby zostaną zapisane w tej przeglądarce.
@@ -912,7 +955,7 @@ export function Workspace() {
             <Notice>
               Pracuj w edytorze przeglądarkowym lub w swojej IDE. Możesz przesłać pojedyncze pliki
               albo archiwum ZIP.{' '}
-              {data?.features.runsAvailable && usesDatabase(task)
+              {runsAvailable && usesDatabase(task)
                 ? 'SQL i PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
                 : 'PHP i SQL uruchom we własnym środowisku.'}{' '}
               Zakończenie tej próby zapisuje pracę bez automatycznej oceny.
@@ -1210,7 +1253,7 @@ export function Workspace() {
           Podgląd pokazuje statyczny HTML/CSS/JavaScript, także z plików .php. Bloki PHP są
           pomijane; dane z bazy nie pojawią się tutaj.{' '}
           {manual
-            ? data?.features.runsAvailable
+            ? runsAvailable
               ? 'PHP z własną bazą uruchomisz w widoku „Baza i PHP”.'
               : 'PHP i SQL uruchom we własnym środowisku zgodnie z oryginalnym arkuszem.'
             : 'PHP i SQL zostaną uruchomione po oddaniu pracy. Wynik zobaczysz w raporcie.'}
@@ -1753,7 +1796,11 @@ export function Workspace() {
               store={store}
               files={attempt.files ?? []}
               visible={tab === 'database'}
-              available={Boolean(data?.features.runsAvailable)}
+              available={runsAvailable}
+              joinPractice={
+                matchesRunScope(riverJoinPractice, task.id, attempt.mode) &&
+                task.version === riverJoinPractice.taskVersion
+              }
               readOnly={closed || overtime}
               showXamppHelp={attempt.mode !== 'egzamin' || closed}
               pageSelection={databasePage}

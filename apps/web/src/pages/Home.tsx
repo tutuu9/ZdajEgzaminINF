@@ -76,12 +76,12 @@ export function Home() {
         </section>
       )}
       <StudyPlanCard />
-      {data.shortPractice && (
-        <Link className="learning-callout glass-panel" to="/nauka/15-minut/join">
+      {(data.shortPractice || data.groupByPractice || data.postPractice) && (
+        <Link className="learning-callout glass-panel" to="/nauka/15-minut">
           <Clock3 size={24} aria-hidden="true" />
           <span>
             <strong>Mam 15 minut</strong>
-            Przećwicz złączenia SQL na dwóch arkuszach CKE.
+            Przećwicz jeden krok SQL albo PHP z arkusza CKE.
           </span>
           <ChevronRight size={18} aria-hidden="true" />
         </Link>

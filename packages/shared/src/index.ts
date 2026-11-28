@@ -394,7 +394,7 @@ export interface ShortPracticeSource {
 }
 
 /** Public teaching material based on two reviewed CKE paper fragments. */
-export interface SqlJoinPractice {
+export interface SqlShortPractice {
   id: string;
   example: {
     source: ShortPracticeSource;
@@ -410,6 +410,15 @@ export interface SqlJoinPractice {
     hint: string;
   };
 }
+export type SqlJoinPractice = SqlShortPractice;
+
+export interface PostShortPractice {
+  source: Omit<ShortPracticeSource, 'queryNumber'>;
+  taskVersion: number;
+  stepId: string;
+  activityId: string;
+  starterFiles: ProjectFile[];
+}
 
 export interface Bootstrap {
   topics: Topic[];
@@ -417,11 +426,18 @@ export interface Bootstrap {
   lessons: Lesson[];
   exercises: PublicExercise[];
   catalog: CatalogEntry[];
-  features: { aiAvailable: boolean; checkingAvailable: boolean; runsAvailable: boolean };
+  features: {
+    aiAvailable: boolean;
+    checkingAvailable: boolean;
+    runsAvailable: boolean;
+    runScope?: RuntimeRunScope;
+  };
   questionCount: number;
   /** IDs of the current CKE questions. Answers and revisions are served through theory tickets. */
   reviewQuestionIds: string[];
   shortPractice?: SqlJoinPractice;
+  groupByPractice?: SqlShortPractice;
+  postPractice?: PostShortPractice;
 }
 export interface AttemptTicket {
   id: string;
@@ -432,6 +448,7 @@ export interface TheoryTicket extends AttemptTicket {
   questions: PublicQuestion[];
 }
 export const THEORY_REVIEW_LIMIT = 5;
+export const MAX_THEORY_SERIES_QUESTIONS = 100;
 export type TheoryStartRequest = { mode: 'nauka' | 'trening'; level: Level } & (
   | { count?: number; topicId?: string; questionIds?: never }
   | { questionIds: string[]; count?: never; topicId?: never }
@@ -475,6 +492,8 @@ export interface AttemptSnapshot {
     current: string;
     /** A separate practice attempt for one stage of the pinned course. */
     focusStepId?: string;
+    /** Restricts a short practice attempt to one activity within its stage. */
+    focusActivityId?: string;
     completed: Record<
       string,
       {
@@ -548,6 +567,22 @@ export function isRunParameterList(value: unknown): value is [string, string][] 
 }
 /** Text files of one run. Stored in the job row, so it stays far below the project limit. */
 export const MAX_RUN_INPUT_BYTES = 4 * 1024 * 1024;
+export interface RuntimeRunScope {
+  taskId: string;
+  mode: Mode;
+}
+
+export const riverJoinPractice = {
+  id: 'river-warning-join',
+  taskId: 'inf03-03-24-06-sg',
+  taskVersion: 1,
+  mode: 'nauka',
+} as const;
+
+export function matchesRunScope(scope: RuntimeRunScope, taskId: string, mode: string): boolean {
+  return scope.taskId === taskId && scope.mode === mode;
+}
+
 export interface SandboxRunSubmission {
   token: string;
   projectRevision: number;
@@ -568,6 +603,8 @@ export interface SandboxRunRequest {
   dumpPath: string | null;
   /** Statements executed in order after the import. */
   sql: string;
+  /** Optional educational comparison available in the pinned learning course. */
+  practice?: typeof riverJoinPractice.id;
   /** One page request made after the statements. */
   php: {
     entry: string;
@@ -588,6 +625,12 @@ export interface SandboxRunStatement {
   affectedRows?: number | null;
   error?: { code: number | null; sqlState: string | null; message: string };
 }
+export type SqlResultFeedback =
+  | { status: 'match' }
+  | { status: 'columns'; expected: string[]; actualCount: number; missing?: string[] }
+  | { status: 'rows'; missing: (string | null)[][]; extra: (string | null)[][] }
+  | { status: 'unavailable'; reason: 'reference' | 'statement' | 'truncated' };
+
 export interface SandboxRunResult {
   database: string;
   import: {
@@ -596,6 +639,7 @@ export interface SandboxRunResult {
     tables: { name: string; rows: number | null }[] | null;
   } | null;
   statements: SandboxRunStatement[];
+  practice?: SqlResultFeedback;
   omittedStatements: number;
   php: {
     status: number | null;

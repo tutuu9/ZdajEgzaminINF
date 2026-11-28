@@ -1,5 +1,7 @@
 import type { AttemptSnapshot, Bootstrap } from '@zdaj/shared';
-import { resumeHref, resumeStep } from './resume';
+import { loadReview } from './exam-report';
+import { practiceSkillForResult } from './practice-results';
+import { resumeHref, resumeStep, studyStageHref } from './resume';
 import { studySequence } from './study-progress';
 import { theoryReviewQuestions } from './theory-review';
 
@@ -10,7 +12,11 @@ export interface StudyPlan {
 
 type DailyAction =
   | { kind: 'review'; questionIds: string[] }
+  | { kind: 'follow-up'; title: string; href: string }
   | { kind: 'course' | 'practice'; title: string; href: string };
+
+type StudyPlanContent = Pick<Bootstrap, 'tasks' | 'reviewQuestionIds'> &
+  Partial<Pick<Bootstrap, 'catalog' | 'groupByPractice' | 'postPractice'>>;
 
 const storageKey = 'zdaj:study-plan';
 const dayMs = 86_400_000;
@@ -63,17 +69,102 @@ export function saveStudyPlan(plan: StudyPlan | null) {
 }
 
 function hasUnfinishedStep(study: NonNullable<AttemptSnapshot['study']>) {
-  return studySequence(study.guide, study.focusStepId).some(({ id }) => !study.completed[id]);
+  return studySequence(study.guide, study.focusStepId, study.focusActivityId).some(
+    ({ id }) => !study.completed[id],
+  );
+}
+
+function examFollowUp(
+  attempts: AttemptSnapshot[],
+  data: StudyPlanContent,
+): DailyAction | undefined {
+  const exam = attempts
+    .filter(
+      (attempt) => attempt.kind === 'practice' && attempt.mode === 'egzamin' && attempt.submittedAt,
+    )
+    .sort((a, b) => Date.parse(b.submittedAt!) - Date.parse(a.submittedAt!))[0];
+  if (!exam?.submittedAt) return;
+  const examTime = Date.parse(exam.submittedAt);
+  const source = data.tasks.find((task) => task.id === exam.taskId);
+  const paper = data.catalog?.find(({ id }) => id === source?.sourceCatalogId);
+  if (!paper?.handIn || !source) return;
+
+  const { results } = loadReview(exam.id);
+  const skills = new Set(
+    paper.handIn.results
+      .filter((result) => results[result] === 'partial' || results[result] === 'missing')
+      .map((result) => practiceSkillForResult(paper.id, result, source.technologies)),
+  );
+  const options = [
+    {
+      skill: 'sql',
+      catalogId: data.groupByPractice?.exercise.source.catalogId,
+      stepId: 'queries',
+      activityId: 'group',
+      title: 'Pogrupuj notatki za pomocą GROUP BY',
+    },
+    {
+      skill: 'sql',
+      catalogId: 'inf03-03-24-06-sg',
+      stepId: 'queries',
+      activityId: 'query-two',
+      title: 'Połącz pomiary z wodowskazami za pomocą JOIN',
+    },
+    {
+      skill: 'php',
+      catalogId: data.postPractice?.source.catalogId,
+      stepId: 'php-form',
+      activityId: 'read-option',
+      title: 'Odczytaj wybór przesłany przez POST',
+    },
+    {
+      skill: 'php',
+      catalogId: 'inf03-08-25-06-sg',
+      stepId: 'php-filter',
+      activityId: 'guard',
+      title: 'Sprawdź, czy formularz przesłał pole w POST',
+    },
+  ] as const;
+  for (const { skill, catalogId, stepId, activityId, title } of options) {
+    if (!skills.has(skill) || !catalogId || catalogId === paper.id) continue;
+    const course = data.tasks.find((task) => task.sourceCatalogId === catalogId);
+    if (!course) continue;
+    const code = `${stepId}/${activityId}`;
+    if (
+      attempts.some((attempt) => {
+        const completed = attempt.study?.completed[code]?.checkedAt;
+        return attempt.taskId === course.id && completed && Date.parse(completed) >= examTime;
+      })
+    ) {
+      skills.delete(skill);
+      continue;
+    }
+    const draft = attempts.find(
+      (attempt) =>
+        attempt.taskId === course.id &&
+        !attempt.submittedAt &&
+        attempt.study?.focusStepId === stepId &&
+        attempt.study.focusActivityId === activityId,
+    );
+    return {
+      kind: 'follow-up',
+      title: `${title} · ${course.title}`,
+      href: draft ? resumeHref(draft, 'study') : studyStageHref(course.id, stepId, activityId),
+    };
+  }
 }
 
 export function dailyStudyAction(
   plan: StudyPlan,
   today: string,
   attempts: AttemptSnapshot[],
-  { tasks, reviewQuestionIds }: Pick<Bootstrap, 'tasks' | 'reviewQuestionIds'>,
+  data: StudyPlanContent,
 ): DailyAction | undefined {
   const days = daysUntilExam(plan.examDate, today);
   if (days < 0) return undefined;
+  const followUp = examFollowUp(attempts, data);
+  if (followUp) return followUp;
+  const { tasks, reviewQuestionIds } = data;
   const drafts = attempts.filter((attempt) => attempt.kind === 'practice' && !attempt.submittedAt);
   if (days > 0 && days <= 7 && plan.minutesPerDay >= 30) {
     const sqlTasks = tasks.filter((task) => task.topicIds.includes('sql'));

@@ -4,6 +4,7 @@ export { questions } from './questions.js';
 export { catalog } from './catalog.js';
 export { officialTasks } from './official-tasks.js';
 export { officialQuestions } from './official-questions.js';
+export { writtenExam2024Source } from './written-questions-2024.js';
 export { examStudyGuides, legacyExamStudyGuides, allExamStudyGuides } from './exam-study.js';
-export { sqlJoinPractice } from './short-practice.js';
+export { riverPostPractice, sqlGroupByPractice, sqlJoinPractice } from './short-practice.js';
 export { faq } from './faq.js';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
-import { MAX_EXTRACTED_BYTES, type AttemptSnapshot } from '@zdaj/shared';
+import { MAX_EXTRACTED_BYTES, toPublicQuestion, type AttemptSnapshot } from '@zdaj/shared';
 import { extractBrowserZip, safePath } from '../apps/web/src/safe-zip';
 import { importProject, projectFromArchive } from '../apps/web/src/storage';
 import { validateBackupAttempts, validateBackupLearning } from '../apps/web/src/backup-validation';
@@ -11,6 +11,7 @@ import {
 } from '../apps/web/src/backup-merge';
 import { validateCachedGuide } from '../apps/web/src/backup-guide-validation';
 import { allExamStudyGuides, examStudyGuides } from '../packages/content/src/exam-study';
+import { officialQuestions } from '../packages/content/src/official-questions';
 
 function centralOffset(bytes: Uint8Array) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -149,6 +150,45 @@ const attempt = (): AttemptSnapshot => ({
 });
 
 describe('progress backup shape validation', () => {
+  it('restores a completed series covering the entire published theory pool', () => {
+    const timestamp = '2026-11-28T10:00:00.000Z';
+    const questions = officialQuestions.map(toPublicQuestion);
+    const answers = Object.fromEntries(officialQuestions.map((q) => [q.id, q.correctOptionId]));
+    const attempt: AttemptSnapshot = {
+      id: 'complete-series',
+      kind: 'theory',
+      mode: 'trening',
+      level: 'beginner',
+      title: 'Przykłady CKE',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      submittedAt: timestamp,
+      deadlineAt: null,
+      hintCount: 0,
+      ticket: { id: 'complete-series', token: 'test-series-token-valid', deadlineAt: null },
+      questions,
+      answers,
+      theoryResult: {
+        correct: questions.length,
+        total: questions.length,
+        percentage: 100,
+        passed: true,
+        submittedAt: timestamp,
+        results: officialQuestions.map((item) => ({
+          question: toPublicQuestion(item),
+          selectedOptionId: item.correctOptionId,
+          correctOptionId: item.correctOptionId,
+          correct: true,
+          explanation: item.explanation,
+          optionExplanations: Object.fromEntries(
+            item.options.map((option) => [option.id, option.explanation]),
+          ),
+        })),
+      },
+    };
+    expect(questions).toHaveLength(64);
+    expect(validateBackupAttempts([attempt])).toEqual([attempt]);
+  });
   it('preserves official question references and rejects unsafe source links or crop coordinates', () => {
     const question = {
       id: 'cke-question-1',

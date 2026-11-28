@@ -1,6 +1,6 @@
 # Public site without a code executor
 
-This profile serves the current 15 CKE INF.03 courses, 25 published theory examples and 51 FAQ entries at `https://zdajegzamin.sbs`. It deliberately has only PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview remain available; server behaviour checks have an explicit manual fallback. AI is disabled by default and can be enabled separately as described below. This does not certify the VPS for anonymous code execution.
+This profile serves 15 CKE INF.03 courses, 64 published theory questions and 51 FAQ entries after the current application image has been deployed at `https://zdajegzamin.sbs`. It runs PostgreSQL, one-shot initialization and the API serving the built frontend. Browser HTML/CSS checks and isolated preview are available. Server behaviour checks have an explicit manual fallback. AI is disabled by default and can be enabled separately as described below.
 
 ## Build and transfer
 
@@ -146,7 +146,7 @@ Code rollback means loading/selecting an earlier verified image and recreating o
 ## Acceptance
 
 - Validate HTTPS certificate, apex/www redirects including path/query, and public API responses from this application.
-- Bootstrap returns 8 tasks, 25 questions and checking/runtime disabled; AI is available only for the explicitly enabled optional deployment. FAQ returns 35 published entries. Exercise all nine official PDF endpoints.
+- Bootstrap returns 15 tasks, 64 questions and disabled checking and runtime. AI is available only when explicitly enabled. FAQ returns 51 published entries. Exercise the 15 practical and two theory PDF endpoints.
 - Validate secure HttpOnly SameSite cookies, CSRF/origin rejection, anonymous admin rejection and owner login.
 - Create a project, edit, change steps, reload and export/import; verify pinned guide and saved files. Check dark theme, theory and responsive navigation. Full browser CI remains required before deployment.
 - A server study check returns unavailable/manual without creating an execution job; manual completion works. Inspect runtime limits, mounts, published ports and feature flags.

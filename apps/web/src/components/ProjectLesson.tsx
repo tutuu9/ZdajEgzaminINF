@@ -135,7 +135,7 @@ export function ProjectLesson({
   }, [project.files]);
   const guide = project.study?.guide;
   const focusedStep = project.study?.focusStepId;
-  const positions = guide ? studySequence(guide, focusedStep) : [];
+  const positions = guide ? studySequence(guide, focusedStep, project.study?.focusActivityId) : [];
   const current = positions.find((item) => item.id === project.study?.current) ?? positions[0];
   const learning = useChangeUnderstand(store, project, current);
   useEffect(() => {

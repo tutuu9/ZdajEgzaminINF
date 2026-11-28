@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { db, Prisma } from '@zdaj/database';
 import { validateProjectFiles } from '@zdaj/checker';
 import {
+  MAX_THEORY_SERIES_QUESTIONS,
   THEORY_REVIEW_LIMIT,
   toPublicQuestion,
   type AttemptTicket,
@@ -113,7 +114,7 @@ export async function startTheory(body: unknown, req: Request): Promise<TheoryTi
       .object({
         mode: modeSchema,
         topicId: z.string().optional(),
-        count: z.number().int().min(1).max(40).optional(),
+        count: z.number().int().min(1).max(MAX_THEORY_SERIES_QUESTIONS).optional(),
         questionIds: z.array(z.string().min(1).max(200)).min(1).max(THEORY_REVIEW_LIMIT).optional(),
         level: levelSchema.optional(),
       })
@@ -123,7 +124,7 @@ export async function startTheory(body: unknown, req: Request): Promise<TheoryTi
   await rateLimit(`theory:${requestIpKey(req)}`, 60, 3_600_000);
   if (value.mode === 'egzamin')
     throw new ServiceUnavailableException(
-      'Opublikowane przykłady CKE zawierają odpowiedzi w dokumencie źródłowym. Są dostępne do nauki i treningu; pełny egzamin z ukrytym kluczem nie jest jeszcze dostępny.',
+      'Opublikowane zadania CKE są dostępne do nauki i treningu. Egzamin z ukrytym kluczem jest niedostępny.',
     );
   const pool = (await published<QuestionRevision>('question')).filter(isCkeQuestion);
   const selected = selectTheoryQuestions(pool, value);
@@ -200,7 +201,7 @@ export async function renewTheory(body: unknown, req: Request): Promise<TheoryTi
               .strict(),
           )
           .min(1)
-          .max(40),
+          .max(MAX_THEORY_SERIES_QUESTIONS),
       })
       .strict(),
     body,
@@ -254,9 +255,8 @@ export async function renewTheory(body: unknown, req: Request): Promise<TheoryTi
   return { id: row.id, token, deadlineAt: null, questions: selected.map(toPublicQuestion) };
 }
 /**
- * Learning mode explains each question as soon as it is answered. The source informator
- * publishes its key, so this reveals nothing a learner could not read there; training and
- * examination attempts still receive explanations only after submission.
+ * Learning mode explains each question as soon as it is answered. Training
+ * and historical examination attempts receive explanations after submission.
  */
 export async function checkTheoryQuestion(
   id: string,
@@ -408,7 +408,7 @@ export async function submitCheck(
       'Ten oryginalny arkusz nie ma jeszcze zweryfikowanego adaptera. Pliki pozostają lokalnie; zakończ próbę do samodzielnego przeglądu.',
     );
   const options = await settings();
-  if (!options.checkingEnabled)
+  if (config.publicRuntimePilot || !options.checkingEnabled)
     throw new ServiceUnavailableException(
       'Sprawdzanie jest obecnie wyłączone. Twoje pliki pozostają zapisane lokalnie.',
     );

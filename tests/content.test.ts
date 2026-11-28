@@ -99,18 +99,42 @@ describe('published CKE INF.03 learning set', () => {
     }
   });
   it('preserves exact published example identity, fixed A–D letters and reviewed crop bounds', () => {
-    expect(officialQuestions).toHaveLength(25);
-    expect(new Set(officialQuestions.map((question) => question.id)).size).toBe(25);
-    expect(
-      officialQuestions.map((question) => question.source?.questionNumber).sort((a, b) => a! - b!),
-    ).toEqual(
-      Array.from({ length: 26 }, (_, index) => index + 1).filter((number) => number !== 12),
-    );
+    expect(officialQuestions).toHaveLength(64);
+    expect(new Set(officialQuestions.map((question) => question.id)).size).toBe(64);
+    const sources = [
+      {
+        id: 'cke-inf03-informator-2022',
+        url: 'https://bip.cke.gov.pl/attachments/download/8580',
+        firstPage: 6,
+        lastPage: 17,
+        printedQuestions: 26,
+        excluded: 12,
+      },
+      {
+        id: 'cke-inf03-written-2024',
+        url: 'https://cke.gov.pl/images/_EGZAMIN_ZAWODOWY/Formula_2019/Przykladowe_zadania/Pisemny/inf_03_pisemny.pdf',
+        firstPage: 2,
+        lastPage: 13,
+        printedQuestions: 40,
+        excluded: 6,
+      },
+    ];
+    for (const source of sources) {
+      const included = officialQuestions.filter(
+        (question) => question.source?.catalogId === source.id,
+      );
+      expect(included.map((question) => question.source?.questionNumber)).toEqual(
+        Array.from({ length: source.printedQuestions }, (_, index) => index + 1).filter(
+          (number) => number !== source.excluded,
+        ),
+      );
+      for (const { source: excerpt } of included) {
+        expect(excerpt?.url).toBe(source.url);
+        expect(excerpt?.page).toBeGreaterThanOrEqual(source.firstPage);
+        expect(excerpt?.page).toBeLessThanOrEqual(source.lastPage);
+      }
+    }
     for (const question of officialQuestions) {
-      expect(question.source?.url).toBe('https://bip.cke.gov.pl/attachments/download/8580');
-      expect(question.source?.catalogId).toBe('cke-inf03-informator-2022');
-      expect(question.source?.page).toBeGreaterThanOrEqual(6);
-      expect(question.source?.page).toBeLessThanOrEqual(17);
       expect(question.source?.top).toBeGreaterThanOrEqual(0);
       expect(question.source?.bottom).toBeLessThanOrEqual(1);
       expect(question.source!.top!).toBeLessThan(question.source!.bottom!);

@@ -1,4 +1,9 @@
-import { MAX_EXTRACTED_BYTES, type AttemptSnapshot, type PublicQuestion } from '@zdaj/shared';
+import {
+  MAX_EXTRACTED_BYTES,
+  MAX_THEORY_SERIES_QUESTIONS,
+  type AttemptSnapshot,
+  type PublicQuestion,
+} from '@zdaj/shared';
 import { validateProjectFiles, validateProjectState } from './backup-guide-validation';
 
 const fail = (): never => {
@@ -104,12 +109,12 @@ function validateReport(value: unknown) {
 
 function validateTheory(value: unknown) {
   const result = record(value);
-  integer(result.correct, 40);
-  integer(result.total, 40);
+  integer(result.correct, MAX_THEORY_SERIES_QUESTIONS);
+  integer(result.total, MAX_THEORY_SERIES_QUESTIONS);
   numeric(result.percentage, 100);
   if (typeof result.passed !== 'boolean') fail();
   date(result.submittedAt);
-  const results = array(result.results, 40);
+  const results = array(result.results, MAX_THEORY_SERIES_QUESTIONS);
   if (result.total !== results.length) fail();
   let correct = 0;
   for (const raw of results) {
@@ -163,7 +168,7 @@ export function validateBackupAttempts(value: unknown): AttemptSnapshot[] {
     if (item.files !== undefined) validateProjectFiles(item.files);
     if (item.kind === 'theory' && item.questions === undefined) fail();
     if (item.questions !== undefined) {
-      const questions = array(item.questions, 40).map(validateQuestion);
+      const questions = array(item.questions, MAX_THEORY_SERIES_QUESTIONS).map(validateQuestion);
       if (!questions.length) fail();
       const questionIds = new Set(questions.map((q) => q.id));
       if (questionIds.size !== questions.length) fail();
